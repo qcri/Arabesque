@@ -108,6 +108,11 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
     }
   }
 
+  @Override
+  public <V> V getReducedValue(String name) {
+    return (V) reducerMap.get(name).getCurrentValue();
+  }
+
   /**
    * Combine partially reduced value into currently reduced value.
    * @param name Name of the reducer
@@ -138,15 +143,13 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
     broadcastedMap.clear();
     reducerMap.clear();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("prepareSuperstep: Start preparing aggregators");
-    }
     AllAggregatorServerData allGlobalCommData =
         serviceWorker.getServerData().getAllAggregatorData();
-    // Wait for my aggregators
+
     Iterable<byte[]> dataToDistribute =
         allGlobalCommData.getDataFromMasterWhenReady(
             serviceWorker.getMasterInfo());
+
     try {
       // Distribute my aggregators
       requestProcessor.distributeReducedValues(dataToDistribute);
@@ -156,11 +159,8 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
     }
     // Wait for all other aggregators and store them
     allGlobalCommData.fillNextSuperstepMapsWhenReady(
-        getOtherWorkerIdsSet(), broadcastedMap,
-        reducerMap);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("prepareSuperstep: Aggregators prepared");
-    }
+            getOtherWorkerIdsSet(), broadcastedMap,
+            reducerMap);
   }
 
   /**
@@ -343,6 +343,11 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
     }
 
     @Override
+    public <V> V getReducedValue(String name) {
+      return (V) threadReducerMap.get(name).getCurrentValue();
+    }
+
+    @Override
     public <B extends Writable> B getBroadcast(String name) {
       return WorkerAggregatorHandler.this.getBroadcast(name);
     }
@@ -360,3 +365,4 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
   }
 
 }
+

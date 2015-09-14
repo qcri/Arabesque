@@ -18,6 +18,7 @@
 
 package org.apache.giraph.aggregators;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -64,4 +65,13 @@ public interface Aggregator<A extends Writable> {
    * Reset the value of aggregator to neutral value
    */
   void reset();
+
+  /**
+   * Do worker-local processing before sending to master.
+   * @param aggregatorKey Name of the aggregator
+   * @param configuration Reference to current configuration
+   */
+  void postSuperstep(String aggregatorKey,
+    ImmutableClassesGiraphConfiguration configuration);
 }
+

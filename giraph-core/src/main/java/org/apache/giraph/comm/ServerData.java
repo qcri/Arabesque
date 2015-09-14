@@ -123,7 +123,7 @@ public class ServerData<I extends WritableComparable,
     EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
     edgeStoreFactory.initialize(service, conf, context);
     edgeStore = edgeStoreFactory.newStore();
-    ownerAggregatorData = new OwnerAggregatorServerData(context);
+    ownerAggregatorData = new OwnerAggregatorServerData(context, conf);
     allAggregatorData = new AllAggregatorServerData(context, conf);
   }
 
@@ -280,3 +280,4 @@ public class ServerData<I extends WritableComparable,
   }
 
 }
+

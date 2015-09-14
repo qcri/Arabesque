@@ -65,6 +65,8 @@ public abstract class AbstractComputation<I extends WritableComparable,
   private GraphTaskManager<I, V, E> graphTaskManager;
   /** Worker context */
   private WorkerContext workerContext;
+  /** Partition id */
+  private int partitionId;
 
   /**
    * Must be defined by user to do computation on a single Vertex.
@@ -273,4 +275,20 @@ public abstract class AbstractComputation<I extends WritableComparable,
   public <W extends WorkerContext> W getWorkerContext() {
     return (W) workerContext;
   }
+
+  @Override
+  public void setPartitionId(int id) {
+    partitionId = id;
+  }
+
+  @Override
+  public int getPartitionId() {
+    return partitionId;
+  }
+
+  @Override
+  public void postComputations() {
+
+  }
 }
+

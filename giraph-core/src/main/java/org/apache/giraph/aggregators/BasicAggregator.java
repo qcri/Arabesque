@@ -18,6 +18,7 @@
 
 package org.apache.giraph.aggregators;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -63,4 +64,11 @@ public abstract class BasicAggregator<A extends Writable> implements
   public void reset() {
     value = createInitialValue();
   }
+
+  @Override
+  public void postSuperstep(String aggregatorKey,
+    ImmutableClassesGiraphConfiguration configuration) {
+    // Empty by design
+  }
 }
+

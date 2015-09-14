@@ -77,6 +77,10 @@ public class AggregatorReduceOperation<A extends Writable>
     return agg;
   }
 
+  public Aggregator<A> getAggregator() {
+    return aggregator;
+  }
+
   /**
    * Creates copy of this object
    * @return copy
@@ -113,6 +117,5 @@ public class AggregatorReduceOperation<A extends Writable>
     aggregatorClass = WritableUtils.readClass(in);
     initAggregator();
   }
-
-
 }
+

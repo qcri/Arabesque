@@ -23,6 +23,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.master.AggregatorReduceOperation;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.reducers.Reducer;
 import org.apache.giraph.utils.TaskIdsPermitsBarrier;
@@ -72,14 +75,19 @@ public class OwnerAggregatorServerData {
   private final TaskIdsPermitsBarrier workersBarrier;
   /** Progressable used to report progress */
   private final Progressable progressable;
+  /** Reference to configuration being used */
+  private final ImmutableClassesGiraphConfiguration configuration;
 
   /**
    * Constructor
    *
    * @param progressable Progressable used to report progress
+   * @param configuration Configuration being used
    */
-  public OwnerAggregatorServerData(Progressable progressable) {
+  public OwnerAggregatorServerData(Progressable progressable,
+          ImmutableClassesGiraphConfiguration configuration) {
     this.progressable = progressable;
+    this.configuration = configuration;
     workersBarrier = new TaskIdsPermitsBarrier(progressable);
   }
 
@@ -161,18 +169,30 @@ public class OwnerAggregatorServerData {
   public Iterable<Map.Entry<String, Writable>>
   getMyReducedValuesWhenReady(Set<Integer> workerIds) {
     workersBarrier.waitForRequiredPermits(workerIds);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("getMyAggregatorValuesWhenReady: Values ready");
-    }
+
     return Iterables.transform(myReducerMap.entrySet(),
         new Function<Map.Entry<String, Reducer<Object, Writable>>,
-            Map.Entry<String, Writable>>() {
+                Map.Entry<String, Writable>>() {
           @Override
           public Map.Entry<String, Writable> apply(
-              Map.Entry<String, Reducer<Object, Writable>> aggregator) {
+                  Map.Entry<String, Reducer<Object, Writable>> aggregator) {
+            Reducer<Object, Writable> reducer = aggregator.getValue();
+            ReduceOperation<Object, Writable> reduceOp = reducer.getReduceOp();
+
+            // HACK: Introduce post-superstep operation in aggregators to allow
+            // distributed filtering before sending to master.
+            if (reduceOp instanceof AggregatorReduceOperation) {
+              AggregatorReduceOperation<Writable> aggReduceOp =
+                  (AggregatorReduceOperation) reduceOp;
+              Aggregator<Writable> aggObject = aggReduceOp.getAggregator();
+              aggObject.setAggregatedValue(reducer.getCurrentValue());
+              aggObject.postSuperstep(aggregator.getKey(), configuration);
+              reducer.setCurrentValue(aggObject.getAggregatedValue());
+            }
+
             return new AbstractMap.SimpleEntry<String, Writable>(
-                aggregator.getKey(),
-                aggregator.getValue().getCurrentValue());
+                    aggregator.getKey(),
+                    reducer.getCurrentValue());
           }
         });
   }
@@ -188,3 +208,4 @@ public class OwnerAggregatorServerData {
   }
 
 }
+

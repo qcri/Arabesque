@@ -204,4 +204,24 @@ public interface Computation<I extends WritableComparable,
    */
   @SuppressWarnings("unchecked")
   <W extends WorkerContext> W getWorkerContext();
+
+  /**
+   * Set the partition id that this computation corresponds to.
+   * @param id Partition id corresponding to this computation.
+   */
+  void setPartitionId(int id);
+
+  /**
+   * Get the partition id that this computation corresponds to.
+   *
+   * @return Partition id
+   */
+  int getPartitionId();
+
+  /**
+   * Complement to postSuperstep where message sending mechanisms are still
+   * active.
+   */
+  void postComputations();
 }
+

@@ -77,7 +77,8 @@ public class NettyMasterClient implements MasterClient {
   }
 
   @Override
-  public void sendToOwner(String name, GlobalCommType sendType, Writable object)
+  public void sendToOwner(String name, GlobalCommType sendType,
+    Writable object)
     throws IOException {
     WorkerInfo owner =
         AggregatorUtils.getOwner(name, service.getWorkerInfoList());
@@ -121,3 +122,4 @@ public class NettyMasterClient implements MasterClient {
     nettyClient.stop();
   }
 }
+

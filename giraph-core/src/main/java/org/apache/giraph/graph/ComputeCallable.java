@@ -161,11 +161,13 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
           (Computation<I, V, E, M1, M2>) configuration.createComputation();
       computation.initialize(graphState, workerClientRequestProcessor,
           serviceWorker.getGraphTaskManager(), aggregatorUsage, workerContext);
+      computation.setPartitionId(partition.getId());
       computation.preSuperstep();
 
       try {
         PartitionStats partitionStats =
             computePartition(computation, partition);
+        computation.postComputations();
         partitionStatsList.add(partitionStats);
         long partitionMsgs = workerClientRequestProcessor.resetMessageCount();
         partitionStats.addMessagesSentCount(partitionMsgs);
@@ -280,4 +282,5 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     return partitionStats;
   }
 }
+
 

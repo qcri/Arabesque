@@ -310,7 +310,7 @@ public class NettyServer {
                 handlerToUseExecutionGroup, executionGroup, ch);
           }
           PipelineUtils.addLastWithExecutorCheck("requestFrameDecoder",
-              new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
+              new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4),
               handlerToUseExecutionGroup, executionGroup, ch);
           PipelineUtils.addLastWithExecutorCheck("requestDecoder",
               new RequestDecoder(conf, inByteCounter),
@@ -413,4 +413,5 @@ public class NettyServer {
   }
 
 }
+
 

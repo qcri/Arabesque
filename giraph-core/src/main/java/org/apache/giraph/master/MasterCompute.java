@@ -73,7 +73,7 @@ public abstract class MasterCompute
    *
    * @return Current superstep
    */
-  public final long getSuperstep() {
+  public long getSuperstep() {
     return graphState.getSuperstep();
   }
 
@@ -213,7 +213,7 @@ public abstract class MasterCompute
   }
 
   @Override
-  public final <A extends Writable> boolean registerAggregator(
+  public <A extends Writable> boolean registerAggregator(
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
     return serviceMaster.getAggregatorTranslationHandler().registerAggregator(
@@ -221,7 +221,7 @@ public abstract class MasterCompute
   }
 
   @Override
-  public final <A extends Writable> boolean registerPersistentAggregator(
+  public <A extends Writable> boolean registerPersistentAggregator(
       String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
@@ -264,3 +264,4 @@ public abstract class MasterCompute
     this.superstepClasses = superstepClasses;
   }
 }
+

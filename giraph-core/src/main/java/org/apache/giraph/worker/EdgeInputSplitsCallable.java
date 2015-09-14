@@ -144,6 +144,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     edgeReader.setConf(
         (ImmutableClassesGiraphConfiguration<I, Writable, E>)
             configuration);
+    edgeReader.setWorkerContext(bspServiceWorker.getWorkerContext());
 
     edgeReader.initialize(inputSplit, context);
     // Set aggregator usage to edge reader
@@ -229,3 +230,4 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     return new VertexEdgeCount(0, inputSplitEdgesLoaded);
   }
 }
+

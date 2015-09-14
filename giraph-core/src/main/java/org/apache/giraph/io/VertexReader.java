@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerAggregatorDelegator;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -39,6 +40,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public abstract class VertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
     WorkerAggregatorDelegator<I, V, E> {
+
+  /** Reference to current worker context. */
+  private WorkerContext workerContext;
+
   /**
    * Use the input split and context to setup reading the vertices.
    * Guaranteed to be called prior to any other function.
@@ -88,4 +93,23 @@ public abstract class VertexReader<I extends WritableComparable,
    * @throws InterruptedException
    */
   public abstract float getProgress() throws IOException, InterruptedException;
+
+  /**
+   * Get current worker context.
+   *
+   * @return Current worker context
+   */
+  public WorkerContext getWorkerContext() {
+    return workerContext;
+  }
+
+  /**
+   * Set current worker context.
+   *
+   * @param workerContext Current worker context
+   */
+  public void setWorkerContext(WorkerContext workerContext) {
+    this.workerContext = workerContext;
+  }
 }
+

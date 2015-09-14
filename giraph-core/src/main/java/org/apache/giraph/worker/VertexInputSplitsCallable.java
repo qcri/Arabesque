@@ -151,6 +151,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     VertexReader<I, V, E> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, context);
     vertexReader.setConf(configuration);
+    vertexReader.setWorkerContext(bspServiceWorker.getWorkerContext());
 
     WorkerThreadGlobalCommUsage globalCommUsage =
       this.bspServiceWorker
@@ -277,4 +278,5 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
         inputSplitEdgesLoaded + edgesSinceLastUpdate);
   }
 }
+
 

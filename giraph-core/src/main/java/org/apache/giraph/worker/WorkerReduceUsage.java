@@ -36,4 +36,15 @@ public interface WorkerReduceUsage {
    * @param value Single value to reduce
    */
   void reducePartial(String name, Writable value);
+
+  /**
+   * Get reduced value.
+   *
+   * @param name Aggregator name.
+   * @param <V> Aggregator value class.
+   *
+   * @return Reduced aggregator value.
+   */
+  <V> V getReducedValue(String name);
 }
+

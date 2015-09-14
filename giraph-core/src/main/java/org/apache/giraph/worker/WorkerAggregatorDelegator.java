@@ -59,6 +59,11 @@ public abstract class WorkerAggregatorDelegator<I extends WritableComparable,
   }
 
   @Override
+  public <V> V getReducedValue(String name) {
+    return workerGlobalCommUsage.getReducedValue(name);
+  }
+
+  @Override
   public final <B extends Writable> B getBroadcast(String name) {
     return workerGlobalCommUsage.getBroadcast(name);
   }
@@ -74,3 +79,4 @@ public abstract class WorkerAggregatorDelegator<I extends WritableComparable,
     return broadcast.getValue();
   }
 }
+

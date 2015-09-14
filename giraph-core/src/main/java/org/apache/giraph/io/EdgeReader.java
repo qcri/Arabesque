@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.worker.WorkerAggregatorDelegator;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -38,6 +39,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public abstract class EdgeReader<I extends WritableComparable,
     E extends Writable> extends WorkerAggregatorDelegator<
         I, Writable, E> {
+
+  /** Reference to current worker context */
+  private WorkerContext workerContext;
 
   /**
    * Use the input split and context to setup reading the edges.
@@ -99,4 +103,23 @@ public abstract class EdgeReader<I extends WritableComparable,
    * @throws InterruptedException
    */
   public abstract float getProgress() throws IOException, InterruptedException;
+
+  /**
+   * Get reference to current worker context.
+   *
+   * @return Current worker context
+   */
+  public WorkerContext getWorkerContext() {
+    return workerContext;
+  }
+
+  /**
+   * Set reference to current worker context.
+   *
+   * @param workerContext Current worker context
+   */
+  public void setWorkerContext(WorkerContext workerContext) {
+    this.workerContext = workerContext;
+  }
 }
+
