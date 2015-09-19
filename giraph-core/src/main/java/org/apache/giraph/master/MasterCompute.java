@@ -230,7 +230,7 @@ public abstract class MasterCompute
   }
 
   @Override
-  public final <A extends Writable> A getAggregatedValue(String name) {
+  public <A extends Writable> A getAggregatedValue(String name) {
     return serviceMaster.getAggregatorTranslationHandler()
         .<A>getAggregatedValue(name);
   }
