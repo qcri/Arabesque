@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="keywords" content="footer, address, phone, icons" />
+
+	<title>{{title}}</title>
+
+	<link rel="stylesheet" href="assets/css/demo.css">
+	<link rel="stylesheet" href="assets/css/footer-distributed-with-address-and-phones.css">
+	<link rel="stylesheet" href="assets/css/header-basic.css">
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+	<link href="http://fonts.googleapis.com/css?family=Cookie" rel="stylesheet" type="text/css">
+    <link type="text/css" rel="stylesheet" href="{{asset 'css/bootstrap.css'}}"/>
+    <link type="text/css" rel="stylesheet" href="{{asset 'css/bootstrap-responsive.css'}}"/>
+    <link type="text/css" rel="stylesheet" href="{{asset 'css/pilcrow.css'}}"/>
+    <link type="text/css" rel="stylesheet" href="{{asset 'css/hljs-github.min.css'}}"/>
+    <link type="text/css" rel="stylesheet" href="{{asset 'css/github-markdown.css'}}">
+
+</head>
+
+	<body>
+		<header class="header-basic">
+
+			<div class="header-limiter">
+
+				<h1><a href="index.html"><img src="imgs/arabesque-logo-small.png" alt=""> Arabesque</a></h1>
+
+				<nav>
+					<a href="index.html">Home</a>
+					<a href="user_guide.html">User Guide</a> <!-- class="selected" -->
+					<a href="download.html">Download</a>
+					<a href="about.html">About</a>
+				</nav>
+			</div>
+
+		</header>
+
+		<!-- The content of your page would go here. -->
+<div class="container-fluid">
+    <div class="row-fluid">
+      <div class="span3">
+        {{~> toc }}
+      </div>
+      <article class="span9 markdown-body">
+      <!-- <div class="span9 markdown-body"> -->
+        {{~> content}}
+      </article>
+    </div>
+  </div>
+
+		<div class="footer-distributed">
+			<div class="footer-left">
+
+				<h3><span>Arabesque</span></h3>
+				<p class="footer-company-name">Arabesque.io &copy; 2015</p>
+			</div>
+
+			<div class="footer-center">
+
+				<div>
+					<i class="fa fa-map-marker"></i>
+					<p><span>Tornado Tower</span> Doha, Qatar</p>
+				</div>
+
+				<div>
+					<i class="fa fa-phone"></i>
+					<p>+974 5528 3942</p>
+				</div>
+
+				<div>
+					<i class="fa fa-envelope"></i>
+					<p><a href="mailto:afonseca@qf.org.qa">Alexander :-)</a></p>
+				</div>
+
+			</div>
+
+			<div class="footer-right">
+
+				<p class="footer-company-about">
+					<span>About Arabesque.io</span>
+					Arabesque.io is an open source project of Qatar Computing Research Institute, HBKU.
+				</p>
+
+				<div class="footer-icons">
+
+					<!-- <a href="#"><i class="fa fa-facebook"></i></a> -->
+					<a href="#"><i class="fa fa-twitter"></i></a>
+					<!-- <a href="#"><i class="fa fa-linkedin"></i></a> -->
+					<a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque"><i class="fa fa-github"></i></a>
+
+				</div>
+
+			</div>
+		</div>
+
+	</body>
+
+</html>

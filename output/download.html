@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="keywords" content="footer, address, phone, icons" />
+
+	<title>Download Arabesque</title>
+
+	<link rel="stylesheet" href="assets/css/demo.css">
+	<link rel="stylesheet" href="assets/css/footer-distributed-with-address-and-phones.css">
+	<link rel="stylesheet" href="assets/css/header-basic.css">
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+	<link href="http://fonts.googleapis.com/css?family=Cookie" rel="stylesheet" type="text/css">
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap-responsive.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/pilcrow.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/hljs-github.min.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/github-markdown.css">
+
+</head>
+
+	<body>
+		<header class="header-basic">
+
+			<div class="header-limiter">
+
+				<h1><a href="index.html"><img src="imgs/arabesque-logo-small.png" alt=""> Arabesque</a></h1>
+
+				<nav>
+					<a href="index.html">Home</a>
+					<a href="user_guide.html">User Guide</a> <!-- class="selected" -->
+					<a href="download.html">Download</a>
+					<a href="about.html">About</a>
+				</nav>
+			</div>
+
+		</header>
+
+		<!-- The content of your page would go here. -->
+<div class="container-fluid">
+    <div class="row-fluid">
+      <div class="span3"><ul class="nav nav-list">
+    <li><a href="#github-repo">Github repo</a></li>
+    <li><a href="#precompiled-java-package">Precompiled Java package</a></li>
+</ul>
+      </div>
+      <article class="span9 markdown-body">
+      <!-- <div class="span9 markdown-body"> --><h1 id="github-repo"><a class="header-link" href="#github-repo"></a>Github repo</h1>
+<p>The source code can be download from <a href="http://github/qcri/arabesque.io">Github</a></p>
+<h1 id="precompiled-java-package"><a class="header-link" href="#precompiled-java-package"></a>Precompiled Java package</h1>
+<p>The jar contains Arabesque with a number of example applications, and the 
+modified Giraph.</p>
+<p>To submit an Arabesque job, you need the following script (run_arabesque.sh)</p>
+<pre class="hljs"><code><span class="hljs-shebang">#! /usr/bin/env sh
+</span>
+hdfs dfs -rm -r Output
+
+ARABESQUE_JAR_DIR=<span class="hljs-string">"`pwd`"</span>
+ARABESQUE_JAR=`find <span class="hljs-variable">$ARABESQUE_JAR_DIR</span> -maxdepth <span class="hljs-number">1</span> -name <span class="hljs-string">"arabesque-1.0-jar-with-dependencies.jar"</span> | head -<span class="hljs-number">1</span>`
+
+<span class="hljs-keyword">if</span> [ -z <span class="hljs-string">"<span class="hljs-variable">$ARABESQUE_JAR</span>"</span> ] ; <span class="hljs-keyword">then</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">"No Arabesque jar found in <span class="hljs-variable">$ARABESQUE_JAR_DIR</span>. Did you compile it?"</span>
+  <span class="hljs-built_in">exit</span> <span class="hljs-number">66</span>
+<span class="hljs-keyword">fi</span>
+
+HADOOP_CP=<span class="hljs-string">".:<span class="hljs-variable">${ARABESQUE_JAR}</span>"</span>
+
+HADOOP_CLASSPATH=<span class="hljs-variable">$HADOOP_CP</span> hadoop jar <span class="hljs-variable">$ARABESQUE_JAR</span> io.arabesque.ArabesqueRunner -y <span class="hljs-variable">$@</span></code></pre><p>Then you need to define a cluster.yaml and an application.yaml file and run as following.</p>
+<pre class="hljs"><code>./run_arabesque.sh cluster.yaml cliques.yaml</code></pre><p>Details about how to run and program in Arabesque can be found in the <a href="user_guide.html">user guide</a> section. </p>
+      </article>
+    </div>
+  </div>
+
+		<div class="footer-distributed">
+			<div class="footer-left">
+
+				<h3><span>Arabesque</span></h3>
+				<p class="footer-company-name">Arabesque.io &copy; 2015</p>
+			</div>
+
+			<div class="footer-center">
+
+				<div>
+					<i class="fa fa-map-marker"></i>
+					<p><span>Tornado Tower</span> Doha, Qatar</p>
+				</div>
+
+				<div>
+					<i class="fa fa-phone"></i>
+					<p>+974 5528 3942</p>
+				</div>
+
+				<div>
+					<i class="fa fa-envelope"></i>
+					<p><a href="mailto:afonseca@qf.org.qa">Alexander :-)</a></p>
+				</div>
+
+			</div>
+
+			<div class="footer-right">
+
+				<p class="footer-company-about">
+					<span>About Arabesque.io</span>
+					Arabesque.io is an open source project of Qatar Computing Research Institute, HBKU.
+				</p>
+
+				<div class="footer-icons">
+
+					<!-- <a href="#"><i class="fa fa-facebook"></i></a> -->
+					<a href="#"><i class="fa fa-twitter"></i></a>
+					<!-- <a href="#"><i class="fa fa-linkedin"></i></a> -->
+					<a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque"><i class="fa fa-github"></i></a>
+
+				</div>
+
+			</div>
+		</div>
+
+	</body>
+
+</html>
