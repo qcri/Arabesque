@@ -9,11 +9,11 @@ We show how Arabesque can be used to solve three fundamental problems in Graph M
 
 ## High-Level Programming API
 For Reference we have the high-level API in the simple case where we require no aggregation (first two algorithms).
-![TLE paradigm:](imgs/TLE.png)
+![TLE paradigm:](assets/img/TLE.png)
 
 
 For the third case, we have the aggregation based API.
-![Agg paradigm:](imgs/Agg.png)
+![Agg paradigm:](assets/img/Agg.png)
 
 
 An aggregator in Arabesque has several components:
