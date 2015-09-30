@@ -3,7 +3,7 @@ project: Arabesque
 ---
 
 # Programming in Arabesque
-Arabesque simplifies the programming of Graph Mining Problems as presented in our [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf), that describes the system and provides a comprehensive introduction to the concepts that we describe below.
+Arabesque simplifies the programming of Graph Mining Problems as presented in our [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf). In the paper,  we describe the system and we provide a comprehensive introduction to the concepts that we describe belo  w.
 
 We show how Arabesque can be used to solve three fundamental problems in Graph Mining. Finding cliques, counting motifs and frequent subgraph mining. We chose these problems because they represent different classes of graph mining problems. Finding cliques is an example of dense subgraph mining, and allows one to prune the embeddings using local information. Counting motifs requires exhaustive graph exploration up to some maximum size.  Frequent subgraph mining is an example of explore-and-prune problems, where only embeddings corresponding to a frequent pattern need to be further explored.  We discuss these problems below in more detail. 
 
@@ -64,7 +64,7 @@ public class CliqueComputation
 }
 ```
 
-In Arabesque, the user must define the Computation class for the problem at hand. In this particular case, we have defined the class **CliqueComputation** that extends the **VertexInducedComputation**, which dictates that the exploration that Arabesque will perform is Vertex Induced. As we explained earlier, this exploration extends an embedding by adding all edges of a vertex.
+In Arabesque, the user must define the Computation class for the problem at hand. In this particular case, we have defined the class **CliqueComputation** that extends the **VertexInducedComputation**, which dictates that the exploration Arabesque will perform is Vertex Induced. As we explained in the paper, this exploration extends an embedding by adding all edges of a vertex.
 
 To solve the problem and control the exploration the user defines two main functions. The **filter** function that decides whether the passed embedding is a valid clique and thus it should be further expanded and processed, and the **process** that dictates what to do with the embeddings that passed the filter function. In this particular problem, we only want to output the embeddings. Note, that the complexity of the exploration and the required checks for avoiding redudant work, and the canonicality checks are completely transparent to the end-user. Properties like anti-monotonicity are trivial to show that hold for this filter function. 
 
@@ -245,7 +245,7 @@ public class FSMMasterComputation extends MasterComputation {
 ```
 
 # How to Run an Arabesque Job
-To configure an Arabesque job, we use YAMLs files. We have a cluster.yaml file that defines the parameters of the servers, for instance number of workers, threads etc. The application yaml file specifies the problem to run and applicable parameters.
+To configure an Arabesque job, we use YAMLs files. We have a cluster.yaml file that defines the parameters of the servers, for instance number of workers, threads etc. Since Arabesque runs as a Giraph Job, these parameters are controlling the Giraph job. The application yaml file specifies the problem to run and applicable parameters.
 
 An example of the cluster.yaml file:
 ```yaml
@@ -267,7 +267,7 @@ giraph.nettyRequestEncoderBufferSize: 1048576
 Configuration for Cliques:
 ```yaml
 computation: io.arabesque.examples.clique.CliqueComputation
-input_graph_path: mico-qanat-sortedByDegree-sameLabel.txt
+input_graph_path: citeseer-sortedByDegree-sameLabel.txt
 #communication_strategy: cache
 
 # Custom parameters
@@ -278,7 +278,7 @@ arabesque.clique.maxsize: 4
 Configuration for Motifs:
 ```yaml
 computation: io.arabesque.examples.motif.MotifComputation
-input_graph_path: mico-qanat-sortedByDegree-sameLabel.txt
+input_graph_path: citeseer-sortedByDegree-sameLabel.txt
 #communication_strategy: cache
 
 # Custom parameters
@@ -289,13 +289,13 @@ Configuration for Frequent Subgraph Mining:
 ```yaml
 computation: io.arabesque.examples.fsm.FSMComputation
 master_computation: io.arabesque.examples.fsm.FSMMasterComputation
-input_graph_path: citeseer-qanat-sortedByDegree.txt
+input_graph_path: citeseer-sortedByDegree.txt
 #communication_strategy: cache
 
 # Custom parameters
 arabesque.fsm.support: 300
 #arabesque.fsm.maxsize: 7
-arabesque.fsm.num_agg_splits: 10
+arabesque.number_of_aggregators: 10
 ```
 
 
@@ -303,6 +303,11 @@ To actual submit an Arabesque job, for instance Cliques, you simply run
 ```bash
 ./run_arabesque.sh cluster.yaml cliques.yaml
 ```
+
+### Extra Parameters
+Two parameters that the user can specify is the **communication_strategy**, which dictates whether to use the ODAGs (default) or a simple cache for the embeddings. The simple cache can be beneficial when we consider shallow depths (<=3) where the potential of savings for ODAGs isn't high, and we pay the penalty of building the ODAGs. In most cases though, ODAGs are vastly superior. 
+
+The second parameter is the **arabesque.number_of_aggregators**, which specifies how many splits we are going to have while we aggregate. The aggregation is happening in a Map Reduce fashion, and this basically configures how many mappers and reducers we use. The higher this number the more inefficient the aggregation will be, but on the other hand the more spread the load of the aggregation.
 
 ## Requirements for Input Graph
 The graph should have sequential ids assigned to vertices. 
