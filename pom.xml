@@ -792,6 +792,13 @@ under the License.
         <artifactId>maven-duplicate-finder-plugin</artifactId>
       </plugin>
     </plugins>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-ssh-external</artifactId>
+        <version>LATEST</version>
+      </extension>
+    </extensions>
   </build>
 
 
@@ -1339,12 +1346,19 @@ under the License.
       <id>arabesque_hadoop2</id>
       <modules>
       </modules>
+      <distributionManagement>
+        <repository>
+          <id>arabesque.io</id>
+          <url>scpexe://maven.alexjf.net:40000/home/alex/www/public_html/maven2</url>
+        </repository>
+      </distributionManagement>
       <properties>
         <hadoop.version>2.6.0</hadoop.version>
         <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
         <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
+        <maven.test.skip>true</maven.test.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
