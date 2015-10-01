@@ -1,0 +1,7 @@
+computation: io.arabesque.examples.clique.CliqueComputation
+input_graph_path: citeseer-single-label.graph
+output_path: Cliques_Output
+#communication_strategy: embeddings
+
+# Custom parameters
+arabesque.clique.maxsize: 4

@@ -1,0 +1,13 @@
+computation: io.arabesque.examples.fsm.FSMComputation
+master_computation: io.arabesque.examples.fsm.FSMMasterComputation
+input_graph_path: citeseer.graph
+output_path: FSM_Output
+#communication_strategy: embeddings
+
+# Custom parameters
+arabesque.fsm.support: 300
+#arabesque.fsm.maxsize: 7
+
+# Split all aggregations in 10 parts for parallel aggregation
+# (use only with heavy aggregations)
+arabesque.aggregators.default_splits: 10

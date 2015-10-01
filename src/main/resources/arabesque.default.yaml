@@ -1,0 +1,26 @@
+#### General cluster
+num_workers: 1
+num_compute_threads: 1
+# num_partitions: 1 # Defaults to num_workers * num_compute_threads
+
+#### General Execution
+verbose: yes
+log_level: info
+
+#### Computation
+#computation: Required - <Java class reference extends io.arabesque.computation.Computation>
+#master_computation: Optional - <Java class reference extends io.arabesque.computation.MasterComputation>
+#worker_context: Optional - <Java class reference extends io.arabesque.computation.WorkerContext>
+pattern: io.arabesque.pattern.JBlissPattern
+communication_strategy: odag # Possible values: odag, embeddings, <Java class reference extends io.arabesque.computation.comm.CommunicationStrategyFactory>
+
+#### Input
+#input_graph_path: Required - <String with HDFS/local path to the input graph>
+#input_graph_local: false # false = graph located in HDFS, true = graph located in local disk
+
+#### Output
+output_active: yes
+output_path: Output # HDFS Path
+
+#### Extra
+giraph.SplitMasterWorker: false

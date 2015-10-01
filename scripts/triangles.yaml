@@ -1,0 +1,4 @@
+computation: io.arabesque.examples.triangles.CountingTrianglesComputation
+input_graph_path: citeseer-single-label.graph
+output_path: Triangles_Output
+#communication_strategy: embeddings
