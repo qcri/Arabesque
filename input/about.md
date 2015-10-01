@@ -3,9 +3,9 @@ project: Arabesque
 ---
 
 # Who are we?
-Arabesque started as a Project in [QCRI](http://qcri.org.qa) and continues to be supported by QCRI.
+Arabesque is a community project supported by [QCRI](http://qcri.org.qa).
 
-The original team:
+Team:
 * [Carlos H. C. Teixeira](http://homepages.dcc.ufmg.br/~carlos), currently a PhD student at Federal University of Minas Gerais, Brazil.
 * [Alexandre J. Fonseca](http://www.alexjf.net), Research Associate, QCRI.
 * [Marco Serafini](http://qcri.org.qa/page?a=117&pid=83&lang=en-CA), Scientist, QCRI.

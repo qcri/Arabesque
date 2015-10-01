@@ -11,16 +11,21 @@ Benefits of Arabesque:
 - Efficient implementation: negligible overhead compared to equivalent centralized solutions
 - Support of large graphs with over a billion edges. It can process trillion of subgraphs in a commodity cluster.
 - Designed for Hadoop. Runs as an Apache Giraph Job.
-- Open-Source with Apache 2.0 license.
  
 ## Documentation
 
 Check our SOSP 2015 [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf) that describe the system.
 
-Follow our [user-guide](user_guide.html), on how to program graph mining applications on Arabesque.
+Follow our [user-guide](user_guide.html) (under construction), on how to program graph mining applications on Arabesque.
+
+We are also working on the system's Javadocs. We'll release them as soon as possible.
 
 ## How to Use
-Binary jars can be downloaded [here](download.html).
+Arabesque can be used in one of 2 ways:
+* **Standalone** - If you simply want to test/execute one of the example algorithms included in Arabesque, you can simply download the JAR file from our [download page](download.html) and use the supporting execution scripts to run your desired algorithm.
+* **Framework** - If you want to code your own graph mining algorithm on top of Arabesque, the easiest way to accomplish this is by forking our [Arabeque skeleton project](https://github.com/Qatar-Computing-Research-Institute/Arabesque-Skeleton) and follow the instructions in the README file.
+
+## Source code
+Arabesque is open-sourced under the Apache 2.0 license.
 
 The source code can be accessed from [github](https://github.com/Qatar-Computing-Research-Institute/Arabesque).
-
