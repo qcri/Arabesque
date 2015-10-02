@@ -2,7 +2,7 @@
 	background-color: #292c2f;
 	box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.15);
 	padding: 15px 40px;
-	height: 70px;
+	height: auto;
 	box-sizing: border-box;
 }
 
@@ -10,19 +10,39 @@
 	max-width: 1200px;
 	text-align: center;
 	margin: 0 auto;
+	height: auto;
 }
 
 /* Logo */
 
+.clearfix:after { 
+   content: " ";
+   display: block; 
+   height: 0; 
+   clear: both;
+}
+
 .header-basic .header-limiter h1 {
 	float: left;
+	display: block;
 	font: normal 28px Cookie, Arial, Helvetica, sans-serif;
-	line-height: 40px;
 	margin: 0;
+	padding: 0;
+}
+
+.header-basic .header-limiter h1 a {
+	display: block;
+	height: 42px;
+}
+
+.header-basic .header-limiter h1 img {
+	display: inline-block;
+	vertical-align: middle;
 }
 
 .header-basic .header-limiter h1 span {
-	color: #5383d3;
+	display: inline-block;
+	vertical-align: middle;
 }
 
 /* The header links */
@@ -34,12 +54,15 @@
 
 .header-basic .header-limiter nav{
 	font:16px Arial, Helvetica, sans-serif;
-	line-height: 40px;
 	float: right;
+	height: 42px;
+	display: block;
+	line-height: 42px;
 }
 
 .header-basic .header-limiter nav a{
 	display: inline-block;
+	vertical-align: middle;
 	padding: 0 5px;
 	text-decoration:none;
 	color: #ffffff;

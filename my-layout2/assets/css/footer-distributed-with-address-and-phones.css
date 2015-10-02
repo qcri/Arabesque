@@ -10,6 +10,16 @@
 	margin-top: 80px;
 }
 
+.footer-distributed a{
+	color:  #5383d3;
+	text-decoration: none;;
+}
+
+.footer-distributed a:hover {
+	color:  #5383d3;
+	text-decoration: underline;
+}
+
 .footer-distributed .footer-left,
 .footer-distributed .footer-center,
 .footer-distributed .footer-right{
