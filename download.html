@@ -8,7 +8,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="keywords" content="footer, address, phone, icons" />
 
-	<title>Arabesque, A System for Distributed Graph Mining</title>
+	<title>Download Arabesque</title>
 
 	<link rel="stylesheet" href="assets/css/demo.css">
 	<link rel="stylesheet" href="assets/css/footer-distributed-with-address-and-phones.css">
@@ -48,39 +48,24 @@
 <div class="container-fluid">
     <div class="row-fluid">
       <div class="span3"><ul class="nav nav-list">
-    <li><a href="#distributed-graph-mining-made-easy">Distributed Graph Mining, Made Easy</a></li>
-    <li><a href="#documentation">Documentation</a></li>
-    <li><a href="#how-to-use">How to Use</a></li>
-    <li><a href="#source-code">Source code</a></li>
+    <li><a href="#github-repo">Github repo</a></li>
+    <li><a href="#precompiled-java-package">Precompiled Java package</a></li>
+    <li><a href="#preconfigured-maven-project">Preconfigured Maven project</a></li>
 </ul>
       </div>
       <article class="span9 markdown-body">
-      <!-- <div class="span9 markdown-body"> --><h1 id="distributed-graph-mining-made-easy"><a class="header-link" href="#distributed-graph-mining-made-easy"></a>Distributed Graph Mining, Made Easy</h1>
-<blockquote>
-<p>Arabesque is a distributed graph mining system that enables quick and easy development of graph mining algorithms, while providing a scalable and efficient implementation that runs on top of Hadoop.</p>
-</blockquote>
-<p>Benefits of Arabesque:</p>
-<ul class="list">
-<li>Simple intuitive API, tuned for Graph Mining Problems</li>
-<li>Handles all the complexity of Graph Mining Algorithms transparently</li>
-<li>Scalable to hundreds of machines</li>
-<li>Efficient implementation: negligible overhead compared to equivalent centralized solutions</li>
-<li>Support of large graphs with over a billion edges. It can process trillion of subgraphs in a commodity cluster.</li>
-<li>Designed for Hadoop. Runs as an Apache Giraph Job.</li>
-</ul>
-<h2 id="documentation"><a class="header-link" href="#documentation"></a>Documentation</h2>
-<p>Check our SOSP 2015 <a href="http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf">paper</a> that describe the system.</p>
-<p>Follow our <a href="user_guide.html">user-guide</a> (under construction), on how to program graph mining applications on Arabesque.</p>
-<p>We are also working on the system&#39;s Javadocs. We&#39;ll release them as soon as possible.</p>
-<h2 id="how-to-use"><a class="header-link" href="#how-to-use"></a>How to Use</h2>
-<p>Arabesque can be used in one of 2 ways:</p>
-<ul class="list">
-<li><strong>Standalone</strong> - If you simply want to test/execute one of the example algorithms included in Arabesque, you can simply download the JAR file from our <a href="download.html">download page</a> and use the supporting execution scripts to run your desired algorithm.</li>
-<li><strong>Framework</strong> - If you want to code your own graph mining algorithm on top of Arabesque, the easiest way to accomplish this is by forking our <a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque-Skeleton">Arabeque skeleton project</a> and follow the instructions in the README file.</li>
-</ul>
-<h2 id="source-code"><a class="header-link" href="#source-code"></a>Source code</h2>
-<p>Arabesque is open-sourced under the Apache 2.0 license.</p>
-<p>The source code can be accessed from <a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque">github</a>.</p>
+      <!-- <div class="span9 markdown-body"> --><h1 id="github-repo"><a class="header-link" href="#github-repo"></a>Github repo</h1>
+<p>The source code can be downloaded from <a href="http://github/qcri/arabesque.io">Github</a></p>
+<p>Arabesque is licensed under Apache 2.0.</p>
+<h1 id="precompiled-java-package"><a class="header-link" href="#precompiled-java-package"></a>Precompiled Java package</h1>
+<p>The precompiled jar contains the complete Arabesque system along with all its dependencies. It also includes 4 example applications:
+clique finding, motif counting, frequent subgraph mining and triangle counting.</p>
+<p>This jar is ideal if you simply want to test the example applications or manually setup
+your own project.</p>
+<p><a href="http://maven.alexjf.net/io/arabesque/arabesque/1.0-BETA/arabesque-1.0-BETA-jar-with-dependencies.jar">Download the latest JAR</a></p>
+<p>To run any of the example applications, refer to <a href="user_guide.html#how-to-run-an-arabesque-job">our user guide</a>.</p>
+<h1 id="preconfigured-maven-project"><a class="header-link" href="#preconfigured-maven-project"></a>Preconfigured Maven project</h1>
+<p>If you want to start developing your own graph mining implementations on top of Arabesque, the easiest way to achieve this is by forking our <a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque-Skeleton">Arabesque-Skeleton</a> project and follow the instructions on the README file.</p>
       </article>
     </div>
   </div>

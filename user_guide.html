@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="keywords" content="footer, address, phone, icons" />
+
+	<title>User guide to programming Arabesque</title>
+
+	<link rel="stylesheet" href="assets/css/demo.css">
+	<link rel="stylesheet" href="assets/css/footer-distributed-with-address-and-phones.css">
+	<link rel="stylesheet" href="assets/css/header-basic.css">
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+	<link href="http://fonts.googleapis.com/css?family=Cookie" rel="stylesheet" type="text/css">
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap-responsive.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/pilcrow.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/hljs-github.min.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/github-markdown.css">
+
+</head>
+
+	<body>
+		<header class="header-basic">
+
+			<div class="header-limiter clearfix">
+
+				<h1>
+					<a href="index.html">
+						<img src="assets/img/arabesque-logo-small.png" alt="">
+						<span>Arabesque</span>
+					</a>
+				</h1>
+
+				<nav>
+					<a href="index.html">Home</a>
+					<a href="user_guide.html">User Guide</a> <!-- class="selected" -->
+					<a href="download.html">Download</a>
+					<a href="about.html">About</a>
+				</nav>
+			</div>
+		</header>
+
+		<!-- The content of your page would go here. -->
+<div class="container-fluid">
+    <div class="row-fluid">
+      <div class="span3"><ul class="nav nav-list">
+    <li><a href="#programming-in-arabesque">Programming in Arabesque</a></li>
+    <li><a href="#high-level-programming-api">High-Level Programming API</a></li>
+    <li><a href="#finding-cliques">Finding Cliques</a></li>
+    <li><a href="#counting-motif">Counting Motif</a></li>
+    <li><a href="#frequent-subgraph-mining">Frequent Subgraph Mining</a></li>
+    <li><a href="#how-to-run-an-arabesque-job">How to Run an Arabesque Job</a></li>
+    <li><a href="#requirements">Requirements</a></li>
+    <li><a href="#helper-scripts-and-configuration-files">Helper scripts and configuration files</a></li>
+    <li><a href="#steps">Steps</a></li>
+    <li><a href="#extra-parameters">Extra Parameters</a></li>
+    <li><a href="#requirements-for-input-graph">Requirements for Input Graph</a></li>
+    <li><a href="#developing-your-own-algorithms">Developing your own algorithms</a></li>
+    <li><a href="#javadocs">Javadocs</a></li>
+</ul>
+      </div>
+      <article class="span9 markdown-body">
+      <!-- <div class="span9 markdown-body"> --><h1 id="programming-in-arabesque"><a class="header-link" href="#programming-in-arabesque"></a>Programming in Arabesque</h1>
+<p>Arabesque simplifies the programming of Graph Mining Problems as presented in our <a href="http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf">paper</a>. In the paper,  we describe the system and provide a comprehensive introduction to the concepts that we describe below.</p>
+<p>We show how Arabesque can be used to solve three fundamental problems in Graph Mining. Finding cliques, counting motifs and frequent subgraph mining. We chose these problems because they represent different classes of graph mining problems. Finding cliques is an example of dense subgraph mining, and allows one to prune the embeddings using local information. Counting motifs requires exhaustive graph exploration up to some maximum size.  Frequent subgraph mining is an example of explore-and-prune problems, where only embeddings corresponding to a frequent pattern need to be further explored.  We discuss these problems below in more detail. </p>
+<h2 id="high-level-programming-api"><a class="header-link" href="#high-level-programming-api"></a>High-Level Programming API</h2>
+<p>For Reference we have the high-level API in the simple case where we require no aggregation (first two algorithms).
+<img src="assets/img/TLE.png" alt="TLE paradigm:"></p>
+<p>For the third case, we have the aggregation based API.
+<img src="assets/img/Agg.png" alt="Agg paradigm:"></p>
+<p>An aggregator in Arabesque has several components:</p>
+<ul class="list">
+<li>Key Class</li>
+<li>Value Class</li>
+<li>Reduction function (f(V, V) -&gt; V)</li>
+<li>(Optional) Function to execute at the end of the aggregation to remove content you’re not interested in (only keep frequent patterns in the aggregation for instance) or do some other kind of final computation.</li>
+</ul>
+<h2 id="finding-cliques"><a class="header-link" href="#finding-cliques"></a>Finding Cliques</h2>
+<p>Finding <a href="https://en.wikipedia.org/wiki/Clique_problem">cliques</a> has many variations. Here, we present the variation of finding cliques of a maximum size. Following, we have the implementation in Arabesque. </p>
+<pre class="hljs"><code><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CliqueComputation</span> 
+            <span class="hljs-keyword">extends</span> <span class="hljs-title">VertexInducedComputation</span>&lt;<span class="hljs-title">VertexInducedEmbedding</span>&gt; </span>{
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String MAXSIZE = <span class="hljs-string">"arabesque.clique.maxsize"</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> MAXSIZE_DEFAULT = <span class="hljs-number">4</span>;
+
+    <span class="hljs-keyword">int</span> maxsize;
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">init</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">super</span>.init();
+        maxsize = Configuration.get().getInteger(MAXSIZE, MAXSIZE_DEFAULT);
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">filter</span><span class="hljs-params">(VertexInducedEmbedding embedding)</span> </span>{
+        <span class="hljs-keyword">return</span> isClique(embedding);
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isClique</span><span class="hljs-params">(VertexInducedEmbedding embedding)</span> </span>{
+        <span class="hljs-keyword">return</span> embedding.getNumEdgesAddedWithExpansion() 
+                == embedding.getNumVertices() - <span class="hljs-number">1</span>;
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">process</span><span class="hljs-params">(VertexInducedEmbedding embedding)</span> </span>{
+        <span class="hljs-keyword">if</span> (embedding.getNumWords() == maxsize) {
+            output(embedding);
+        }
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">shouldExpand</span><span class="hljs-params">(VertexInducedEmbedding newEmbedding)</span> </span>{
+        <span class="hljs-keyword">return</span> newEmbedding.getNumWords() &lt; maxsize;
+    }
+
+}</code></pre><p>In Arabesque, the user must define the Computation class for the problem at hand. In this particular case, we have defined the class <strong>CliqueComputation</strong> that extends the <strong>VertexInducedComputation</strong>, which dictates that the exploration Arabesque will perform is Vertex Induced. As we explained in the paper, this exploration extends an embedding by connecting it to a new vertex. All edges connecting that new vertex to existing vertices of the embedding are also added.</p>
+<p>To solve the problem and control the exploration the user defines two main functions. The <strong>filter</strong> function decides whether the passed embedding is a valid clique and, thus, if it should be further expanded and processed. The <strong>process</strong> function dictates what to do with the embeddings that passed the filter function. In this particular problem, we only want to output the embeddings. Note, that the complexity of the exploration and the required checks for avoiding redudant work, and the canonicality checks are completely transparent to the end-user. This filter function trivially respects the anti-monotonicity property as if a parent is not a clique, there&#39;s no chance for any of its children to be cliques.</p>
+<p>For performance reasons, the <strong>filter</strong> is implemented in an incremental way. The current embedding was constructed by extending a parent embedding with some new vertex and all the edges that connect it to existing vertices in the embedding. Thus we can efficiently implement the filter function by only considering whether the vertex we added connects to all previous vertices in the parent embedding. This can be done very easily, by getting the number of new edges added to this embedding <em>getNumEdgesAddedWithExpansion()</em> and checking if this number is equal to the number of vertices in the parent embedding which by default is one less than the current embedding.</p>
+<p>To produce the output, we simply check whether we have reached the size of cliques we are interested in. The <em>output</em> function saves that embedding to HDFS.</p>
+<p>To avoid going to deeper depths than the one we want to discover, the user can override the optional <strong>shouldExpand</strong> function that checks whether we need to further expand the embedding and thus continue the exploration. By default, this function returns true, and by overriding it we can stop the processing faster. </p>
+<h2 id="counting-motif"><a class="header-link" href="#counting-motif"></a>Counting Motif</h2>
+<p>A <a href="https://en.wikipedia.org/wiki/Network_motif">motif</a> is defined as a connected pattern of vertex induced embeddings that exists in an input graph. Further, a set of motifs is required to be non-isomorphic, i.e., there should obviously be no duplicate patterns. In motif mining, the input graph is assumed to be unlabeled, and there is no minimum frequency threshold; rather the goal is to extract all motifs that occur in the graph along with their frequency distribution. Since this task is inherently exponential, the motifs are typically restricted to patterns of order (i.e., number of vertices) at most k. For example, for k = 3 we have two possible motifs: a chain where ends are not connected and a (complete) triangle. Following, we have the Motif implementation in Arabesque.</p>
+<pre class="hljs"><code><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MotifComputation</span> 
+                <span class="hljs-keyword">extends</span> <span class="hljs-title">VertexInducedComputation</span>&lt;<span class="hljs-title">VertexInducedEmbedding</span>&gt; </span>{
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String MAXSIZE = <span class="hljs-string">"arabesque.motif.maxsize"</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> MAXSIZE_DEFAULT = <span class="hljs-number">4</span>;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> LongWritable reusableLongWritableUnit = <span class="hljs-keyword">new</span> LongWritable(<span class="hljs-number">1</span>);
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">int</span> maxsize;
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">init</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">super</span>.init();
+        maxsize = Configuration.get().getInteger(MAXSIZE, MAXSIZE_DEFAULT);
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initAggregations</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">super</span>.initAggregations();
+
+        Configuration conf = Configuration.get();
+
+        conf.registerOutputAggregation(conf.getPatternClass(), 
+                                           LongWritable.class, 
+                                       <span class="hljs-keyword">new</span> LongSumReduction());
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">process</span><span class="hljs-params">(VertexInducedEmbedding embedding)</span> </span>{
+        <span class="hljs-keyword">if</span> (embedding.getNumWords() == maxsize) {
+            mapOutput(embedding.getPattern(), reusableLongWritableUnit);
+        }
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">shouldExpand</span><span class="hljs-params">(VertexInducedEmbedding newEmbedding)</span> </span>{
+        <span class="hljs-keyword">return</span> newEmbedding.getNumWords() &lt; maxsize;
+    }
+}</code></pre><p>The Computation class, <strong>MotifComputation</strong>, extends the <strong>VertexInducedComputation</strong>, which dictates that the exploration that Arabesque will perform is Vertex Induced in a similar way to finding cliques.</p>
+<p>For counting Motifs, we are interested in all possible variations of the embeddings and thus we don&#39;t need to implement a special filter function. The default filter function returns true and is sufficient for this problem. For the process implementation, we need to compute for every embedding the pattern it corresponds to (motif for this problem), and then group it over all embeddings to compute the frequencies of the motifs. In Arabesque, this aggregation is performed using <em>output aggregators</em>, which are similar to functionality to Giraph&#39;s Aggregators, and allow to compute aggregate statistics on a pattern level or any arbitrary value. In the process function, we simply generate a new unit key-pair containing the pattern that this embedding corresponds to as the key and 1 as the value. To be able to use an aggregator, we first need to initialize them. This is done in the <strong>initAggregations</strong> function. Here, we define the key and value types as well as how to reduce values belonging to the same key. For motifs, a simple sum reduction is sufficient.</p>
+<p>The shouldExpand behaves identically to the Finding Cliques computation, terminating the expansion when the desired depth has been reached.</p>
+<h2 id="frequent-subgraph-mining"><a class="header-link" href="#frequent-subgraph-mining"></a>Frequent Subgraph Mining</h2>
+<p>Frequent subgraph mining (FSM) focuses on finding those subgraphs associated with patterns whose frequency in the input graph is above a certain threshold. The occurrences are counted using some anti-monotonic function on the set of its embeddings. The FSM task is to mine all frequent subgraphs and respective patterns from a single input graph.</p>
+<p>In frequent subgraph mining, we use aggregation to calculate the frequency/support of each pattern we see. The frequency/support metric is based on the notion of domain, which is defined as the set of distinct mappings between a vertex in a pattern and the matching vertices in any automorphism of an embedding. The <strong>process</strong> function maps the domains of an embedding to its respective pattern. The <em>DomainSupportReducer</em> function merges 2 domains into one by merging all internal mappings for each vertex position. After we&#39;ve looked at all embeddings of a certain size, we&#39;re sure that the aggregation is finished so the <em>DomainSupportEndAggregationFunction</em> is called. This function will look at all aggregated (Pattern, DomainSupport) pairs and only keep those where the DomainSupport is above a predetermined threshold. This is a performance optimization to prevent having to broadcast a large amount of pairs that are of no value to us because we already know they are not frequent. The <strong>aggregationFilter</strong> function then consults the surviving key-value mapping to see if the pattern of the current embedding is contained in that mapping. If it is, that pattern is frequent so the current embedding should be processed. This is then done via the <strong>aggregationProcess</strong> function which outputs all embeddings that survive the aggregation-filter.</p>
+<pre class="hljs"><code><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FSMComputation</span> 
+        <span class="hljs-keyword">extends</span> <span class="hljs-title">EdgeInducedComputation</span>&lt;<span class="hljs-title">EdgeInducedEmbedding</span>&gt; </span>{
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String CONF_SUPPORT = <span class="hljs-string">"arabesque.fsm.support"</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> CONF_SUPPORT_DEFAULT = <span class="hljs-number">1000</span>;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String CONF_MAXSIZE = <span class="hljs-string">"arabesque.fsm.maxsize"</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> CONF_MAXSIZE_DEFAULT = -<span class="hljs-number">1</span>;
+
+    <span class="hljs-keyword">private</span> DomainSupport reusableDomainSupport;
+
+    <span class="hljs-keyword">private</span> AggregationStorage&lt;Pattern, DomainSupport&gt; previousStepAggregation;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">int</span> maxSize;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">int</span> support;
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">init</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">super</span>.init();
+
+        Configuration conf = Configuration.get();
+
+        support = conf.getInteger(CONF_SUPPORT, CONF_SUPPORT_DEFAULT);
+        maxSize = conf.getInteger(CONF_MAXSIZE, CONF_MAXSIZE_DEFAULT);
+
+        reusableDomainSupport = <span class="hljs-keyword">new</span> DomainSupport(support);
+
+        previousStepAggregation = readAggregation();
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initAggregations</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">super</span>.initAggregations();
+
+        Configuration conf = Configuration.get();
+
+        conf.registerInterStepAggregation(conf.getPatternClass(), 
+                                        DomainSupport.class,
+                                    <span class="hljs-keyword">new</span> DomainSupportReducer(), 
+                                    <span class="hljs-keyword">new</span> DomainSupportEndAggregationFunction());
+    }
+
+    <span class="hljs-comment">// Previous Step embeddings</span>
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">aggregationFilter</span><span class="hljs-params">(EdgeInducedEmbedding previousStepEmbedding)</span> </span>{
+        <span class="hljs-comment">// Using the DomainSupportEndAggregationFunction, we </span>
+        <span class="hljs-comment">// removed all mappings for non-frequent patterns. </span>
+        <span class="hljs-comment">// So we simply have to check if the mapping has</span>
+        <span class="hljs-comment">// the pattern for the corresponding key</span>
+        <span class="hljs-keyword">return</span> previousStepAggregation.containsKey(previousStepEmbedding.getPattern());
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">aggregationProcess</span><span class="hljs-params">(EdgeInducedEmbedding previousStepEmbedding)</span> </span>{
+        output(previousStepEmbedding);
+    }
+
+    <span class="hljs-comment">// Current step embeddings </span>
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">process</span><span class="hljs-params">(EdgeInducedEmbedding embedding)</span> </span>{
+        reusableDomainSupport.setFromEmbedding(embedding);
+        map(embedding.getPattern(), reusableDomainSupport);
+    }
+
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">shouldExpand</span><span class="hljs-params">(EdgeInducedEmbedding newEmbedding)</span> </span>{
+        <span class="hljs-keyword">return</span> maxSize &lt; <span class="hljs-number">0</span> || newEmbedding.getNumWords() &lt; maxSize;
+    }
+}</code></pre><p>The Computation class <strong>FSMComputation</strong> extends the EdgeInducedComputation class, which determines that the exploration is edge induced, a different exploration strategy to the previous two Applications. Similar to Motifs, no filter function is defined. The reasoning for such an omission, however, is different than in the case of Motifs. With FSM we cannot filter based on the information of a single subgraph alone and need to wait until the aggregated frequency values are ready to then filter the embeddings with the aggregationFilter function.</p>
+<p>To obtain the aggregated frequencies, we use a different type of aggregators: interstep aggregators. These behave in a similar manner to output aggregators with the difference that their values can be read during execution (in particular during the aggregationFilter and aggregationProcess stages) and that they do not persist until the end of the execution. That is, at each different step, the content of interstep aggregators are reset.</p>
+<p>The process function for FSM is responsible for creating the key-value pairs that, when aggregated, will result in (Pattern, DomainSupport) from which we can extract the set of frequent patterns.</p>
+<p>Similar to the other algorithms, the user can define the optional shouldExpand function to prune explorations of very big subgraphs.</p>
+<p>The FSM algorithm also contains an optional MasterComputation. This MasterComputation is called after the end of a superstep and allows you complete access to the values of the interstep aggregators before the start of the next step. In this example, we use this access to output the frequent patterns that we see at each step as well as to terminate execution earlier if we immediately detect that there are no frequent patterns (and, therefore, all aggregationFilter calls will return false at the next step).</p>
+<pre class="hljs"><code><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FSMMasterComputation</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">MasterComputation</span> </span>{
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">compute</span><span class="hljs-params">()</span> </span>{
+        AggregationStorage&lt;Pattern, DomainSupport&gt; aggregationStorage = readInterstepAggregation();
+
+        <span class="hljs-keyword">if</span> (aggregationStorage.getNumberMappings() &gt; <span class="hljs-number">0</span>) {
+            System.out.println(<span class="hljs-string">"Frequent patterns:"</span>);
+
+            <span class="hljs-keyword">int</span> i = <span class="hljs-number">1</span>;
+            <span class="hljs-keyword">for</span> (Pattern pattern : aggregationStorage.getKeys()) {
+                System.out.println(i + <span class="hljs-string">": "</span> + pattern);
+                ++i;
+            }
+        }
+        <span class="hljs-comment">// If frequent patterns is empty and superstep &gt; 0, halt</span>
+        <span class="hljs-function"><span class="hljs-keyword">else</span> <span class="hljs-title">if</span> <span class="hljs-params">(getStep()</span> &gt; 0) </span>{
+            haltComputation();
+        }
+    }
+}</code></pre><h1 id="how-to-run-an-arabesque-job"><a class="header-link" href="#how-to-run-an-arabesque-job"></a>How to Run an Arabesque Job</h1>
+<h2 id="requirements"><a class="header-link" href="#requirements"></a>Requirements</h2>
+<ul class="list">
+<li>Linux/Mac with 64-bit JVM</li>
+<li><a href="http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/">A functioning installation of Hadoop2 with MapReduce (local or in a cluster)</a></li>
+</ul>
+<h2 id="helper-scripts-and-configuration-files"><a class="header-link" href="#helper-scripts-and-configuration-files"></a>Helper scripts and configuration files</h2>
+<p>You can find an execution-helper script and several configuration files for the different algorithms under the <a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/scripts">scripts
+folder in the repository</a>:</p>
+<ul class="list">
+<li><code>run_arabesque.sh</code> - Launcher for arabesque executions. Takes as parameters one or more yaml files describing the configuration of the execution to be run. Configurations are applied in sequence with configurations in subsequent yaml files overriding entries of previous ones.</li>
+<li><code>cluster.yaml</code> - File with configurations related to the cluster and, so, common to all algorithms: number of workers, number of threads per worker, number of partitions, etc.</li>
+<li><code>&lt;algorithm&gt;.yaml</code> - Files with configurations related to particular algorithm executions using as input the <a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/data">provided citeseer graph</a>:<ul class="list">
+<li><code>fsm.yaml</code> - Run frequent subgraph mining over the citeseer graph.</li>
+<li><code>cliques.yaml</code> - Run clique finding over the citeseer graph.</li>
+<li><code>motifs.yaml</code> - Run motif counting over the citeseer graph.</li>
+<li><code>triangles.yaml</code> - Run motif counting over the citeseer graph.</li>
+</ul>
+</li>
+</ul>
+<h2 id="steps"><a class="header-link" href="#steps"></a>Steps</h2>
+<ol class="list">
+<li><p>Put the Arabesque jar, the <code>run_arabesque.sh</code> script and desired yaml files in a folder on a computer with access to an Hadoop cluster. </p>
+</li>
+<li><p>Upload the input graph to HDFS.</p>
+</li>
+<li><p>Configure the <code>cluster.yaml</code> file with the desired number of containers, threads per container and other cluster-wide configurations.</p>
+</li>
+<li><p>Configure the algorithm-specific yamls to reflect the HDFS location of your input graph as well as the parameters you want to use (max size for motifs and cliques or support for FSM).</p>
+</li>
+<li><p>Run your desired algorithm by executing:</p>
+<pre class="hljs"><code>./run_arabesque<span class="hljs-class">.sh</span> cluster<span class="hljs-class">.yaml</span> &lt;algorithm&gt;.yaml</code></pre></li>
+<li><p>Follow execution progress by checking the logs of the Hadoop containers.</p>
+</li>
+<li><p>Check any output (generated with calls to the <code>output</code> function) in the HDFS path indicated by the <code>output_path</code> configuration entry.</p>
+</li>
+</ol>
+<h2 id="extra-parameters"><a class="header-link" href="#extra-parameters"></a>Extra Parameters</h2>
+<ul class="list">
+<li><p><strong>communication_strategy</strong> - Dictates whether to use the ODAGs (default, corresponding to the <code>odag</code> value) or a simple compressed embedding list to store the embeddings (corresponding to the <code>embeddings</code> value). </p>
+<p>Simple lists can be beneficial when we consider shallow depths (&lt;=3) or very restricted explorations (small number of embeddings) where the potential savings for ODAGs aren&#39;t high and their construction would just incur in extra overhead. In most cases though, ODAGs are vastly superior. </p>
+</li>
+<li><p><strong>arabesque.aggregators.default_splits</strong> - In how many parts to split aggregated values (default=1).</p>
+<p>Heavy aggregations handling thousands of different keys might benefit from being split into several parts to speedup execution and network communication. However, splitting simple aggregations will add unnecessary overhead.</p>
+</li>
+</ul>
+<h2 id="requirements-for-input-graph"><a class="header-link" href="#requirements-for-input-graph"></a>Requirements for Input Graph</h2>
+<p>Arabesque currently takes as input graphs with the following format:</p>
+<pre class="hljs"><code><span class="hljs-comment"># &lt;num vertices&gt; &lt;num edges&gt;</span>
+&lt;vertex id&gt; &lt;vertex label&gt; [&lt;neighbour id1&gt; &lt;neighbour id2&gt; <span class="hljs-keyword">...</span> &lt;neighbour id n&gt;]
+&lt;vertex id&gt; &lt;vertex label&gt; [&lt;neighbour id1&gt; &lt;neighbour id2&gt; <span class="hljs-keyword">...</span> &lt;neighbour id n&gt;]
+<span class="hljs-keyword">...</span></code></pre><p>Vertex ids are expected to be sequential integers between 0 and (total number of vertices - 1).</p>
+<p>You can examine our sample citeseer graphs <a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/data">here</a>.</p>
+<h1 id="developing-your-own-algorithms"><a class="header-link" href="#developing-your-own-algorithms"></a>Developing your own algorithms</h1>
+<p>The easiest way to start developing your own graph mining algorithms on top of Arabesque is to clone our <a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque-Skeleton">Arabesque-Skeleton repository</a>. This gives you a preconfigured Maven project with detailed instructions on how to get your code running in a cluster.</p>
+<h1 id="javadocs"><a class="header-link" href="#javadocs"></a>Javadocs</h1>
+<p>Under construction</p>
+      </article>
+    </div>
+  </div>
+
+		<div class="footer-distributed">
+			<div class="footer-left">
+
+				<h3><span>Arabesque</span></h3>
+				<p class="footer-company-name">Arabesque &copy; 2015</p>
+			</div>
+
+			<div class="footer-center">
+
+				<div>
+					<i class="fa fa-map-marker"></i>
+					<p><span>Tornado Tower</span> Doha, Qatar</p>
+				</div>
+
+				<div>
+					<i class="fa fa-phone"></i>
+					<p>+974 5528 3942</p>
+				</div>
+
+				<div>
+					<i class="fa fa-envelope"></i>
+					<p><a href="mailto:gsiganos@qf.org.qa">Georgos</a></p>
+				</div>
+
+			</div>
+
+			<div class="footer-right">
+
+				<p class="footer-company-about">
+					<span>About Arabesque</span>
+					Arabesque is an open source project of <a href="http://qcri.org.qa">Qatar Computing Research Institute, HBKU</a>.
+				</p>
+
+				<div class="footer-icons">
+
+					<!-- <a href="#"><i class="fa fa-facebook"></i></a> -->
+					<a href="https://twitter.com/arabesque_io"><i class="fa fa-twitter"></i></a>
+					<!-- <a href="#"><i class="fa fa-linkedin"></i></a> -->
+					<a href="https://github.com/Qatar-Computing-Research-Institute/Arabesque"><i class="fa fa-github"></i></a>
+
+				</div>
+
+			</div>
+		</div>
+
+	</body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-54154002-4', 'auto');
+  ga('send', 'pageview');
+</script>
+</html>
