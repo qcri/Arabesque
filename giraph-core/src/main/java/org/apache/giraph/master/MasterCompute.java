@@ -236,7 +236,7 @@ public abstract class MasterCompute
   }
 
   @Override
-  public final <A extends Writable> void setAggregatedValue(
+  public <A extends Writable> void setAggregatedValue(
       String name, A value) {
     serviceMaster.getAggregatorTranslationHandler()
         .setAggregatedValue(name, value);
