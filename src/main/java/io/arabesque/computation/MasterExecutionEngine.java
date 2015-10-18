@@ -16,10 +16,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class MasterExecutionEngine extends MasterCompute {
     public static final String AGG_EMBEDDINGS_PROCESSED = "embeddings_processed";
@@ -126,6 +123,63 @@ public class MasterExecutionEngine extends MasterCompute {
             }
 
             return (A) aggregationStorage;
+        }
+    }
+
+    @Override
+    public <A extends Writable> void setAggregatedValue(String name, A value) {
+        AggregationStorageMetadata metadata = Configuration.get().getAggregationMetadata(name);
+
+        if (metadata == null) {
+            super.setAggregatedValue(name, value);
+        } else {
+            if (!(value instanceof AggregationStorage)) {
+                throw new RuntimeException("Value of an Arabesque aggregation should be a subclass of AggregationStorage");
+            }
+
+            AggregationStorage aggregationStorage = (AggregationStorage) value;
+
+            splitAggregationStoragesAndSend(name, metadata, aggregationStorage);
+        }
+    }
+
+    private void splitAggregationStoragesAndSend(String name, AggregationStorageMetadata metadata, AggregationStorage aggregationStorage) {
+        Configuration conf = Configuration.get();
+
+        int numSplits = metadata.getNumSplits();
+
+        if (numSplits == 1) {
+            AggregationStorageWrapper aggWrapper = new AggregationStorageWrapper(aggregationStorage);
+            super.setAggregatedValue(conf.getAggregationSplitName(name, 0), aggWrapper);
+        } else {
+            Collection<Writable> keysToTransfer = new ArrayList<>(aggregationStorage.getNumberMappings());
+
+            for (int i = 0; i < numSplits; ++i) {
+                AggregationStorage aggStorageSplit = aggregationStorageFactory.createAggregationStorage(name);
+                AggregationStorageWrapper aggStorageSplitWrapper = new AggregationStorageWrapper(aggStorageSplit);
+
+                keysToTransfer.clear();
+
+                for (Object key : aggregationStorage.getKeys()) {
+                    int owner = key.hashCode() % numSplits;
+
+                    if (owner < 0) {
+                        owner += numSplits;
+                    }
+
+                    if (owner != i) {
+                        continue;
+                    }
+
+                    keysToTransfer.add((Writable) key);
+                }
+
+                for (Writable key : keysToTransfer) {
+                    aggStorageSplit.transferKeyFrom(key, aggregationStorage);
+                }
+
+                super.setAggregatedValue(conf.getAggregationSplitName(name, i), aggStorageSplitWrapper);
+            }
         }
     }
 

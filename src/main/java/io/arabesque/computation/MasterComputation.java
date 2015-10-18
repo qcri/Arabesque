@@ -37,7 +37,7 @@ public class MasterComputation {
     }
 
     public <K extends Writable, V extends Writable> void setAggregation(String name, AggregationStorage<K, V> aggregation) {
-        executionEngine.setAggregatedValue(name, new AggregationStorageWrapper<>(aggregation));
+        executionEngine.setAggregatedValue(name, aggregation);
     }
 
     public <K extends Writable, V extends Writable> void setInterstepAggregation(AggregationStorage<K, V> aggregation) {
