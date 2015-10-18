@@ -178,10 +178,6 @@ public class ExecutionEngine<O extends Embedding>
             if (numPendingProcessedEmbeddings > 0) {
                 workerContext.reportProcessedInfo(currentDepth, numPendingProcessedEmbeddings);
             }
-
-            if (numEmbeddingsProcessed == 0) {
-                vertex.voteToHalt();
-            }
         }
     }
 

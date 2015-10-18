@@ -149,6 +149,10 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
 
             nextEmbeddingStash.clear();
         } else if (getCurrentPhase() == 1) {
+            if (aggregatedEmbeddingStash == null) {
+                return;
+            }
+
             Collection<ODAG> ezips = aggregatedEmbeddingStash.getEzips();
             Iterator<ODAG> ezipsIterator = ezips.iterator();
 
@@ -198,6 +202,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
     @Override
     public void finish() {
         getWorkerContext().resetLocalCoordination();
+
         flush();
 
         LongWritable longWritable = new LongWritable();
