@@ -752,8 +752,14 @@ public class JBlissPattern extends Pattern {
                 edge.setSrcId(convertedSrcPos);
                 edge.setDestId(convertedDstPos);
             } else {
+                // If we changed the position of source and destination due to
+                // relabel, we also have to change the labels to match this
+                // change.
+                int tmp = edge.getSrcLabel();
                 edge.setSrcId(convertedDstPos);
+                edge.setSrcLabel(edge.getDestLabel());
                 edge.setDestId(convertedSrcPos);
+                edge.setDestLabel(tmp);
             }
         }
 
