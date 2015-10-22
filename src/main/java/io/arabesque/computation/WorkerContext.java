@@ -41,6 +41,7 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
     private int maxProcessedDepthReached;
     private Timer infoTimer;
     private OutputStreamWriter embeddingOutputStream;
+    private OutputStreamWriter aggregationOutputStream;
 
     private CyclicBarrier barrier;
     private LocalCoordinationObject localCoordinationObject;
@@ -133,6 +134,17 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
                 System.out.println("Output aggregation: ");
                 AggregationStorage aggregationStorage = getAggregatedValue(Configuration.AGG_OUTPUT);
                 System.out.println(aggregationStorage.toOutputString());
+                try {
+                    FileSystem fs = FileSystem.get(getConf());
+                    aggregationOutputStream = new OutputStreamWriter(
+                            fs.create(
+                                    new Path(OUTPUT_PATH,
+                                            "aggregation-" + aggregationStorage.getName())));
+                    aggregationOutputStream.write(aggregationStorage.toOutputString() + '\n');
+                    aggregationOutputStream.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
