@@ -14,11 +14,11 @@ Benefits of Arabesque:
  
 ## Documentation
 
-Check our SOSP 2015 [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf) that describe the system.
+Check our SOSP 2015 [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf) that describes the system.
 
-Follow our [user-guide](user_guide.html) (under construction), on how to program graph mining applications on Arabesque.
+Follow our [user-guide](user_guide.html) (under construction) to learn how to program graph mining applications on Arabesque.
 
-We are also working on the system's Javadocs. We'll release them as soon as possible.
+We are also working on the system's Javadocs. We'll release them soon.
 
 ## How to Use
 Arabesque can be used in one of 2 ways:

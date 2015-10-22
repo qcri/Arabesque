@@ -6,22 +6,36 @@ Arabesque simplifies the programming of Graph Mining Problems as presented in ou
 
 We show how Arabesque can be used to solve three fundamental problems in Graph Mining. Finding cliques, counting motifs and frequent subgraph mining. We chose these problems because they represent different classes of graph mining problems. Finding cliques is an example of dense subgraph mining, and allows one to prune the embeddings using local information. Counting motifs requires exhaustive graph exploration up to some maximum size.  Frequent subgraph mining is an example of explore-and-prune problems, where only embeddings corresponding to a frequent pattern need to be further explored.  We discuss these problems below in more detail. 
 
-## High-Level Programming API
-For Reference we have the high-level API in the simple case where we require no aggregation (first two algorithms).
+## High-Level Programming API: Think Like an Embedding
+Our [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf) is the best introduction to the filter-process model, or "Think Like an Embedding" (TLE). We now summarize the TLE model, which is depicted below in its most basic form.
+
 ![TLE paradigm:](assets/img/TLE.png)
 
+The systems exhaustively explores all subgraphs in the graph. We use the term **embedding** for a subgraph. Exploration proceeds in exploration steps. At each step the existing embeddings are expanded by one new neighboring vertex or incident edge, depending if the application wants vertex-based or edge-based exploration. If we add vertices, then every time a new vertex is added to an embedding, all the edges between the new vertex and the ones currently in the embedding are also added to the embedding, i.e., subgraphs are vertex-induced. If we add edges, then every time a new vertex is added to an embedding, the vertex at the other end of the embedding is also added.
 
-For the third case, we have the aggregation based API.
+Each newly generated embedding, called candidate embedding, is streamed through a user-defined **filter** function, which returns a boolean saying whether the embedding is interesting or not. If the embedding is interesting, it is streamed over a user-defined **process** function, which typically derives some output from the embedding.  After the process function, the new embedding is added to the set of embeddings to be expanded on the next exploration step. Before that, the embedding is streamed through an optional user-defined termination filter function, which is true by default and operates similar a filter function.
+
+Applications that need to aggregate values across multiple embeddings can also define optional aggregation functions. Their operations is depicted below.
+
 ![Agg paradigm:](assets/img/Agg.png)
 
+The process function can call a **map** function, which sends a value *v* to the aggregator associated with the key *k*. The aggregator runs a user-defined **reduce** function. The aggregated values become available for reads by user-defined functions at the end of the exploration step. Before the filter function, Arabesque executes two user-defined functions that can take advantage of aggregated values: **aggregate-filter** and **aggregate-process**, which are analogous to the filter and process function. These two additional functions allow pre-filtering and pre-processing based on values aggregated in the previous steps. 
 
-An aggregator in Arabesque has several components:
-- Key Class
-- Value Class
-- Reduction function (f(V, V) -> V)
-- (Optional) Function to execute at the end of the aggregation to remove content you’re not interested in (only keep frequent patterns in the aggregation for instance) or do some other kind of final computation.
+## Programming With Arabesque
+Let us see how to create a new computation in Arabesque. Arabesque operates in two modes: vertex-induced and edge-induced expansion. For algorithms using vertex-induced expansion, it is necessary to create a new class that extends **VertexInducedComputation<VertexInducedEmbedding>**; for algorithms using edge-induced expansion, the new class must extend **EdgeInducedComputation<EdgeInducedEmbedding>**. The local state of the class will be replicated at each Arabesque worker running the job.
+	
 
-## Finding Cliques
+Implementing the computation entails overriding methods of the parent class. The ** public void init()** initializes the internal state of the computation and must start with a call to super.init(). The **public boolean filter(T embedding)** method executes the filter function and the **public void process(VertexInducedEmbedding embedding)** method executes the process function, where T can be either the class VertexInducedEmbedding or EdgeInducedEmbedding, depending on the type of exploration. Finally, the method **public boolean shouldExpand(VertexInducedEmbedding newEmbedding)** implements the termination filter function.
+
+
+Algorithms using aggregation can also override the aggregation filter and aggregation process function **public boolean aggregationFilter(T previousStepEmbedding)** and **public void aggregationProcess(T previousStepEmbedding)**.
+
+
+## Application Examples
+
+We now show examples of pseudocode for three applications: finding cliques, counting motifs, and frequent subgraph mining.
+
+### Finding Cliques
 
 Finding [cliques][cliques] has many variations. Here, we present the variation of finding cliques of a maximum size. Following, we have the implementation in Arabesque. 
 ```java
@@ -73,7 +87,7 @@ To produce the output, we simply check whether we have reached the size of cliqu
 
 To avoid going to deeper depths than the one we want to discover, the user can override the optional **shouldExpand** function that checks whether we need to further expand the embedding and thus continue the exploration. By default, this function returns true, and by overriding it we can stop the processing faster. 
 
-## Counting Motif
+### Counting Motifs
 A [motif][motifs] is defined as a connected pattern of vertex induced embeddings that exists in an input graph. Further, a set of motifs is required to be non-isomorphic, i.e., there should obviously be no duplicate patterns. In motif mining, the input graph is assumed to be unlabeled, and there is no minimum frequency threshold; rather the goal is to extract all motifs that occur in the graph along with their frequency distribution. Since this task is inherently exponential, the motifs are typically restricted to patterns of order (i.e., number of vertices) at most k. For example, for k = 3 we have two possible motifs: a chain where ends are not connected and a (complete) triangle. Following, we have the Motif implementation in Arabesque.
 
 ```java
@@ -123,7 +137,7 @@ For counting Motifs, we are interested in all possible variations of the embeddi
 
 The shouldExpand behaves identically to the Finding Cliques computation, terminating the expansion when the desired depth has been reached.
 
-## Frequent Subgraph Mining
+### Frequent Subgraph Mining
 Frequent subgraph mining (FSM) focuses on finding those subgraphs associated with patterns whose frequency in the input graph is above a certain threshold. The occurrences are counted using some anti-monotonic function on the set of its embeddings. The FSM task is to mine all frequent subgraphs and respective patterns from a single input graph.
 
 In frequent subgraph mining, we use aggregation to calculate the frequency/support of each pattern we see. The frequency/support metric is based on the notion of domain, which is defined as the set of distinct mappings between a vertex in a pattern and the matching vertices in any automorphism of an embedding. The **process** function maps the domains of an embedding to its respective pattern. The *DomainSupportReducer* function merges 2 domains into one by merging all internal mappings for each vertex position. After we've looked at all embeddings of a certain size, we're sure that the aggregation is finished so the *DomainSupportEndAggregationFunction* is called. This function will look at all aggregated (Pattern, DomainSupport) pairs and only keep those where the DomainSupport is above a predetermined threshold. This is a performance optimization to prevent having to broadcast a large amount of pairs that are of no value to us because we already know they are not frequent. The **aggregationFilter** function then consults the surviving key-value mapping to see if the pattern of the current embedding is contained in that mapping. If it is, that pattern is frequent so the current embedding should be processed. This is then done via the **aggregationProcess** function which outputs all embeddings that survive the aggregation-filter.
