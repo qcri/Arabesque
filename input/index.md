@@ -16,7 +16,7 @@ Benefits of Arabesque:
 
 Check our SOSP 2015 [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf) that describes the system.
 
-Follow our [user-guide](user_guide.html) (under construction) to learn how to program graph mining applications on Arabesque.
+Follow our [programming guide](user_guide.html) to learn how to program graph mining applications on Arabesque. You can then try to [run your code](how_run.html)!
 
 We are also working on the system's Javadocs. We'll release them soon.
 
