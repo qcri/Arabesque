@@ -35,7 +35,6 @@ Vertex ids are expected to be sequential integers between 0 and (total number of
 
 ## Test/Execute the included algorithms
 
-We have prepared a precompiled version of Arabesque to easily start running the algorithms we have implemented. 
 You can find an execution-helper script and several configuration files for the different algorithms under the [scripts
 folder in the repository](https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/scripts):
 
@@ -49,27 +48,33 @@ folder in the repository](https://github.com/Qatar-Computing-Research-Institute/
 
 **Steps:**
 
-1. Download the [Arabesque jar](http://maven.alexjf.net/io/arabesque/arabesque/1.0-BETA/arabesque-1.0-BETA-jar-with-dependencies.jar) and put it with the `run_arabesque.sh` script and desired yaml files in a folder on a computer with access to an Hadoop cluster. 
+1. Compile Arabesque using 
+  ```
+  mvn package
+  ```
+  You will find the jar file under `target/`
+  
+2. Copy the newly generated jar file, the `run_arabesque.sh` script and the desired yaml files onto a folder on a computer with access to an Hadoop cluster. 
 
-2. Upload the input graph to HDFS. Sample graphs are under the `data` directory. Make sure you have initialized HDFS first.
+3. Upload the input graph to HDFS. Sample graphs are under the `data` directory. Make sure you have initialized HDFS first.
 
   ```
   hdfs dfs -put <input graph file> <destination graph file in HDFS>
   ```
 
-3. Configure the `cluster.yaml` file with the desired number of containers, threads per container and other cluster-wide configurations.
+4. Configure the `cluster.yaml` file with the desired number of containers, threads per container and other cluster-wide configurations.
 
-4. Configure the algorithm-specific yamls to reflect the HDFS location of your input graph as well as the parameters you want to use (max size for motifs and cliques or support for FSM).
+5. Configure the algorithm-specific yamls to reflect the HDFS location of your input graph as well as the parameters you want to use (max size for motifs and cliques or support for FSM).
 
-5. Run your desired algorithm by executing:
+6. Run your desired algorithm by executing:
 
   ```
   ./run_arabesque.sh cluster.yaml <algorithm>.yaml
   ```
 
-6. Follow execution progress by checking the logs of the Hadoop containers.
+7. Follow execution progress by checking the logs of the Hadoop containers.
 
-7. Check any output (generated with calls to the `output` function) in the HDFS path indicated by the `output_path` configuration entry.
+8. Check any output (generated with calls to the `output` function) in the HDFS path indicated by the `output_path` configuration entry.
 
 
 ## Implementing your own algorithms
