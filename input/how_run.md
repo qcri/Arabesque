@@ -24,7 +24,11 @@ folder in the repository](https://github.com/Qatar-Computing-Research-Institute/
 ## Steps
 1. Put the Arabesque jar, the `run_arabesque.sh` script and desired yaml files in a folder on a computer with access to an Hadoop cluster. 
 
-2. Upload the input graph to HDFS.
+2. Upload the input graph to HDFS.  Sample graphs are under the `data` directory. Make sure you have initialized HDFS first.
+
+  ```
+  hdfs dfs -put <input graph file> <destination graph file in HDFS>
+  ```
 
 3. Configure the `cluster.yaml` file with the desired number of containers, threads per container and other cluster-wide configurations.
 
@@ -65,9 +69,3 @@ You can examine our sample citeseer graphs [here](https://github.com/Qatar-Compu
 
 # Developing your own algorithms
 The easiest way to start developing your own graph mining algorithms on top of Arabesque is to clone our [Arabesque-Skeleton repository](https://github.com/Qatar-Computing-Research-Institute/Arabesque-Skeleton). This gives you a preconfigured Maven project with detailed instructions on how to get your code running in a cluster.
-
-# Javadocs
-Under construction
-
-[cliques]:https://en.wikipedia.org/wiki/Clique_problem
-[motifs]:https://en.wikipedia.org/wiki/Network_motif
