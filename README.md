@@ -50,7 +50,11 @@ folder in the repository](https://github.com/Qatar-Computing-Research-Institute/
 
 1. Put the Arabesque jar, the `run_arabesque.sh` script and desired yaml files in a folder on a computer with access to an Hadoop cluster. 
 
-2. Upload the input graph to HDFS.
+2. Upload the input graph to HDFS. Sample graphs are under the `data` directory. Make sure you have initialized HDFS first.
+
+  ```
+  hdfs dfs -put <input graph file> <destination graph file in HDFS>
+  ```
 
 3. Configure the `cluster.yaml` file with the desired number of containers, threads per container and other cluster-wide configurations.
 
