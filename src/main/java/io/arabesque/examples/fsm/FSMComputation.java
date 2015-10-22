@@ -53,12 +53,6 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
     public void process(EdgeInducedEmbedding embedding) {
         reusableDomainSupport.setFromEmbedding(embedding);
         mapInterstep(embedding.getPattern(), reusableDomainSupport);
-
-        boolean pattern2lvlAggregationEnabled = Configuration.get().is2LevelAggregationEnabled();
-
-        if (!pattern2lvlAggregationEnabled) {
-            embedding.getPattern().generateMinPatternCode();
-        }
     }
 
     @Override
