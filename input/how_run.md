@@ -66,6 +66,3 @@ Arabesque currently takes as input graphs with the following format:
 Vertex ids are expected to be sequential integers between 0 and (total number of vertices - 1).
 
 You can examine our sample citeseer graphs [here](https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/data).
-
-# Developing your own algorithms
-The easiest way to start developing your own graph mining algorithms on top of Arabesque is to clone our [Arabesque-Skeleton repository](https://github.com/Qatar-Computing-Research-Institute/Arabesque-Skeleton). This gives you a preconfigured Maven project with detailed instructions on how to get your code running in a cluster.
