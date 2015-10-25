@@ -26,7 +26,7 @@ public class MotifComputation extends VertexInducedComputation<VertexInducedEmbe
 
         Configuration conf = Configuration.get();
 
-        conf.registerOutputAggregation(conf.getPatternClass(), LongWritable.class, new LongSumReduction());
+        conf.registerAggregation("motifs", conf.getPatternClass(), LongWritable.class, true, new LongSumReduction());
     }
 
     @Override
@@ -37,6 +37,6 @@ public class MotifComputation extends VertexInducedComputation<VertexInducedEmbe
     @Override
     public void process(VertexInducedEmbedding embedding) {
         output(embedding);
-        mapOutput(embedding.getPattern(), reusableLongWritableUnit);
+        map("motifs", embedding.getPattern(), reusableLongWritableUnit);
     }
 }

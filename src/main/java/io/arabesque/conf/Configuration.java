@@ -268,6 +268,11 @@ public class Configuration<O extends Embedding> {
     }
 
     public <K extends Writable, V extends Writable>
+    void registerAggregation(String name, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction) {
+    	registerAggregation(name, keyClass, valueClass, persistent, reductionFunction, null, defaultAggregatorSplits);
+    }
+
+    public <K extends Writable, V extends Writable>
     void registerOutputAggregation(Class<K> keyClass, Class<V> valueClass, ReductionFunction<V> reductionFunction) {
         registerOutputAggregation(keyClass, valueClass, reductionFunction, null);
     }

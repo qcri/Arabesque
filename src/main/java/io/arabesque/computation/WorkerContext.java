@@ -130,22 +130,25 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
         }
 
         if (getMyWorkerIndex() == 0) {
-            if (Configuration.get().getAggregationMetadata(Configuration.AGG_OUTPUT) != null) {
-                System.out.println("Output aggregation: ");
-                AggregationStorage aggregationStorage = getAggregatedValue(Configuration.AGG_OUTPUT);
-                System.out.println(aggregationStorage.toOutputString());
-                try {
-                    FileSystem fs = FileSystem.get(getConf());
-                    aggregationOutputStream = new OutputStreamWriter(
-                            fs.create(
-                                    new Path(OUTPUT_PATH,
-                                            "aggregation-" + aggregationStorage.getName())));
-                    aggregationOutputStream.write(aggregationStorage.toOutputString() + '\n');
-                    aggregationOutputStream.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+        	Map<String, AggregationStorageMetadata> aggregationMap = Configuration.get().getAggregationsMetadata();
+        	for (Map.Entry<String, AggregationStorageMetadata> aggregation : aggregationMap.entrySet()){
+        		if (aggregation.getValue().isPersistent()) {
+	                System.out.println("Output aggregation: ");
+	                AggregationStorage aggregationStorage = getAggregatedValue(aggregation.getKey());
+	                System.out.println(aggregationStorage.toOutputString());
+	                try {
+	                    FileSystem fs = FileSystem.get(getConf());
+	                    aggregationOutputStream = new OutputStreamWriter(
+	                            fs.create(
+	                                    new Path(OUTPUT_PATH,
+	                                            "aggregation-" + aggregationStorage.getName())));
+	                    aggregationOutputStream.write(aggregationStorage.toOutputString() + '\n');
+	                    aggregationOutputStream.close();
+	                } catch (IOException e) {
+	                    throw new RuntimeException(e);
+	                }
+	            }
+        	}
         }
     }
 
