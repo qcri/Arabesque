@@ -215,7 +215,7 @@ public class FSMComputation
 
         reusableDomainSupport = new DomainSupport(support);
         
-        previousStepAggregation = readAggregation();
+        previousStepAggregation = readAggregation("support");
     }
 
     @Override
@@ -276,7 +276,8 @@ The FSM algorithm also contains an optional MasterComputation. This MasterComput
 public class FSMMasterComputation extends MasterComputation {
     @Override
     public void compute() {
-        AggregationStorage<Pattern, DomainSupport> aggregationStorage = readInterstepAggregation();
+        AggregationStorage<Pattern, DomainSupport> aggregationStorage = 
+			readAggregation("support");
 
         if (aggregationStorage.getNumberMappings() > 0) {
             System.out.println("Frequent patterns:");
