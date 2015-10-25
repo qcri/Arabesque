@@ -41,15 +41,8 @@ public interface Computation<E extends Embedding> {
     // {{{ Aggregation-related stuff
     <K extends Writable, V extends Writable> AggregationStorage<K, V> readAggregation(String name);
 
-    <K extends Writable, V extends Writable> AggregationStorage<K, V> readInterstepAggregation();
-
-    <K extends Writable, V extends Writable> AggregationStorage<K, V> readOutputAggregation();
-
     <K extends Writable, V extends Writable> void map(String name, K key, V value);
 
-    <K extends Writable, V extends Writable> void mapInterstep(K key, V value);
-
-    <K extends Writable, V extends Writable> void mapOutput(K key, V value);
     // }}}
 
     // {{{ Misc

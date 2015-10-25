@@ -31,7 +31,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
         reusableDomainSupport = new DomainSupport(support);
 
-        previousStepAggregation = readInterstepAggregation();
+        previousStepAggregation = readAggregation("support");
     }
 
     @Override
@@ -40,7 +40,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
         Configuration conf = Configuration.get();
 
-        conf.registerInterStepAggregation(conf.getPatternClass(), DomainSupport.class,
+        conf.registerAggregation("support", conf.getPatternClass(), DomainSupport.class, true,
                 new DomainSupportReducer(), new DomainSupportEndAggregationFunction());
     }
 
@@ -52,7 +52,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
     @Override
     public void process(EdgeInducedEmbedding embedding) {
         reusableDomainSupport.setFromEmbedding(embedding);
-        mapInterstep(embedding.getPattern(), reusableDomainSupport);
+        map("support", embedding.getPattern(), reusableDomainSupport);
 
         boolean pattern2lvlAggregationEnabled = Configuration.get().is2LevelAggregationEnabled();
 

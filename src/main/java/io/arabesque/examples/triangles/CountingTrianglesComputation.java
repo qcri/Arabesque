@@ -16,9 +16,11 @@ public class CountingTrianglesComputation extends VertexInducedComputation<Verte
     public void initAggregations() {
         super.initAggregations();
 
-        Configuration.get().registerOutputAggregation(
+        Configuration.get().registerAggregation(
+        		"output",
                 IntWritable.class,
                 LongWritable.class,
+                true,
                 new LongSumReduction()
         );
     }
@@ -41,7 +43,7 @@ public class CountingTrianglesComputation extends VertexInducedComputation<Verte
 
             for (int i = 0; i < 3; ++i) {
                 reusableIdWritable.set(vertices[i]);
-                mapOutput(reusableIdWritable, unitLongWritable);
+                map("output", reusableIdWritable, unitLongWritable);
             }
         }
     }
