@@ -153,28 +153,8 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
     }
 
     @Override
-    public <K extends Writable, V extends Writable> AggregationStorage<K, V> readInterstepAggregation() {
-        return underlyingExecutionEngine.getAggregatedValue(Configuration.AGG_INTERSTEP);
-    }
-
-    @Override
-    public <K extends Writable, V extends Writable> AggregationStorage<K, V> readOutputAggregation() {
-        return underlyingExecutionEngine.getAggregatedValue(Configuration.AGG_OUTPUT);
-    }
-
-    @Override
     public <K extends Writable, V extends Writable> void map(String name, K key, V value) {
         underlyingExecutionEngine.map(name, key, value);
-    }
-
-    @Override
-    public <K extends Writable, V extends Writable> void mapInterstep(K key, V value) {
-        underlyingExecutionEngine.map(Configuration.AGG_INTERSTEP, key, value);
-    }
-
-    @Override
-    public <K extends Writable, V extends Writable> void mapOutput(K key, V value) {
-        underlyingExecutionEngine.map(Configuration.AGG_OUTPUT, key, value);
     }
 
     @Override

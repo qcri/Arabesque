@@ -207,18 +207,10 @@ public class ExecutionEngine<O extends Embedding>
         }
     }
 
-    public <K extends Writable, V extends Writable> AggregationStorage<K, V> readInterstepAggregation() {
-        return getAggregatedValue(Configuration.AGG_INTERSTEP);
-    }
-
     public <K extends Writable, V extends Writable> void map(String name, K key, V value) {
         AggregationStorage<K, V> aggregationStorage = getAggregationStorage(name);
 
         aggregationStorage.aggregateWithReusables(key, value);
-    }
-
-    public <K extends Writable, V extends Writable> void map(K key, V value) {
-        map(Configuration.AGG_INTERSTEP, key, value);
     }
 
     private <K extends Writable, V extends Writable> AggregationStorage<K, V> getAggregationStorage(String name) {
@@ -230,9 +222,5 @@ public class ExecutionEngine<O extends Embedding>
         }
 
         return aggregationStorage;
-    }
-
-    public <K extends Writable, V extends Writable> void mapOutput(K key, V value) {
-        map(Configuration.AGG_OUTPUT, key, value);
     }
 }

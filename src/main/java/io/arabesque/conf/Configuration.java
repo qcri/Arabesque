@@ -74,9 +74,6 @@ public class Configuration<O extends Embedding> {
     private static final String CONF_FORCE_GC = "arabesque.forcegc";
     private static final boolean CONF_FORCE_GC_DEFAULT = false;
 
-    public static final String AGG_OUTPUT = "output";
-    public static final String AGG_INTERSTEP = "interstep";
-
     public static final String CONF_OUTPUT_PATH = "arabesque.output.path";
     public static final String CONF_OUTPUT_PATH_DEFAULT = "Output";
 
@@ -268,33 +265,13 @@ public class Configuration<O extends Embedding> {
     }
 
     public <K extends Writable, V extends Writable>
-    void registerOutputAggregation(Class<K> keyClass, Class<V> valueClass, ReductionFunction<V> reductionFunction) {
-        registerOutputAggregation(keyClass, valueClass, reductionFunction, null);
+    void registerAggregation(String name, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction) {
+    	registerAggregation(name, keyClass, valueClass, persistent, reductionFunction, null, defaultAggregatorSplits);
     }
 
     public <K extends Writable, V extends Writable>
-    void registerOutputAggregation(Class<K> keyClass, Class<V> valueClass, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction) {
-        registerAggregation(AGG_OUTPUT, keyClass, valueClass, true, reductionFunction, endAggregationFunction, defaultAggregatorSplits);
-    }
-
-    public <K extends Writable, V extends Writable>
-    void registerOutputAggregation(Class<K> keyClass, Class<V> valueClass, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction, int numSplits) {
-        registerAggregation(AGG_OUTPUT, keyClass, valueClass, true, reductionFunction, endAggregationFunction, numSplits);
-    }
-
-    public <K extends Writable, V extends Writable>
-    void registerInterStepAggregation(Class<K> keyClass, Class<V> valueClass, ReductionFunction<V> reductionFunction) {
-        registerInterStepAggregation(keyClass, valueClass, reductionFunction, null);
-    }
-
-    public <K extends Writable, V extends Writable>
-    void registerInterStepAggregation(Class<K> keyClass, Class<V> valueClass, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction) {
-        registerAggregation(AGG_INTERSTEP, keyClass, valueClass, false, reductionFunction, endAggregationFunction, defaultAggregatorSplits);
-    }
-
-    public <K extends Writable, V extends Writable>
-    void registerInterStepAggregation(Class<K> keyClass, Class<V> valueClass, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction, int numSplits) {
-        registerAggregation(AGG_INTERSTEP, keyClass, valueClass, false, reductionFunction, endAggregationFunction, numSplits);
+    void registerAggregation(String name, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction) {
+    	registerAggregation(name, keyClass, valueClass, persistent, reductionFunction, endAggregationFunction, defaultAggregatorSplits);
     }
 
     public <K extends Writable, V extends Writable> AggregationStorageMetadata<K, V> getAggregationMetadata(String name) {
