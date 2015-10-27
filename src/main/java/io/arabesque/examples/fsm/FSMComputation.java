@@ -7,6 +7,8 @@ import io.arabesque.embedding.EdgeInducedEmbedding;
 import io.arabesque.pattern.Pattern;
 
 public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding> {
+    public static final String AGG_SUPPORT = "support";
+
     public static final String CONF_SUPPORT = "arabesque.fsm.support";
     public static final int CONF_SUPPORT_DEFAULT = 4;
 
@@ -31,7 +33,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
         reusableDomainSupport = new DomainSupport(support);
 
-        previousStepAggregation = readAggregation("support");
+        previousStepAggregation = readAggregation(AGG_SUPPORT);
     }
 
     @Override
@@ -40,7 +42,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
         Configuration conf = Configuration.get();
 
-        conf.registerAggregation("support", conf.getPatternClass(), DomainSupport.class, true,
+        conf.registerAggregation(AGG_SUPPORT, conf.getPatternClass(), DomainSupport.class, true,
                 new DomainSupportReducer(), new DomainSupportEndAggregationFunction());
     }
 
@@ -52,7 +54,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
     @Override
     public void process(EdgeInducedEmbedding embedding) {
         reusableDomainSupport.setFromEmbedding(embedding);
-        map("support", embedding.getPattern(), reusableDomainSupport);
+        map(AGG_SUPPORT, embedding.getPattern(), reusableDomainSupport);
     }
 
     @Override

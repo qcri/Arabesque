@@ -8,7 +8,8 @@ import io.arabesque.pattern.Pattern;
 public class FSMMasterComputation extends MasterComputation {
     @Override
     public void compute() {
-        AggregationStorage<Pattern, DomainSupport> aggregationStorage = readAggregation("support");
+        AggregationStorage<Pattern, DomainSupport> aggregationStorage =
+                readAggregation(FSMComputation.AGG_SUPPORT);
 
         if (aggregationStorage.getNumberMappings() > 0) {
             System.out.println("Frequent patterns:");
