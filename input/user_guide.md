@@ -11,18 +11,18 @@ Our [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-te
 
 ![TLE paradigm:](assets/img/TLE.png)
 
-The systems exhaustively explores all subgraphs in the graph. We use the term **embedding** for a subgraph. Exploration proceeds in exploration steps. At each step the existing embeddings are expanded by one new neighboring vertex or incident edge, depending if the application wants vertex-based or edge-based exploration. If we add vertices, then every time a new vertex is added to an embedding, all the edges between the new vertex and the ones currently in the embedding are also added to the embedding, i.e., subgraphs are vertex-induced. If we add edges, then every time a new vertex is added to an embedding, the vertex at the other end of the embedding is also added.
+The systems exhaustively explores all subgraphs in the graph. We use the term **embedding** for a subgraph. Exploration proceeds in exploration steps. At each step the existing embeddings are expanded by one new neighboring vertex or incident edge, depending if the application wants vertex-based or edge-based exploration. If we add vertices, then every time a new vertex is added to an embedding, all the edges between the new vertex and the ones currently in the embedding are also added to the embedding, i.e., subgraphs are vertex-induced. If we add edges, then every time a new edge is added to an embedding, the vertex at the other end of the edge is also added (if it wasn't already in the embedding).
 
-Each newly generated embedding, called candidate embedding, is streamed through a user-defined **filter** function, which returns a boolean saying whether the embedding is interesting or not. If the embedding is interesting, it is streamed over a user-defined **process** function, which typically derives some output from the embedding.  After the process function, the new embedding is added to the set of embeddings to be expanded on the next exploration step. Before that, the embedding is streamed through an optional user-defined termination filter function, which is true by default and operates similar a filter function.
+Each newly generated embedding, called candidate embedding, is streamed through a user-defined **filter** function, which returns a boolean saying whether the embedding is interesting or not. If the embedding is interesting, it is streamed over a user-defined **process** function, which typically derives some output from the embedding.  After the process function, the new embedding is added to the set of embeddings to be expanded on the next exploration step. Before that, the embedding is streamed through an optional user-defined termination filter function, which is true by default and operates similarly to a filter function.
 
-Applications that need to aggregate values across multiple embeddings can also define optional aggregation functions. Their operations is depicted below.
+Applications that need to aggregate values across multiple embeddings can also define optional aggregation functions. Their operation is depicted below:
 
 ![Agg paradigm:](assets/img/Agg.png)
 
-The process function can call a **map** function, which sends a value *v* to the aggregator associated with the key *k*. The aggregator runs a user-defined **reduce** function. The aggregated values become available for reads by user-defined functions at the end of the exploration step. Before the filter function, Arabesque executes two user-defined functions that can take advantage of aggregated values: **aggregate-filter** and **aggregate-process**, which are analogous to the filter and process function. These two additional functions allow pre-filtering and pre-processing based on values aggregated in the previous steps. 
+The process function can call a **map** function, which sends a key-value pair *(k, v)* to a certain aggregator. This aggregator then runs a user-defined **reduce** function to merge all *(k, v)* pairs with the same key *k*. The aggregated values become available for reads by user-defined functions at the end of the exploration step. Before the filter function, Arabesque executes two user-defined functions that can take advantage of aggregated values: **aggregate-filter** and **aggregate-process**, which are analogous to the filter and process function. These two additional functions allow pre-filtering and pre-processing based on values aggregated in the previous steps. 
 
 ## Arabesque API
-Let us see how to create a new computation in Arabesque. Arabesque operates in two modes: vertex-induced and edge-induced expansion. For algorithms using vertex-induced expansion, it is necessary to create a new class that extends *VertexInducedComputation*; for algorithms using edge-induced expansion, the new class must extend *EdgeInducedComputation*. Implementing a computation entails overriding methods of the parent class. Both partent classes extend the following interface (we report only the most important methods).
+Let us see how to create a new computation in Arabesque. Arabesque operates in two modes: vertex-induced and edge-induced expansion. For algorithms using vertex-induced expansion, it is necessary to create a new class that extends *VertexInducedComputation*; for algorithms using edge-induced expansion, the new class must extend *EdgeInducedComputation*. Implementing a computation entails overriding methods of the parent class. Both parent classes extend the following interface (we report only the most important methods).
  
  ```java
 public interface Computation<E extends Embedding> {
@@ -44,10 +44,10 @@ public interface Computation<E extends Embedding> {
 
 The class *E* can be either *VertexInducedEmbedding* or *EdgeInducedEmbedding*, depending on the type of computation we are using.
 
-Computation classes can have a local state, which will be replicated at each Arabesque worker running the job.  The init method initializes this internal state (it must start with a call to *super.init()*). The filter method executes the filter function and the process method executes the process function. The class E can be either the class VertexInducedEmbedding or EdgeInducedEmbedding, depending on the type of exploration.
+Computation classes can have a local state, which will be replicated at each Arabesque worker running the job.  The init method initializes this internal state (it must start with a call to *super.init()*). The filter method executes the filter function and the process method executes the process function. 
 Finally, the method shouldExpand implements the termination filter function. These methods are sufficient to implement the basic filter-process model.
 
-Algorithms using aggregation can also override the aggregation filter and aggregation process functions. In order to use aggregation, applications starts by registering the reducers. This must be done in the initAggregations method, which typically looks like the following example.
+Algorithms using aggregation can also override the aggregation filter and aggregation process functions. In order to use aggregations, applications need to register them by specifying the key and value classes, as well as the reduction function. This must be done in the initAggregations method, which typically looks like the following example.
 
  ```java
 @Override
@@ -56,11 +56,13 @@ public void initAggregations() {
 
     Configuration conf = Configuration.get();
 
-    conf.registerAggregation("my-aggregation", 
-	                                   KeyClass.class, 
-                                       ValueClass.class, 
-									   false,
-                                   new ReductionClass);
+    conf.registerAggregation(
+        "my-aggregation", // Aggregation name
+        KeyClass.class, // The class of key objects
+        ValueClass.class, // The class of value objects
+        false, // Is this aggregation persistent (i.e  an output aggregation)
+        new ReductionFunctionImplementation() // This specifies the reduction function to use.
+    );
 }
  ```
 
@@ -72,18 +74,19 @@ public interface ReductionFunction<V extends Writable> {
 }
  ```
 
-Application can map values to a reducer by invoking the *void map(String name, K key, V value)* method and read aggregated values using *AggregationStorage<K, V> readAggregation(String name)*.
+Applications can map values to a reducer by invoking the `void map(String name, K key, V value)` method and read aggregated values using `AggregationStorage<K, V> readAggregation(String name)`.
 
 ## Application Examples
 
-We now show examples of pseudocode for three applications: finding cliques, counting motifs, and frequent subgraph mining.
+We now show implementation examples for three applications: finding cliques, counting motifs, and frequent subgraph mining.
 
 ### Finding Cliques
 
-Finding [cliques][cliques] has many variations. Here, we present the variation of finding cliques of a maximum size. Following, we have the implementation in Arabesque. 
+Finding [cliques][cliques] has many variations. Here, we present the variation of finding cliques of a maximum size. Following, we have the implementation in Arabesque:
+
 ```java
 public class CliqueComputation 
-            extends VertexInducedComputation<VertexInducedEmbedding> {
+        extends VertexInducedComputation<VertexInducedEmbedding> {
     private static final String MAXSIZE = "arabesque.clique.maxsize";
     private static final int MAXSIZE_DEFAULT = 4;
 
@@ -120,7 +123,7 @@ public class CliqueComputation
 }
 ```
 
-In Arabesque, the user must define the Computation class for the problem at hand. In this particular case, we have defined the class **CliqueComputation** that extends the **VertexInducedComputation**, which dictates that the exploration Arabesque will perform is Vertex Induced. As we explained in the paper, this exploration extends an embedding by connecting it to a new vertex. All edges connecting that new vertex to existing vertices of the embedding are also added.
+In Arabesque, the user must define the Computation class for the problem at hand. In this particular case, we have defined the class **CliqueComputation** that extends the **VertexInducedComputation**, which dictates that the exploration Arabesque will perform is vertex-induced. As we explained before, this exploration extends an embedding by connecting it to a new vertex at a time. All edges connecting that new vertex to existing vertices of the embedding are also added.
 
 To solve the problem and control the exploration the user defines two main functions. The **filter** function decides whether the passed embedding is a valid clique and, thus, if it should be further expanded and processed. The **process** function dictates what to do with the embeddings that passed the filter function. In this particular problem, we only want to output the embeddings. Note, that the complexity of the exploration and the required checks for avoiding redudant work, and the canonicality checks are completely transparent to the end-user. This filter function trivially respects the anti-monotonicity property as if a parent is not a clique, there's no chance for any of its children to be cliques.
 
@@ -131,11 +134,12 @@ To produce the output, we simply check whether we have reached the size of cliqu
 To avoid going to deeper depths than the one we want to discover, the user can override the optional **shouldExpand** function that checks whether we need to further expand the embedding and thus continue the exploration. By default, this function returns true, and by overriding it we can stop the processing faster. 
 
 ### Counting Motifs
-A [motif][motifs] is defined as a connected pattern of vertex induced embeddings that exists in an input graph. Further, a set of motifs is required to be non-isomorphic, i.e., there should obviously be no duplicate patterns. In motif mining, the input graph is assumed to be unlabeled, and there is no minimum frequency threshold; rather the goal is to extract all motifs that occur in the graph along with their frequency distribution. Since this task is inherently exponential, the motifs are typically restricted to patterns of order (i.e., number of vertices) at most k. For example, for k = 3 we have two possible motifs: a chain where ends are not connected and a (complete) triangle. Following, we have the Motif implementation in Arabesque.
+A [motif][motifs] is defined as a connected pattern of vertex induced embeddings that exists in an input graph. Further, a set of motifs is required to be non-isomorphic, i.e., there should obviously be no duplicate patterns. In motif mining there is no minimum frequency threshold; rather the goal is to extract all motifs that occur in the graph along with their frequency distribution. Since this task is inherently exponential, motifs are typically restricted to patterns of order (i.e., number of vertices) at most k. For example, for k = 3 we have two possible motifs: a chain where ends are not connected and a (complete) triangle. Following, we have the Motif counting implementation in Arabesque:
 
 ```java
 public class MotifComputation 
-                extends VertexInducedComputation<VertexInducedEmbedding> {
+        extends VertexInducedComputation<VertexInducedEmbedding> {
+    private static final String AGG_OUTPUT = " output";
     private static final String MAXSIZE = "arabesque.motif.maxsize";
     private static final int MAXSIZE_DEFAULT = 4;
 
@@ -154,17 +158,19 @@ public class MotifComputation
 
         Configuration conf = Configuration.get();
 
-        conf.registerAggregation("output",
-                                       conf.getPatternClass(), 
-                                       LongWritable.class, 
-									   true,
-                                   new LongSumReduction());
+        conf.registerAggregation(
+            AGG_OUTPUT,
+            conf.getPatternClass(), 
+            LongWritable.class, 
+            true,
+            new LongSumReduction()
+        );
     }
 
     @Override
     public void process(VertexInducedEmbedding embedding) {
         if (embedding.getNumWords() == maxsize) {
-            map("output", embedding.getPattern(), reusableLongWritableUnit);
+            map(AGG_OUTPUT, embedding.getPattern(), reusableLongWritableUnit);
         }
     }
 
@@ -178,7 +184,7 @@ public class MotifComputation
 
 The Computation class, **MotifComputation**, extends the **VertexInducedComputation**, which dictates that the exploration that Arabesque will perform is Vertex Induced in a similar way to finding cliques.
 
-For counting Motifs, we are interested in all possible variations of the embeddings and thus we don't need to implement a special filter function. The default filter function returns true and is sufficient for this problem. For the process implementation, we need to compute for every embedding the pattern it corresponds to (motif for this problem), and then group it over all embeddings to compute the frequencies of the motifs. In Arabesque, this aggregation is performed using *output aggregators*, which are similar to functionality to Giraph's Aggregators, and allow to compute aggregate statistics on a pattern level or any arbitrary value. In the process function, we simply generate a new unit key-pair containing the pattern that this embedding corresponds to as the key and 1 as the value. To be able to use an aggregator, we first need to initialize them. This is done in the **initAggregations** function. Here, we define the key and value types as well as how to reduce values belonging to the same key. For motifs, a simple sum reduction is sufficient.
+For counting Motifs, we are interested in all possible variations of the embeddings and thus we don't need to implement a special filter function. The default filter function returns true and is sufficient for this problem. For the process implementation, we need to compute for every embedding the pattern it corresponds to (motif for this problem), and then group it over all embeddings to compute the frequencies of the motifs. In Arabesque, this is performed through the user of aggregations, which work similarly to Giraph's Aggregators, and allow one to compute aggregate statistics on a pattern level or any other arbitrary key. In the process function, we simply generate a new unit key-pair containing the pattern that this embedding corresponds to as the key and 1 as the value. To be able to use an aggregation, we first need to initialize it. This is done in the **initAggregations** function. Here, we define the key and value types as well as how to reduce values belonging to the same key. For motifs, a simple sum reduction is sufficient.
 
 The shouldExpand behaves identically to the Finding Cliques computation, terminating the expansion when the desired depth has been reached.
 
@@ -190,6 +196,7 @@ In frequent subgraph mining, we use aggregation to calculate the frequency/suppo
 ```java
 public class FSMComputation 
         extends EdgeInducedComputation<EdgeInducedEmbedding> {
+    public static final String AGG_SUPPORT = "support";
 
     public static final String CONF_SUPPORT = "arabesque.fsm.support";
     public static final int CONF_SUPPORT_DEFAULT = 1000;
@@ -215,7 +222,7 @@ public class FSMComputation
 
         reusableDomainSupport = new DomainSupport(support);
         
-        previousStepAggregation = readAggregation("support");
+        previousStepAggregation = readAggregation(AGG_SUPPORT);
     }
 
     @Override
@@ -224,12 +231,14 @@ public class FSMComputation
 
         Configuration conf = Configuration.get();
 
-        conf.registerAggregation("support",
-										conf.getPatternClass(), 
-                                        DomainSupport.class,
-										false,
-                                    new DomainSupportReducer(), 
-                                    new DomainSupportEndAggregationFunction());
+        conf.registerAggregation(
+            AGG_SUPPORT,
+            conf.getPatternClass(), 
+            DomainSupport.class,
+            false,
+            new DomainSupportReducer(), 
+            new DomainSupportEndAggregationFunction()
+        );
     }
 
     // Previous Step embeddings
@@ -251,7 +260,7 @@ public class FSMComputation
     @Override
     public void process(EdgeInducedEmbedding embedding) {
         reusableDomainSupport.setFromEmbedding(embedding);
-        map("support", embedding.getPattern(), reusableDomainSupport);
+        map(AGG_SUPPORT, embedding.getPattern(), reusableDomainSupport);
     }
 
     @Override
@@ -264,20 +273,20 @@ public class FSMComputation
 
 The Computation class **FSMComputation** extends the EdgeInducedComputation class, which determines that the exploration is edge induced, a different exploration strategy to the previous two Applications. Similar to Motifs, no filter function is defined. The reasoning for such an omission, however, is different than in the case of Motifs. With FSM we cannot filter based on the information of a single subgraph alone and need to wait until the aggregated frequency values are ready to then filter the embeddings with the aggregationFilter function.
 
-To obtain the aggregated frequencies, we use a different type of aggregators: interstep aggregators. These behave in a similar manner to output aggregators with the difference that their values can be read during execution (in particular during the aggregationFilter and aggregationProcess stages) and that they do not persist until the end of the execution. That is, at each different step, the content of interstep aggregators are reset.
+To obtain the aggregated frequencies, we use a non persistent aggregation. These behave in a similar manner to output aggregations with the difference that their values do not persist until the end of the execution. That is, at each different step, the content of interstep aggregators are reset.
 
 The process function for FSM is responsible for creating the key-value pairs that, when aggregated, will result in (Pattern, DomainSupport) from which we can extract the set of frequent patterns.
 
 Similar to the other algorithms, the user can define the optional shouldExpand function to prune explorations of very big subgraphs.
 
-The FSM algorithm also contains an optional MasterComputation. This MasterComputation is called after the end of a superstep and allows you complete access to the values of the interstep aggregators before the start of the next step. In this example, we use this access to output the frequent patterns that we see at each step as well as to terminate execution earlier if we immediately detect that there are no frequent patterns (and, therefore, all aggregationFilter calls will return false at the next step).
+The FSM algorithm also contains an optional MasterComputation. This MasterComputation is called after the end of a superstep and allows you complete access to the values of the aggregations before the start of the next step. In this example, we use this access to output the frequent patterns that we see at each step as well as to terminate execution earlier if we immediately detect that there are no frequent patterns (and, therefore, all aggregationFilter calls will return false at the next step).
 
 ```java
 public class FSMMasterComputation extends MasterComputation {
     @Override
     public void compute() {
         AggregationStorage<Pattern, DomainSupport> aggregationStorage = 
-			readAggregation("support");
+            readAggregation(FSMComputation.AGG_SUPPORT);
 
         if (aggregationStorage.getNumberMappings() > 0) {
             System.out.println("Frequent patterns:");
