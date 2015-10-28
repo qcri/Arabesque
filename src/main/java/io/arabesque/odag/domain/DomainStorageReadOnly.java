@@ -9,6 +9,7 @@ import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.PatternEdge;
+import io.arabesque.pattern.PatternEdgeArrayList;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 
@@ -140,9 +141,9 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                 computation.filter(reusableEmbedding, singletonExtensionSet);
 
-                PatternEdge[] edges = pattern.getEdges();
+                PatternEdgeArrayList edges = pattern.getEdges();
 
-                PatternEdge equivalentPatternEdge = edges[reusableEdgeEmbedding.getNumWords()];
+                PatternEdge equivalentPatternEdge = edges.get(reusableEdgeEmbedding.getNumWords());
 
                 int equivalentPatternEdgeSrcIndex = equivalentPatternEdge.getSrcId();
                 int equivalentPatternEdgeDestIndex = equivalentPatternEdge.getDestId();
@@ -199,12 +200,12 @@ public class DomainStorageReadOnly extends DomainStorage {
                     return false;
                 }
 
-                PatternEdge edgesPattern[] = pattern.getEdges();
+                PatternEdgeArrayList edgesPattern = pattern.getEdges();
                 int[] edgesEmbedding = reusableVertexEmbedding.getEdges();
                 int[] verticesEmbedding = reusableVertexEmbedding.getVertices();
 
                 for (int i = 0; i < numEdgesPattern; ++i) {
-                    PatternEdge edgePattern = edgesPattern[i];
+                    PatternEdge edgePattern = edgesPattern.get(i);
                     Edge<?> edgeEmbedding = mainGraph.getEdge(edgesEmbedding[i]);
 
                     if (!edgeEmbedding.hasVertex(verticesEmbedding[edgePattern.getSrcId()]) ||

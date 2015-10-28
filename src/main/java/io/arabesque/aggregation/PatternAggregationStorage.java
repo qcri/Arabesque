@@ -218,7 +218,7 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
             }
 
             canonicalPattern = (K) quickPattern.copy();
-            canonicalPattern.generateMinPatternCode();
+            canonicalPattern.turnCanonical();
 
             quick2CanonicalMap.put(quickPattern, canonicalPattern);
         }

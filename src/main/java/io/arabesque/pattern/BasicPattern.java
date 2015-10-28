@@ -5,805 +5,243 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.map.IntIntCursor;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
+import io.arabesque.utils.IntArrayList;
+import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collection;
 
-public class BasicPattern extends Pattern {
-    private static final int MAX_INT = 2147483647;
+public abstract class BasicPattern extends Pattern {
+    // Basic structure {{
+    private IntArrayList vertices;
+    private PatternEdgeArrayList edges;
+    private IntIntMap vertexPositions;
+    // }}
 
-    private HashIntIntMap adjListMap;
-    private int[][] adjListDst;
-    private int[] adjListLabels;
+    // Incremental building {{
+    private IntArrayList previousWords;
+    private int numVerticesAddedFromPrevious = -1;
+    private int numAddedEdgesFromPrevious = 0;
+    // }}
 
+    // Isomorphisms {{
+    private VertexPositionEquivalences vertexPositionEquivalences;
+    private IntIntMap canonicalLabelling;
+    // }}
 
-    int numberOfVertices;
-    int numberOfVerticesMinCode;
-    int numberOfEdges;
-    int numberOfEdgesMinCode;
+    // Others {{
+    protected final MainGraph<?, ?, ?, ?> mainGraph;
+    private PatternEdgeArrayList edgePool;
 
-    int[] vertexMap;
-    int[] vertexMapMinCode;
-    PatternEdge[] edges;
-    PatternEdge[] edgesMinCode;
+    private volatile boolean dirtyVertexPositionEquivalences;
+    private volatile boolean dirtyCanonicalLabelling;
+    // }}
 
-    MainGraph<?, ?, ?, ?> g;
-
-    HashIntSet[] autoVertexSet;
-
-    public HashIntSet[] getAutoVertexSet() {
-        return autoVertexSet;
-    }
-
-    public void convertAutoVertexSet(int originalVeterxMap[], int numberOfVertices) {
-        HashIntSet[] newAutoVertexSet = new HashIntSet[numberOfVertices];
-        for (int i = 0; i < numberOfVertices; i++) {
-            newAutoVertexSet[i] = HashIntSets.newMutableSet();
-            IntCursor cursor = autoVertexSet[i].cursor();
-            while (cursor.moveNext()) {
-                int idx = getIndexMap(originalVeterxMap, numberOfVertices, cursor.elem());
-                newAutoVertexSet[i].add(idx);
-                if (idx == -1)
-                    System.err.println("vertex idx map not found!");
-            }
-        }
-        autoVertexSet = newAutoVertexSet;
-    }
 
     public BasicPattern() {
-        this.g = Configuration.get().getMainGraph();
-        edges = null;
-        vertexMap = null;
-        numberOfVertices = 0;
-        numberOfEdges = 0;
+        mainGraph = Configuration.get().getMainGraph();
 
-        vertexMapMinCode = null;
-        edgesMinCode = null;
-        numberOfEdgesMinCode = 0;
-        numberOfVerticesMinCode = 0;
+        vertices = new IntArrayList();
+        edges = createPatternEdgeArrayList();
+        vertexPositions = HashIntIntMaps.newMutableMap();
+        previousWords = new IntArrayList();
+        edgePool = null;
+
+        init();
     }
 
-    public BasicPattern(int size) {
-        this.g = Configuration.get().getMainGraph();
+    public BasicPattern(BasicPattern basicPattern) {
+        this();
 
-        edges = new PatternEdge[size];
-        vertexMap = new int[size + 1];
-        numberOfVertices = 0;
-        numberOfEdges = 0;
+        vertices.addAll(basicPattern.vertices);
 
-        edgesMinCode = null;
-        vertexMapMinCode = null;
-        numberOfEdgesMinCode = 0;
-        numberOfVerticesMinCode = 0;
+        edges.ensureCapacity(basicPattern.edges.size());
 
+        for (PatternEdge otherEdge : basicPattern.edges) {
+            edges.add(new PatternEdge(otherEdge));
+        }
+
+        vertexPositions.putAll(basicPattern.vertexPositions);
     }
 
-    public BasicPattern(BasicPattern other) {
-        this.g = Configuration.get().getMainGraph();
-        numberOfVertices = other.numberOfVertices;
-        numberOfEdges = other.numberOfEdges;
-
-        if (other.edges != null) {
-            edges = new PatternEdge[numberOfEdges];
-
-            for (int i = 0; i < numberOfEdges; ++i) {
-                PatternEdge otherEdge = other.edges[i];
-
-                if (otherEdge != null) {
-                    edges[i] = new PatternEdge(otherEdge);
-                } else {
-                    edges[i] = null;
-                }
-            }
-        } else {
-            edges = null;
-        }
-
-        if (other.vertexMap != null) {
-            vertexMap = Arrays.copyOf(other.vertexMap, numberOfVertices);
-        } else {
-            vertexMap = null;
-        }
-
-        if (other.autoVertexSet != null) {
-            autoVertexSet = new HashIntSet[numberOfVertices];
-            for (int i = 0; i < numberOfVertices; i++) {
-                autoVertexSet[i] = HashIntSets.newMutableSet();
-                IntCursor cursor = other.autoVertexSet[i].cursor();
-                while (cursor.moveNext()) {
-                    autoVertexSet[i].add(cursor.elem());
-                }
-            }
-        }
-    }
-
-    @Override
-    public Pattern copy() {
-        return new BasicPattern(this);
+    protected void init() {
+        reset();
     }
 
     @Override
     public void reset() {
-        numberOfEdges = 0;
-        numberOfVertices = 0;
-        numberOfEdgesMinCode = 0;
-        numberOfVerticesMinCode = 0;
+        vertices.clear();
+        reclaimPatternEdges(edges);
+        edges.clear();
+        vertexPositions.clear();
 
-        edgesMinCode = null;
-        vertexMapMinCode = null;
-        adjListMap = null;
+        dirtyVertexPositionEquivalences = true;
+        dirtyCanonicalLabelling = true;
+
+        resetIncremental();
+    }
+
+    private void resetIncremental() {
+        numVerticesAddedFromPrevious = 0;
+        numAddedEdgesFromPrevious = 0;
+        previousWords.clear();
     }
 
     @Override
     public void setEmbedding(Embedding embedding) {
-        setEmbedding(embedding, true);
-    }
-
-    public void setEmbedding(Embedding embedding, boolean useQuickCode) {
-        reset();
-        int numEdges = embedding.getNumEdges();
-        int numVertices = embedding.getNumVertices();
-
-        if (numEdges == 0 && numVertices == 0) {
-            return;
-        }
-
-        setupStructures(numVertices, numEdges);
-
-
-        if (numEdges > 0) {
-            if (useQuickCode) {
-                generateQuickPatternCode(embedding);
-            } else {
-                computeEmbeddingAdjancyList(embedding);
-                generateNaivePatternCode();
-            }
+        if (canDoIncremental(embedding)) {
+            setEmbeddingIncremental(embedding);
         } else {
-            if (numVertices > 1) {
-                throw new RuntimeException("Embedding with 0 edges and >1 vertices: " + embedding);
-            }
-
-            vertexMap[0] = embedding.getVertices()[0];
-            ++numVertices;
+            setEmbeddingFromScratch(embedding);
         }
-    }
-
-    public void setupStructures(int numVertices, int numEdges) {
-        if (vertexMap == null || vertexMap.length < numVertices) {
-            vertexMap = new int[numVertices];
-        }
-
-        if (edges == null || edges.length < numEdges) {
-            edges = new PatternEdge[numEdges];
-        }
-    }
-
-    public void generateQuickPatternCode(Embedding embedding) {
-        int numEdges = embedding.getNumEdges();
-        int[] edges = embedding.getEdges();
-
-        boolean isOk = true;
-        for (int i = 0; i < numEdges; ++i) {
-            Edge<?> actualWord = g.getEdge(edges[i]);
-
-            int srcId = actualWord.getSourceId();
-            int dstId = actualWord.getDestinationId();
-
-            Vertex<?> srcVertex = g.getVertex(srcId);
-            Vertex<?> dstVertex = g.getVertex(dstId);
-
-            if (!addEdge(srcVertex.getVertexId(), srcVertex.getVertexLabel(), dstVertex.getVertexId(), dstVertex.getVertexLabel())) {
-                Vertex<?> tmp = srcVertex;
-                srcVertex = dstVertex;
-                dstVertex = tmp;
-                if (!addEdge(srcVertex.getVertexId(), srcVertex.getVertexLabel(), dstVertex.getVertexId(), dstVertex.getVertexLabel())) {
-                    System.out.println("Problem: " + embedding.toString());
-                    isOk = false;
-                }
-            }
-        }
-
-        if (!isOk)
-            System.out.println("QuickPatternCode Problem!");
-    }
-
-    @Override
-    public int getNumberOfVertices() {
-        return numberOfVertices;
-    }
-
-    public int[] getVertices() {
-        return vertexMap;
-    }
-
-    @Override
-    public PatternEdge[] getPatternEdges() {
-        return edges;
-    }
-
-    public void generateNaivePatternCode() {
-
-        if (adjListMap == null) {
-            computeAdjacencyList();
-        }
-
-        int[] extensibleIds = this.getExtensibleVertexIdsDFS();
-        //get the edge with smallest id
-        if (extensibleIds == null) {
-
-            final int smallestSrcId = smallestSourceIdKey();
-
-            if (smallestSrcId != MAX_INT) {
-                //Min source
-                int srcLabel = getLabelFromAdjList(smallestSrcId);
-                //Min dest
-                final int smallestDestId = smallestFromIntArray(adjListDst[adjListMap.get(smallestSrcId)]);
-                final int destLabel = getLabelFromAdjList(smallestDestId);
-
-                if (this.addEdge(smallestSrcId, srcLabel, smallestDestId, destLabel)) {
-                    generateNaivePatternCode();
-                }
-            }
-        } else {
-            PatternEdge minEdge = null;
-            int k = 0;
-            while (extensibleIds[k] >= 0) {
-                int i = extensibleIds[k];
-                k++;
-                int srcId = i;
-                int srcLabel = getLabelFromAdjList(i);
-                int[] dests = adjListDst[adjListMap.get(i)];
-                int kkpos = 0;
-                while (dests[kkpos] >= 0) {
-                    int destId = dests[kkpos];
-                    kkpos++;
-                    int destLabel = getLabelFromAdjList(destId);
-                    PatternEdge edge = new PatternEdge(srcId, srcLabel, destId, destLabel);
-                    if (this.addEdge(edge)) {
-                        if (minEdge == null || edge.isSmaller(minEdge))
-                            minEdge = edge;
-                        this.removeLastEdge();
-                    }
-                }
-                if (minEdge != null) {
-                    break;
-                }
-            }
-            if (minEdge == null) {
-                return;
-            } else {
-                this.addEdge(minEdge);
-                generateNaivePatternCode();
-            }
-        }
-    }
-
-    private int smallestSourceIdKey() {
-        IntIntCursor cursor = adjListMap.cursor();
-        int minKey = MAX_INT;
-
-        while (cursor.moveNext()) {
-            final int key = cursor.key();
-            if (key < minKey)
-                minKey = key;
-        }
-
-        return minKey;
-    }
-
-    private int smallestFromIntArray(int[] data) {
-        int minKey = MAX_INT;
-
-        int kpos = 0;
-
-        while (data[kpos] >= 0) {
-            if (data[kpos] < minKey) {
-                minKey = data[kpos];
-            }
-            kpos++;
-        }
-        return minKey;
-    }
-
-    public int getIndexMap(int n) {
-        return getIndexMap(vertexMap, numberOfVertices, n);
-    }
-
-    public int getIndexMap(int vertexMap[], int numberOfVertices, int n) {
-        for (int i = 0; i < numberOfVertices; i++) {
-            if (vertexMap[i] == n) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    public boolean addEdge(PatternEdge e) {
-        return addEdge(e.getSrcId(), e.getSrcLabel(), e.getDestId(), e.getDestLabel());
-    }
-
-    @Override
-    public boolean addEdge(int edgeId) {
-        Edge edge = g.getEdge(edgeId);
-
-        return addEdge(edge.getSourceId(), edge.getDestinationId());
-    }
-
-    public boolean addEdge(int srcId, int destId) {
-        Vertex srcVertex = g.getVertex(srcId);
-        Vertex dstVertex = g.getVertex(destId);
-
-        return addEdge(srcId, srcVertex.getVertexLabel(), destId, dstVertex.getVertexLabel());
-    }
-
-    public boolean addEdge(int srcId, int srcLabel, int destId, int dstLabel) {
-        int newSrcId = getIndexMap(srcId);
-        int newDestId = getIndexMap(destId);
-        boolean type = true;
-
-        if (newSrcId == -1 && newDestId != -1) {
-            return false;
-        }
-
-        //check if the node was inserted yet
-        if (newSrcId != -1 && newDestId != -1) {
-            for (int i = 0; i < numberOfEdges; i++) {
-                PatternEdge e = edges[i];
-                int realESrc = vertexMap[e.getSrcId()];
-                int realEDst = vertexMap[e.getDestId()];
-                if ((realESrc == srcId && realEDst == destId) ||
-                        (realESrc == destId && realEDst == srcId))
-                    return false;
-            }
-            type = false; //bwd
-        }
-
-        //add vertex src
-        if (newSrcId == -1) {
-            this.vertexMap[numberOfVertices] = srcId;
-            newSrcId = numberOfVertices;
-            numberOfVertices++;
-        }
-
-        //add vertex dest
-        if (newDestId == -1) {
-            this.vertexMap[numberOfVertices] = destId;
-            newDestId = numberOfVertices;
-            numberOfVertices++;
-        }
-
-        //add edge
-        if (edges[numberOfEdges] == null)
-            edges[numberOfEdges] = new PatternEdge();
-
-        edges[numberOfEdges].setType(type);
-        edges[numberOfEdges].setSrcId(newSrcId);
-        edges[numberOfEdges].setSrcLabel(srcLabel);
-        edges[numberOfEdges].setDestId(newDestId);
-        edges[numberOfEdges].setDestLabel(dstLabel);
-        numberOfEdges++;
-
-        return true;
-    }
-
-    @Override
-    public int getNumberOfEdges() {
-        return numberOfEdges;
-    }
-
-    public void removeLastEdge() {
-        if (numberOfEdges <= 1) {
-            numberOfEdges = 0;
-            numberOfVertices = 0;
-            return;
-        }
-        if (edges[numberOfEdges - 1].getType() == true) {
-            numberOfVertices--;
-        }
-        numberOfEdges--;
-    }
-
-    public int[] getExtensibleVertexIdsDFS() {
-        if (numberOfEdges == 0)
-            return null;
-
-        int[] extensibles = new int[numberOfEdges + 2];//new ArrayList<Integer>();
-        int myPos = 0;
-
-        int lastIndex = 0;
-        int lastSourceId = 0;
-
-        for (int i = numberOfEdges; i > 0; i--) {
-            if (edges[i - 1].getType() == true) {
-                lastIndex = i;
-                lastSourceId = edges[i - 1].getSrcId();
-                extensibles[myPos] = vertexMap[edges[i - 1].getDestId()];
-                myPos++;
-                extensibles[myPos] = vertexMap[lastSourceId];
-                myPos++;
-                break;
-            }
-        }
-        for (int i = lastIndex; i > 0; i--) {
-            if (edges[i - 1].getType() == true && edges[i - 1].getDestId() == lastSourceId) {
-                lastSourceId = edges[i - 1].getSrcId();
-                extensibles[myPos] = vertexMap[lastSourceId];
-                myPos++;
-            }
-        }
-        extensibles[myPos] = -1;//Indication that we finished.
-
-        return extensibles;
-
-    }
-
-    @Override
-    public void generateMinPatternCode() {
-
-        if (edgesMinCode == null) {
-            if (adjListMap == null) {
-                computeAdjacencyList();
-            }
-
-            autoVertexSet = new HashIntSet[numberOfVertices];
-            for (int i = 0; i < numberOfVertices; i++)
-                autoVertexSet[i] = HashIntSets.newMutableSet();
-
-            numberOfEdgesMinCode = numberOfEdges;
-            numberOfVerticesMinCode = numberOfVertices;
-
-            edgesMinCode = edges;
-            vertexMapMinCode = vertexMap;
-
-            //copy the original vertex map to reconstruct the autovertexset
-            int originalVertexMap[] = Arrays.copyOf(vertexMap, numberOfVertices);
-
-            edges = new PatternEdge[numberOfEdges];
-            vertexMap = new int[numberOfEdges + 1];
-
-            numberOfEdges = 0;
-            numberOfVertices = 0;
-
-            internalGenerateMinPatternCode();
-
-            edges = edgesMinCode;
-            vertexMap = vertexMapMinCode;
-            numberOfEdges = numberOfEdgesMinCode;
-            numberOfVertices = numberOfVerticesMinCode;
-            convertAutoVertexSet(originalVertexMap, numberOfVertices);
-        }
-    }
-
-    public void internalGenerateMinPatternCode() {
-        int[] extensibleVertexIds = this.getExtensibleVertexIdsDFS();
-
-        if (extensibleVertexIds == null) {
-            IntIntCursor cursor = adjListMap.cursor();
-            while (cursor.moveNext()) {
-                int srcId = cursor.key();
-                int srcLabel = adjListLabels[cursor.value()];
-                int[] neighbors = adjListDst[cursor.value()];
-
-                int kkpos = 0;
-                while (neighbors[kkpos] >= 0) {
-                    int destId = neighbors[kkpos];
-                    kkpos++;
-                    int destLabel = getLabelFromAdjList(destId);
-                    if (this.addEdge(srcId, srcLabel, destId, destLabel)) {
-                        int comp = compareEdgeCode(edges, numberOfEdges, edgesMinCode, numberOfEdgesMinCode);
-                        if (comp < 0) {
-                            if (numberOfEdges == numberOfEdgesMinCode) {
-                                copyToMin();
-                                //update autoVertexSet
-                                for (int j = 0; j < numberOfVerticesMinCode; j++) {
-                                    autoVertexSet[j].clear();
-                                    autoVertexSet[j].add(vertexMapMinCode[j]);
-                                }
-                            }
-                            internalGenerateMinPatternCode();
-                        } else if (comp == 0) {
-                            //update autoVertexSet
-                            for (int j = 0; j < numberOfVerticesMinCode; j++) {
-                                autoVertexSet[j].add(vertexMap[j]);
-                            }
-                        }
-                        this.removeLastEdge();
-                    }
-                }
-            }
-        } else {
-            int k = 0;
-            while (extensibleVertexIds[k] >= 0) {
-                int i = extensibleVertexIds[k];
-                k++;
-                int srcId = i;
-                int srcLabel = getLabelFromAdjList(i);
-                int[] neighbors = adjListDst[adjListMap.get(srcId)];
-                int pppp = 0;
-                while (neighbors[pppp] >= 0) {
-                    int destId = neighbors[pppp];
-                    pppp++;
-                    int destLabel = getLabelFromAdjList(destId);
-
-                    if (this.addEdge(srcId, srcLabel, destId, destLabel)) {
-                        int comp = compareEdgeCode(edges, numberOfEdges, edgesMinCode, numberOfEdgesMinCode);
-                        if (comp < 0) {
-                            if (numberOfEdges == numberOfEdgesMinCode) {
-                                copyToMin();
-                                //update autoVertexSet
-                                for (int j = 0; j < numberOfVerticesMinCode; j++) {
-                                    autoVertexSet[j].clear();
-                                    autoVertexSet[j].add(vertexMapMinCode[j]);
-                                }
-                            }
-                            internalGenerateMinPatternCode();
-                        } else if (comp == 0) {
-                            //update autoVertexSet
-                            for (int j = 0; j < numberOfVerticesMinCode; j++) {
-                                autoVertexSet[j].add(vertexMap[j]);
-                            }
-                        }
-                        this.removeLastEdge();
-                    }
-                }
-            }
-        }
-    }
-
-    private int getLabelFromAdjList(int destId) {
-        return adjListLabels[adjListMap.get(destId)];
-    }
-
-    private int stupidAdd(int src, int src_label, int to_add1, int to_add2, int localpos, int[] localPos, int max_size) {
-        if (!adjListMap.containsKey(src)) {
-            adjListMap.put(src, localpos);
-            adjListLabels[localpos] = src_label;
-            adjListDst[localpos] = new int[max_size + 1];
-            adjListDst[localpos][0] = to_add1;
-            localPos[localpos] = 1; //Current position to insert.
-            localpos++;
-        } else {
-            int p1 = adjListMap.get(src);
-            adjListDst[p1][localPos[p1]] = to_add2;
-            localPos[p1] = localPos[p1] + 1;
-        }
-
-        return localpos;
     }
 
     /**
-     * Blah
+     * Reset everything and do everything from scratch.
+     *
+     * @param embedding
+     */
+    private void setEmbeddingFromScratch(Embedding embedding) {
+        reset();
+
+        int numEdgesInEmbedding = embedding.getNumEdges();
+        int numVerticesInEmbedding = embedding.getNumVertices();
+
+        if (numEdgesInEmbedding == 0 && numVerticesInEmbedding == 0) {
+            return;
+        }
+
+        ensureCanStoreNewVertices(numVerticesInEmbedding);
+        ensureCanStoreNewEdges(numEdgesInEmbedding);
+
+        int[] embeddingVertices = embedding.getVertices();
+
+        for (int i = 0; i < numVerticesInEmbedding; ++i) {
+            addVertex(embeddingVertices[i]);
+        }
+
+        numVerticesAddedFromPrevious = embedding.getNumVerticesAddedWithExpansion();
+
+        int[] embeddingEdges = embedding.getEdges();
+
+        for (int i = 0; i < numEdgesInEmbedding; ++i) {
+            addEdge(embeddingEdges[i]);
+        }
+
+        numAddedEdgesFromPrevious = embedding.getNumEdgesAddedWithExpansion();
+
+        updateUsedEmbeddingFromScratch(embedding);
+    }
+
+    private void updateUsedEmbeddingFromScratch(Embedding embedding) {
+        previousWords.clear();
+
+        int embeddingNumWords = embedding.getNumWords();
+
+        previousWords.ensureCapacity(embeddingNumWords);
+
+        int[] words = embedding.getWords();
+
+        for (int i = 0; i < embeddingNumWords; i++) {
+            previousWords.set(i, words[i]);
+        }
+    }
+
+    private void resetToPrevious() {
+        removeLastNEdges(numAddedEdgesFromPrevious);
+        removeLastNVertices(numVerticesAddedFromPrevious);
+        dirtyVertexPositionEquivalences = true;
+    }
+
+    private void removeLastNEdges(int n) {
+        int targetI = edges.size() - n;
+
+        for (int i = edges.size() - 1; i >= targetI; --i) {
+            reclaimPatternEdge(edges.remove(i));
+        }
+    }
+
+    private void removeLastNVertices(int n) {
+        int targetI = vertices.size() - n;
+
+        for (int i = vertices.size() - 1; i >= targetI; --i) {
+            vertexPositions.remove(vertices.remove(i));
+        }
+    }
+
+    /**
+     * Only the last word has changed, so skipped processing for the previous words.
+     *
+     * @param embedding
+     */
+    private void setEmbeddingIncremental(Embedding embedding) {
+        resetToPrevious();
+
+        numVerticesAddedFromPrevious = embedding.getNumVerticesAddedWithExpansion();
+        numAddedEdgesFromPrevious = embedding.getNumEdgesAddedWithExpansion();
+
+        int numEdgesInEmbedding = embedding.getNumEdges();
+        int numVerticesInEmbedding = embedding.getNumVertices();
+
+        ensureCanStoreNewVertices(numVerticesAddedFromPrevious);
+        ensureCanStoreNewEdges(numAddedEdgesFromPrevious);
+
+        int[] embeddingVertices = embedding.getVertices();
+
+        for (int i = (numVerticesInEmbedding - numVerticesAddedFromPrevious); i < numVerticesInEmbedding; ++i) {
+            addVertex(embeddingVertices[i]);
+        }
+
+        int[] embeddingEdges = embedding.getEdges();
+
+        for (int i = (numEdgesInEmbedding - numAddedEdgesFromPrevious); i < numEdgesInEmbedding; ++i) {
+            addEdgeWithPositions(embeddingEdges[i]);
+        }
+
+        updateUsedEmbeddingIncremental(embedding);
+    }
+
+    /**
+     * By default only the last word changed.
+     *
+     * @param embedding
+     */
+    private void updateUsedEmbeddingIncremental(Embedding embedding) {
+        previousWords.set(previousWords.size() - 1, embedding.getWords()[previousWords.size() - 1]);
+    }
+
+    private void ensureCanStoreNewEdges(int numAddedEdgesFromPrevious) {
+        int newNumEdges = edges.size() + numAddedEdgesFromPrevious;
+
+        edges.ensureCapacity(newNumEdges);
+    }
+
+    private void ensureCanStoreNewVertices(int numVerticesAddedFromPrevious) {
+        int newNumVertices = vertices.size() + numVerticesAddedFromPrevious;
+
+        vertices.ensureCapacity(newNumVertices);
+        vertexPositions.ensureCapacity(newNumVertices);
+    }
+
+    /**
+     * Can do incremental only if the last word is different.
      *
      * @param embedding
      * @return
      */
-    public void computeEmbeddingAdjancyList(Embedding embedding) {
-
-        int numberOfVertices = embedding.getNumVertices();
-
-        adjListMap = HashIntIntMaps.newMutableMap(numberOfVertices);
-        adjListDst = new int[numberOfVertices][];
-        adjListLabels = new int[numberOfVertices];
-        int localpos = 0;
-
-        int localPos[] = new int[numberOfVertices];
-
-        int numberOfEdges = embedding.getNumEdges();
-        int[] edges = embedding.getEdges();
-
-        for (int i = 0; i < numberOfEdges; i++) {
-            Edge<?> e = g.getEdge(edges[i]);
-            Vertex<?> src = g.getVertex(e.getSourceId());
-            Vertex<?> dest = g.getVertex(e.getDestinationId());
-
-            localpos = stupidAdd(src.getVertexId(), src.getVertexLabel(), dest.getVertexId(), e.getDestinationId(),
-                    localpos, localPos, numberOfVertices + 1);
-
-            localpos = stupidAdd(dest.getVertexId(), dest.getVertexLabel(), src.getVertexId(), src.getVertexId(),
-                    localpos, localPos, numberOfVertices + 1);
-
+    private boolean canDoIncremental(Embedding embedding) {
+        if (previousWords.size() != embedding.getNumWords()) {
+            return false;
         }
 
-        // Make sure we finalize the dest properly with -1.
-        for (int i = 0; i < numberOfVertices; i++) {
-            if (adjListDst[i] == null) {
-                //No more entries...
-                break;
-            }
-            adjListDst[i][localPos[i]] = -1;
-        }
-    }
-
-    public void computeAdjacencyList() {
-
-        adjListMap = HashIntIntMaps.newMutableMap(numberOfVertices);
-        adjListDst = new int[numberOfVertices][];
-        adjListLabels = new int[numberOfVertices];
-        int localpos = 0;
-
-        int localPos[] = new int[numberOfVertices + 1];
-
-
-        for (int i = 0; i < numberOfEdges; i++) {
-            PatternEdge e = edges[i];
-
-            localpos = stupidAdd(vertexMap[e.getSrcId()], e.getSrcLabel(),
-                    vertexMap[e.getDestId()], vertexMap[e.getDestId()], localpos, localPos, numberOfVertices + 1);
-
-            localpos = stupidAdd(vertexMap[e.getDestId()], e.getDestLabel(),
-                    vertexMap[e.getSrcId()], vertexMap[e.getSrcId()], localpos, localPos, numberOfVertices + 1);
-
-        }
-        // Make sure we finalize the dest properly with -1.
-        for (int i = 0; i < numberOfVertices; i++) {
-            if (adjListDst[i] == null) {
-                //No more entries...
-                break;
-            }
-            adjListDst[i][localPos[i]] = -1;
-        }
-    }
-
-    public static boolean isEdgeCodeSmaller(PatternEdge edges1[], int numEdges1, PatternEdge edges2[], int numEdges2) {
-        boolean isSmaller = false;
-        boolean isSimilar = true;
-
-        int minSize = Math.min(numEdges1, numEdges2);
-
-        for (int i = 0; i < minSize; i++) {
-            if (!edges1[i].equals(edges2[i])) {
-                if (edges1[i].isSmaller(edges2[i])) {
-                    isSmaller = true;
-                } else {
-                    isSmaller = false;
-                }
-                isSimilar = false;
-                break;
-            }
-        }
-
-        if (isSimilar) {
-            if (numEdges1 < numEdges2) {
-                isSmaller = false;
-            } else {
-                isSmaller = true;
-            }
-        }
-
-        return isSmaller;
-    }
-
-    public static int compareEdgeCode(PatternEdge edges1[], int numEdges1, PatternEdge edges2[], int numEdges2) {
-        int minSize = Math.min(numEdges1, numEdges2);
-        int ret = 0;
-        for (int i = 0; i < minSize; i++) {
-            ret = edges1[i].compareTo(edges2[i]);
-            if (ret != 0) {
-                break;
-            }
-        }
-        if (ret < 0) {
-            if (numEdges1 < numEdges2)
-                return -2;
-            else
-                return -3;
-        } else if (ret > 0) {
-            if (numEdges1 < numEdges2)
-                return 2;
-            else
-                return 3;
-        } else {
-            if (numEdges1 == numEdges2)
-                return 0;
-            else if (numEdges1 < numEdges2)
-                return -1;
-            else
-                return 1;
-        }
-    }
-
-    public static boolean isEdgeCodeSub(PatternEdge edges1[], int numEdges1, PatternEdge edges2[], int numEdges2) {
-        boolean isSubcode = true;
-
-        if (numEdges1 > numEdges2) {
-            isSubcode = false;
-        } else {
-            int i = 0;
-            while (i < numEdges1 && i < numEdges2) {
-                if (!edges1[i].equals(edges2[i])) {
-                    isSubcode = false;
-                    break;
-                }
-                i++;
-            }
-        }
-        return isSubcode;
-    }
-
-    public boolean isPatternWithEdges(String edges) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < numberOfEdges; i++) {
-            sb.append(this.edges[i] + " ");
-        }
-        return edges.equals(sb.toString());
-    }
-
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("numberOfEdges: " + numberOfEdges + "\n");
-        for (int i = 0; i < numberOfEdges; i++) {
-            sb.append(edges[i] + " ");
-        }
-        sb.append("\n");
-        sb.append("numberOfVertices: " + numberOfVertices + "\n");
-        for (int i = 0; i < numberOfVertices; i++) {
-            sb.append("[" + i + "," + vertexMap[i] + "] ");
-        }
-        if (autoVertexSet != null) {
-            sb.append("autoVertexSet:");
-            for (int i = 0; i < numberOfVertices; i++) {
-                IntCursor cursor = autoVertexSet[i].cursor();
-                sb.append("\nidx: " + i);
-                while (cursor.moveNext()) {
-                    sb.append("\n" + cursor.elem());
-                }
-
-            }
-        }
-        sb.append("\n");
-        sb.append("hashcode: " + this.hashCode());
-        sb.append("\n");
-        return sb.toString();
-    }
-
-    public String toStringVertexMap() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Pattern VertexMap:");
-
-        for (int i = 0; i < numberOfVertices; i++) {
-            sb.append(" " + vertexMap[i]);
-        }
-
-        sb.append("\n");
-        return sb.toString();
-    }
-
-    public int[] getPatternCode() {
-        int[] ccode = new int[numberOfEdgesMinCode * 5];
-
-        for (int i = 0; i < numberOfEdgesMinCode; i++) {
-            ccode[i * 5] = edgesMinCode[i].getSrcId();
-            ccode[i * 5 + 1] = edgesMinCode[i].getSrcLabel();
-            ccode[i * 5 + 2] = edgesMinCode[i].getDestId();
-            ccode[i * 5 + 3] = edgesMinCode[i].getDestLabel();
-            ccode[i * 5 + 4] = edgesMinCode[i].getTypeInt();
-        }
-
-        return ccode;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        BasicPattern Pattern = (BasicPattern) o;
-
-        if (numberOfEdges != Pattern.numberOfEdges) return false;
-        if (numberOfVertices != Pattern.numberOfVertices) return false;
-
-        for (int i = 0; i < numberOfEdges; ++i) {
-            if (!edges[i].equals(Pattern.edges[i])) {
+        // Maximum we want 1 change (which we know by default that it exists in the last position).
+        // so we check
+        final int[] words = embedding.getWords();
+        for (int i = previousWords.size() - 2; i >= 0; i--) {
+            if (words[i] != previousWords.getUnchecked(i)) {
                 return false;
             }
         }
@@ -812,64 +250,295 @@ public class BasicPattern extends Pattern {
     }
 
     @Override
-    public int hashCode() {
-        int result = numberOfVertices;
-        result = 31 * result + numberOfEdges;
-        for (int i = 0; i < numberOfEdges; ++i) {
-            PatternEdge edge = edges[i];
-            result = 31 * result + (edge != null ? edge.hashCode() : 0);
-        }
-        return result;
-    }
-
-    public void copyToMin() {
-        for (int j = 0; j < numberOfEdges; j++) {
-            edgesMinCode[j].setSrcId(edges[j].getSrcId());
-            edgesMinCode[j].setSrcLabel(edges[j].getSrcLabel());
-            edgesMinCode[j].setDestId(edges[j].getDestId());
-            edgesMinCode[j].setDestLabel(edges[j].getDestLabel());
-            edgesMinCode[j].setType(edges[j].getType());
-        }
-        for (int j = 0; j < numberOfVertices; j++) {
-            vertexMapMinCode[j] = vertexMap[j];
-        }
+    public int getNumberOfVertices() {
+        return vertices.getSize();
     }
 
     @Override
-    public void write(DataOutput out) throws IOException {
+    public boolean addEdge(int edgeId) {
+        Edge<?> edge = mainGraph.getEdge(edgeId);
 
-        out.writeInt(numberOfEdges);
-        for (int i = 0; i < numberOfEdges; i++) {
-            edges[i].write(out);
-        }
-        out.writeInt(numberOfVertices);
-        for (int i = 0; i < numberOfVertices; i++) {
-            out.writeInt(vertexMap[i]);
-        }
+        int srcId = edge.getSourceId();
+        int dstId = edge.getDestinationId();
+
+        return addEdge(srcId, dstId);
+    }
+
+    private boolean addEdgeWithPositions(int edgeId) {
+        Edge<?> edge = mainGraph.getEdge(edgeId);
+
+        int srcId = edge.getSourceId();
+        int dstId = edge.getDestinationId();
+
+        Vertex<?> src = mainGraph.getVertex(srcId);
+        Vertex<?> dst = mainGraph.getVertex(dstId);
+
+        int srcPos = vertexPositions.get(srcId);
+        int dstPos = vertexPositions.get(dstId);
+
+        return addEdgeWithPositions(srcPos, src.getVertexLabel(), dstPos, dst.getVertexLabel());
+    }
+
+    public boolean addEdge(int srcId, int dstId) {
+        Vertex<?> src = mainGraph.getVertex(srcId);
+        Vertex<?> dst = mainGraph.getVertex(dstId);
+
+        return addEdge(srcId, src.getVertexLabel(), dstId, dst.getVertexLabel());
     }
 
     @Override
-    public void readFields(DataInput in) throws IOException {
-        numberOfEdges = in.readInt();
-        edges = new PatternEdge[numberOfEdges];
-        for (int i = 0; i < numberOfEdges; i++) {
-            edges[i] = new PatternEdge();
-            edges[i].readFields(in);
-        }
-
-        numberOfVertices = in.readInt();
-        vertexMap = new int[numberOfEdges + 1];
-        for (int i = 0; i < numberOfVertices; i++) {
-            vertexMap[i] = in.readInt();
-        }
+    public boolean addEdge(PatternEdge patternEdge) {
+        return addEdge(patternEdge.getSrcId(), patternEdge.getSrcLabel(),
+                patternEdge.getDestId(), patternEdge.getDestLabel());
     }
 
-    public PatternEdge[] getEdges() {
+    public boolean addEdge(int srcId, int srcLabel, int dstId, int dstLabel) {
+        int srcPos = addVertex(srcId);
+        int dstPos = addVertex(dstId);
+
+        return addEdgeWithPositions(srcPos, srcLabel, dstPos, dstLabel);
+    }
+
+    private boolean addEdgeWithPositions(int srcPos, int srcLabel, int dstPos, int dstLabel) {
+        PatternEdge patternEdge = createPatternEdge();
+
+        edges.add(patternEdge);
+
+        if (srcPos < dstPos) {
+            patternEdge.setSrcId(srcPos);
+            patternEdge.setDestId(dstPos);
+
+            patternEdge.setSrcLabel(srcLabel);
+            patternEdge.setDestLabel(dstLabel);
+        } else {
+            patternEdge.setSrcId(dstPos);
+            patternEdge.setDestId(srcPos);
+
+            patternEdge.setSrcLabel(dstLabel);
+            patternEdge.setDestLabel(srcLabel);
+        }
+
+        dirtyVertexPositionEquivalences = true;
+
+        return true;
+    }
+
+    public int addVertex(int vertexId) {
+        int pos = vertexPositions.get(vertexId);
+
+        if (pos == -1) {
+            vertices.add(vertexId);
+            vertexPositions.put(vertexId, pos);
+        }
+
+        dirtyVertexPositionEquivalences = true;
+
+        return pos;
+    }
+
+    @Override
+    public int getNumberOfEdges() {
+        return edges.size();
+    }
+
+    @Override
+    public IntArrayList getVertices() {
+        return vertices;
+    }
+
+    @Override
+    public PatternEdgeArrayList getEdges() {
         return edges;
     }
 
     @Override
-    public HashIntIntMap getCanonicalLabeling() {
-        throw new NotImplementedException();
+    public VertexPositionEquivalences getVertexPositionEquivalences() {
+        if (dirtyVertexPositionEquivalences) {
+            synchronized (this) {
+                if (dirtyVertexPositionEquivalences) {
+                    if (vertexPositionEquivalences == null) {
+                        vertexPositionEquivalences = new VertexPositionEquivalences();
+                    }
+
+                    vertexPositionEquivalences.setNumVertices(getNumberOfVertices());
+                    vertexPositionEquivalences.clear();
+
+                    fillVertexPositionEquivalences(vertexPositionEquivalences);
+
+                    dirtyVertexPositionEquivalences = false;
+                }
+            }
+        }
+
+        return vertexPositionEquivalences;
+    }
+
+    protected abstract void fillVertexPositionEquivalences(VertexPositionEquivalences vertexPositionEquivalences);
+
+    @Override
+    public IntIntMap getCanonicalLabeling() {
+        if (dirtyCanonicalLabelling) {
+            synchronized (this) {
+                if (dirtyCanonicalLabelling) {
+                    if (canonicalLabelling == null) {
+                        canonicalLabelling = HashIntIntMaps.newMutableMap(getNumberOfVertices());
+                    }
+
+                    canonicalLabelling.clear();
+
+                    fillCanonicalLabelling(canonicalLabelling);
+
+                    dirtyCanonicalLabelling = false;
+                }
+            }
+        }
+
+        return canonicalLabelling;
+    }
+
+    protected abstract void fillCanonicalLabelling(IntIntMap canonicalLabelling);
+
+    @Override
+    public void turnCanonical() {
+        resetIncremental();
+
+        IntIntMap canonicalLabelling = getCanonicalLabeling();
+
+        IntArrayList oldVertices = new IntArrayList(vertices);
+
+        for (int i = 0; i < vertices.size(); ++i) {
+            int newPos = canonicalLabelling.get(i);
+
+            // If position didn't change, do nothing
+            if (newPos == i) {
+                continue;
+            }
+
+            int vertexId = oldVertices.get(i);
+            vertices.set(newPos, vertexId);
+
+            vertexPositions.put(vertexId, newPos);
+        }
+
+        for (int i = 0; i < edges.size(); ++i) {
+            PatternEdge edge = edges.get(i);
+
+            int srcPos = edge.getSrcId();
+            int dstPos = edge.getDestId();
+
+            int convertedSrcPos = canonicalLabelling.get(srcPos);
+            int convertedDstPos = canonicalLabelling.get(dstPos);
+
+            if (convertedSrcPos < convertedDstPos) {
+                edge.setSrcId(convertedSrcPos);
+                edge.setDestId(convertedDstPos);
+            } else {
+                // If we changed the position of source and destination due to
+                // relabel, we also have to change the labels to match this
+                // change.
+                int tmp = edge.getSrcLabel();
+                edge.setSrcId(convertedDstPos);
+                edge.setSrcLabel(edge.getDestLabel());
+                edge.setDestId(convertedSrcPos);
+                edge.setDestLabel(tmp);
+            }
+        }
+
+        edges.sort();
+        dirtyVertexPositionEquivalences = true;
+    }
+
+    @Override
+    public void write(DataOutput dataOutput) throws IOException {
+        edges.write(dataOutput);
+        vertices.write(dataOutput);
+    }
+
+    @Override
+    public void readFields(DataInput dataInput) throws IOException {
+        reset();
+
+        edges.readFields(dataInput);
+        vertices.readFields(dataInput);
+
+        for (int i = 0; i < vertices.size(); ++i) {
+            vertexPositions.put(vertices.get(i), i);
+        }
+    }
+
+    protected PatternEdgeArrayList createPatternEdgeArrayList() {
+        return new PatternEdgeArrayList();
+    }
+
+    protected PatternEdge createPatternEdge() {
+        if (edgePool != null && !edgePool.isEmpty()) {
+            return edgePool.remove(edgePool.size() - 1);
+        } else {
+            return new PatternEdge();
+        }
+    }
+
+    protected void reclaimPatternEdge(PatternEdge patternEdge) {
+        if (edgePool == null) {
+            edgePool = new PatternEdgeArrayList();
+        }
+
+        edgePool.add(patternEdge);
+    }
+
+    protected void reclaimPatternEdges(Collection<PatternEdge> patternEdges) {
+        edgePool.ensureCapacity(edgePool.size() + patternEdges.size());
+
+        for (PatternEdge patternEdge : patternEdges) {
+            reclaimPatternEdge(patternEdge);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "BasicPattern{" +
+                "edges=" + edges +
+                '}';
+    }
+
+    @Override
+    public String toOutputString() {
+        StringBuilder strBuilder = new StringBuilder();
+        boolean first = true;
+
+        for (PatternEdge edge : edges) {
+            if (!first) {
+                strBuilder.append(',');
+            }
+
+            strBuilder.append(edge.getSrcId());
+            strBuilder.append("(");
+            strBuilder.append(edge.getSrcLabel());
+            strBuilder.append(")");
+            strBuilder.append('-');
+            strBuilder.append(edge.getDestId());
+            strBuilder.append("(");
+            strBuilder.append(edge.getDestLabel());
+            strBuilder.append(")");
+            first = false;
+        }
+
+        return strBuilder.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BasicPattern that = (BasicPattern) o;
+
+        return edges.equals(that.edges);
+
+    }
+
+    @Override
+    public int hashCode() {
+        return edges.hashCode();
     }
 }

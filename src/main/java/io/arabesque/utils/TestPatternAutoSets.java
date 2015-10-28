@@ -3,8 +3,8 @@ package io.arabesque.utils;
 import io.arabesque.conf.Configuration;
 import io.arabesque.conf.TestConfiguration;
 import io.arabesque.graph.MainGraph;
-import io.arabesque.pattern.BasicPattern;
 import io.arabesque.pattern.JBlissPattern;
+import io.arabesque.pattern.VertexPositionEquivalences;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 
@@ -51,32 +51,27 @@ public class TestPatternAutoSets {
         }
 
         JBlissPattern jblissPattern = new JBlissPattern();
-        BasicPattern basicPattern = new BasicPattern();
+        //BasicPattern basicPattern = new BasicPattern();
 
-        basicPattern.setupStructures(vertexIds.size(), edgeIds.getSize());
+        //basicPattern.setupStructures(vertexIds.size(), edgeIds.getSize());
 
         for (int i = 0; i < edgeIds.getSize(); ++i) {
             int edgeId = edgeIds.getUnchecked(i);
             IntIntPair edge = edges.get(i);
-            jblissPattern.addEdgeTest(mainGraph.getVertex(edge.getFirst()), mainGraph.getVertex(edge.getSecond()));
-            basicPattern.addEdge(edge.getFirst(), edge.getSecond());
+            jblissPattern.addEdge(edgeId);
+            //basicPattern.addEdge(edge.getFirst(), edge.getSecond());
         }
 
-        basicPattern.generateMinPatternCode();
+        //basicPattern.turnCanonical();
 
-        printAutoVertexSet("jbliss", jblissPattern.getAutoVertexSetTest());
-        jblissPattern.generateMinPatternCode();
-        printAutoVertexSet("jbliss-min", jblissPattern.getAutoVertexSet());
-        printAutoVertexSet("basic", basicPattern.getAutoVertexSet());
+        printVertexPositionEquivalences("jbliss", jblissPattern.getVertexPositionEquivalences());
+        jblissPattern.turnCanonical();
+        printVertexPositionEquivalences("jbliss-min", jblissPattern.getVertexPositionEquivalences());
+        //printVertexPositionEquivalences("basic", basicPattern.getVertexPositionEquivalences());
     }
 
-    public static void printAutoVertexSet(String title, HashIntSet[] autoVertexSet) {
+    public static void printVertexPositionEquivalences(String title, VertexPositionEquivalences vertexPositionEquivalences) {
         System.out.println("Autovertex set of " + title);
-
-        int i = 0;
-        for (HashIntSet entry : autoVertexSet) {
-            System.out.println(i + " :" + entry);
-            ++i;
-        }
+        System.out.println(vertexPositionEquivalences.toString());
     }
 }

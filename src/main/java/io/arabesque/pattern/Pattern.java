@@ -1,8 +1,8 @@
 package io.arabesque.pattern;
 
 import io.arabesque.embedding.Embedding;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
+import io.arabesque.utils.IntArrayList;
+import net.openhft.koloboke.collect.map.IntIntMap;
 import org.apache.hadoop.io.Writable;
 
 public abstract class Pattern implements Writable {
@@ -20,24 +20,24 @@ public abstract class Pattern implements Writable {
 
     public abstract int getNumberOfEdges();
 
-    public abstract void generateMinPatternCode();
+    public abstract void turnCanonical();
 
-    public abstract int[] getVertices();
+    public abstract IntArrayList getVertices();
 
-    public abstract PatternEdge[] getPatternEdges();
+    public abstract PatternEdgeArrayList getEdges();
 
-    public abstract HashIntSet[] getAutoVertexSet();
+    public abstract VertexPositionEquivalences getVertexPositionEquivalences();
 
     public boolean isSubPattern(Pattern pattern) {
         if (this.getNumberOfEdges() > pattern.getNumberOfEdges()) return false;
         if (this.getNumberOfVertices() > pattern.getNumberOfVertices()) return false;
 
         int numberOfEdges = getNumberOfEdges();
-        PatternEdge[] myEdges = getPatternEdges();
-        PatternEdge[] otherEdges = pattern.getPatternEdges();
+        PatternEdgeArrayList myEdges = getEdges();
+        PatternEdgeArrayList otherEdges = pattern.getEdges();
 
         for (int i = 0; i < numberOfEdges; ++i) {
-            if (!myEdges[i].equals(otherEdges[i])) {
+            if (!myEdges.get(i).equals(otherEdges.get(i))) {
                 return false;
             }
         }
@@ -45,7 +45,7 @@ public abstract class Pattern implements Writable {
         return true;
     }
 
-    public abstract HashIntIntMap getCanonicalLabeling();
+    public abstract IntIntMap getCanonicalLabeling();
 
-    public abstract PatternEdge[] getEdges();
+    public abstract String toOutputString();
 }
