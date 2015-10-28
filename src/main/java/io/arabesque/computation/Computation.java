@@ -2,7 +2,7 @@ package io.arabesque.computation;
 
 import io.arabesque.aggregation.AggregationStorage;
 import io.arabesque.embedding.Embedding;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
+import net.openhft.koloboke.collect.IntCollection;
 import org.apache.hadoop.io.Writable;
 
 public interface Computation<E extends Embedding> {
@@ -29,7 +29,7 @@ public interface Computation<E extends Embedding> {
     // }}}
 
     // {{{ Other filter-hooks (performance/canonicality related)
-    void filter(E existingEmbedding, HashIntSet extensionPoints);
+    void filter(E existingEmbedding, IntCollection extensionPoints);
 
     boolean filter(E existingEmbedding, int newWord);
     // }}}
@@ -55,9 +55,7 @@ public interface Computation<E extends Embedding> {
 
     // {{{ Internal
     void setUnderlyingExecutionEngine(ExecutionEngine<E> executionEngine);
-
     void expand(E embedding);
-
-    E createEmbedding();
+    Class<? extends Embedding> getEmbeddingClass();
     // }}}
 }

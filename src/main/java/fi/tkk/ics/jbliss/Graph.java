@@ -8,13 +8,14 @@
 package fi.tkk.ics.jbliss;
 
 import cz.adamh.utils.NativeUtils;
+import io.arabesque.conf.Configuration;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
+import io.arabesque.pattern.JBlissPattern;
+import io.arabesque.pattern.PatternEdge;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import org.apache.commons.lang3.SystemUtils;
-import io.arabesque.pattern.JBlissPattern;
-import io.arabesque.pattern.PatternEdge;
 import sun.misc.Unsafe;
 
 import java.io.IOException;
@@ -66,7 +67,7 @@ public class Graph<V extends Comparable> {
     }
 
 	private long createBliss() {
-		MainGraph<?, ?, ?, ?> mainGraph = MainGraph.get();
+		MainGraph<?, ?, ?, ?> mainGraph = Configuration.get().getMainGraph();
 		int numVertices = pattern.getNumberOfVertices();
 		int[] vertices = pattern.getVertices();
 

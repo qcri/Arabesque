@@ -2,6 +2,7 @@ package io.arabesque.pattern;
 
 import fi.tkk.ics.jbliss.Graph;
 import fi.tkk.ics.jbliss.Reporter;
+import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
@@ -59,14 +60,14 @@ public class JBlissPattern extends Pattern {
         edges = null;
         vertices = null;
         vertexPositions = null;
-        g = MainGraph.get();
+        g = Configuration.get().getMainGraph();
         reset();
         jblissGraph = new Graph<>(this);
     }
 
     public JBlissPattern(JBlissPattern other) {
         reset();
-        g = MainGraph.get();
+        g = Configuration.get().getMainGraph();
 
         numEdges = other.numEdges;
 

@@ -6,7 +6,6 @@ import io.arabesque.aggregation.AggregationStorageMetadata;
 import io.arabesque.aggregation.AggregationStorageWrapper;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.graph.MainGraph;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.partition.PartitionOwner;
@@ -78,10 +77,7 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
     public void setConf(ImmutableClassesGiraphConfiguration<WritableComparable, Writable, Writable> conf) {
         super.setConf(conf);
         Configuration.setIfUnset(createConfiguration(conf));
-        // Load graph immediately (guarantee that everyone loads the graph at the same time)
-        // This prevents imbalances if aggregators use the main graph (which means that master
-        // node would load first on superstep -1) then all the others would load on (superstep 0).
-        MainGraph.get();
+        Configuration.get().initialize();
 
         if (Configuration.get().isForceGC()) {
             System.gc();

@@ -1,7 +1,8 @@
 package io.arabesque.embedding;
 
 import io.arabesque.graph.Vertex;
-import io.arabesque.utils.MyIntIntConsumer;
+import io.arabesque.utils.ElementCounterConsumer;
+import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
@@ -20,8 +21,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
     int[] numAdded;
 
     int edgesSize;
-    private MyIntIntConsumer myMapConsumer;
-
+    private ElementCounterConsumer elementCounterConsumer;
 
     public VertexInducedEmbedding() {
         super();
@@ -32,7 +32,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         edges = new int[INC_ARRAY_SIZE];
         numAdded = new int[INC_ARRAY_SIZE];
         incrementalVertexCount = new HashIntIntMap[INC_ARRAY_SIZE];
-        myMapConsumer = new MyIntIntConsumer();
+        elementCounterConsumer = new ElementCounterConsumer();
     }
 
     @Override
@@ -112,8 +112,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
 
 
     @Override
-    @Deprecated
-    public HashIntSet getExtensibleWordIds() {
+    public IntCollection getExtensibleWordIds() {
         return getExtensibleVertexIdsCount().keySet();
     }
 
@@ -164,14 +163,14 @@ public class VertexInducedEmbedding extends BasicEmbedding {
 
         previousWordsPos = numVertices;
 
-        myMapConsumer.setMap(extensionVertexIdMap);
+        elementCounterConsumer.setMap(extensionVertexIdMap);
 
         for (int i = common; i < numVertices; i++) {
             final int vertexId = vertA[i];
 
-            final HashIntIntMap neighbourhood = g.getVertexNeighbourhoodNN(vertexId);
+            final IntCollection neighbourhood = getValidNeighboursForExpansion(vertexId);
             if (neighbourhood != null) {
-                neighbourhood.forEach(myMapConsumer);
+                neighbourhood.forEach(elementCounterConsumer);
             }
 
             // We ignore the last one since it always changes!!!
@@ -197,8 +196,6 @@ public class VertexInducedEmbedding extends BasicEmbedding {
     }
 
     /**
-     * TODO: FIND A WAY TO MERGE THE VALUE AND KEY!!!
-     *
      * @param vertA
      * @param numC
      * @return
@@ -208,14 +205,14 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         extensionVertexIdMap.clear();
 
         previousWordsPos = numC;
-        myMapConsumer.setMap(extensionVertexIdMap);
+        elementCounterConsumer.setMap(extensionVertexIdMap);
 
         for (int i = 0; i < numC; i++) {
             final int vertexId = vertA[i];
 
-            final HashIntIntMap neighbourhood = g.getVertexNeighbourhoodNN(vertexId);
+            final IntCollection neighbourhood = getValidNeighboursForExpansion(vertexId);
             if (neighbourhood != null) {
-                neighbourhood.forEach(myMapConsumer);
+                neighbourhood.forEach(elementCounterConsumer);
             }
 
             if (numC > 2) {
@@ -238,6 +235,10 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         }
 // 		System.out.println("Scratch" + Arrays.toString(vertA) + "   " + extensionEdgeIds.size());
         return extensionVertexIdMap;
+    }
+
+    protected IntCollection getValidNeighboursForExpansion(int vertexId) {
+        return g.getVertexNeighbours(vertexId);
     }
 
 

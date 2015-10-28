@@ -3,5 +3,8 @@ input_graph_path: citeseer-single-label.graph
 output_path: Cliques_Output
 #communication_strategy: embeddings
 
+optimizations:
+  - io.arabesque.optimization.CliqueOptimization
+
 # Custom parameters
 arabesque.clique.maxsize: 4

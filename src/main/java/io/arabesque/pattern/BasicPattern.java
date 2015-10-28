@@ -1,5 +1,6 @@
 package io.arabesque.pattern;
 
+import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
@@ -59,7 +60,7 @@ public class BasicPattern extends Pattern {
     }
 
     public BasicPattern() {
-        this.g = MainGraph.get();
+        this.g = Configuration.get().getMainGraph();
         edges = null;
         vertexMap = null;
         numberOfVertices = 0;
@@ -72,7 +73,7 @@ public class BasicPattern extends Pattern {
     }
 
     public BasicPattern(int size) {
-        this.g = MainGraph.get();
+        this.g = Configuration.get().getMainGraph();
 
         edges = new PatternEdge[size];
         vertexMap = new int[size + 1];
@@ -87,7 +88,7 @@ public class BasicPattern extends Pattern {
     }
 
     public BasicPattern(BasicPattern other) {
-        this.g = MainGraph.get();
+        this.g = Configuration.get().getMainGraph();
         numberOfVertices = other.numberOfVertices;
         numberOfEdges = other.numberOfEdges;
 

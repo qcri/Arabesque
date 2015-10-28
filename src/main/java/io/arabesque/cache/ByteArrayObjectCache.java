@@ -1,6 +1,5 @@
 package io.arabesque.cache;
 
-import io.arabesque.computation.Computation;
 import io.arabesque.conf.Configuration;
 import io.arabesque.misc.WritableObject;
 import org.apache.giraph.utils.ExtendedByteArrayDataInput;
@@ -17,14 +16,14 @@ public class ByteArrayObjectCache implements ObjectCache {
 
     public static class ByteArrayObjectCacheIterator
             implements Iterator<WritableObject> {
-        protected Computation computation;
         protected WritableObject reusableObject = null;
         protected ExtendedByteArrayDataInput byteArrayInputCache;
+        protected Configuration configuration;
 
-        public ByteArrayObjectCacheIterator(Computation computation, ByteArrayObjectCache objectCache) {
-            this.computation = computation;
+        public ByteArrayObjectCacheIterator(ByteArrayObjectCache objectCache) {
             ExtendedByteArrayDataOutput byteArrayOutputCache = objectCache.byteArrayOutputCache;
             byteArrayInputCache = new ExtendedByteArrayDataInput(byteArrayOutputCache.getByteArray(), 0, byteArrayOutputCache.getPos());
+            configuration = Configuration.get();
         }
 
         @Override
@@ -35,7 +34,7 @@ public class ByteArrayObjectCache implements ObjectCache {
         @Override
         public WritableObject next() {
             if (reusableObject == null) {
-                reusableObject = computation.createEmbedding();
+                reusableObject = configuration.createEmbedding();
             }
 
             try {
@@ -78,8 +77,8 @@ public class ByteArrayObjectCache implements ObjectCache {
         return byteArrayObjectCacheIterator.hasNext();
     }
 
-    public void prepareForIteration(Computation computation) {
-        byteArrayObjectCacheIterator = new ByteArrayObjectCacheIterator(computation, this);
+    public void prepareForIteration() {
+        byteArrayObjectCacheIterator = new ByteArrayObjectCacheIterator(this);
     }
 
     @Override

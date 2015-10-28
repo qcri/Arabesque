@@ -1,6 +1,5 @@
 package io.arabesque.cache;
 
-import io.arabesque.computation.Computation;
 import io.arabesque.conf.Configuration;
 import io.arabesque.misc.WritableObject;
 import net.jpountz.lz4.LZ4Compressor;
@@ -41,9 +40,9 @@ public class LZ4ObjectCache extends ByteArrayObjectCache {
     }
 
     @Override
-    public void prepareForIteration(Computation computation) {
+    public void prepareForIteration() {
         decompressDataInput();
-        super.prepareForIteration(computation);
+        super.prepareForIteration();
     }
 
     @Override

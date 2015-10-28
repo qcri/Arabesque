@@ -3,7 +3,8 @@ package io.arabesque.embedding;
 import io.arabesque.graph.Edge;
 import io.arabesque.utils.DumpSetOrdered;
 import io.arabesque.utils.SetIntValueConsumer;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
+import net.openhft.koloboke.collect.IntCollection;
+import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 
@@ -29,7 +30,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         mySetConsumer = new SetIntValueConsumer();
     }
 
-    public HashIntSet getExtensibleWordIds() {
+    public IntCollection getExtensibleWordIds() {
         return getExtensibleEdgeIds();
     }
 
@@ -48,7 +49,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         return sb.toString();
     }
 
-    public HashIntSet getExtensibleEdgeIds() {
+    public IntCollection getExtensibleEdgeIds() {
         ++total;
         if (vertices.getNumKeys() > 2) {
             int common = canDoIncremental(vertices.getKeys(), vertices.getNumKeys());
@@ -83,7 +84,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
      * @param common
      * @return
      */
-    HashIntSet getExtensibleIdsIncrementalValue(final int[] vertA,
+    IntCollection getExtensibleIdsIncrementalValue(final int[] vertA,
             final int numVertices,
             final int common) {
         // or the following
@@ -98,7 +99,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
 
         for (int i = common; i < numVertices; i++) {
             final int vertexId = vertA[i];
-            final HashIntIntMap neighbourhood = g.getVertexNeighbourhoodNN(vertexId);
+            final IntIntMap neighbourhood = g.getVertexNeighbourhood(vertexId);
             neighbourhood.forEach(mySetConsumer);
 
             // We ignore the last one since it always changes!!!
@@ -127,7 +128,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
      * @param numC
      * @return
      */
-    HashIntSet getExtensibleIdsScratchValue(final int[] vertA,
+    IntCollection getExtensibleIdsScratchValue(final int[] vertA,
             final int numC) {
         extensionEdgeIds.clear();
 
@@ -136,7 +137,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         for (int i = 0; i < numC; i++) {
             final int vertexId = vertA[i];
 
-            final HashIntIntMap neighbourhood = g.getVertexNeighbourhoodNN(vertexId);
+            final IntIntMap neighbourhood = g.getVertexNeighbourhood(vertexId);
             neighbourhood.forEach(mySetConsumer);
 
             if (numC > 2) {

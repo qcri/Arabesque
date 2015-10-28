@@ -208,9 +208,10 @@ public class MasterExecutionEngine extends MasterCompute {
         System.out.println("Embeddings output: " + getAggregatedValue(AGG_EMBEDDINGS_OUTPUT));
 
         LongWritable numEmbeddingsProcessed = getAggregatedValue(AGG_EMBEDDINGS_PROCESSED);
+        LongWritable numEmbeddingsGenerated = getAggregatedValue(AGG_EMBEDDINGS_GENERATED);
 
-        // If we processed no embeddings on the last superstep, execution has finished
-        if (getSuperstep() > 0 && numEmbeddingsProcessed.get() == 0) {
+        // If we processed and generated no embeddings on the last superstep, execution has finished
+        if (getSuperstep() > 0 && numEmbeddingsProcessed.get() == 0 && numEmbeddingsGenerated.get() == 0) {
             haltComputation();
         }
 

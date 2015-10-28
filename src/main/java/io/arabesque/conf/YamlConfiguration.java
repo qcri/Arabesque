@@ -5,7 +5,9 @@ import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import io.arabesque.computation.WorkerContext;
 import io.arabesque.input.ArabesqueInputFormat;
+import io.arabesque.optimization.ConfigBasedOptimizationSetDescriptor;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang.StringUtils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.job.GiraphConfigurationValidator;
@@ -103,12 +105,8 @@ public class YamlConfiguration {
                     // Logging
                     .put("log_level", new GiraphStringConfigurationAssignment(GiraphConstants.LOG_LEVEL.getKey()))
 
-                    // Extra
-                    .put("extra", new GiraphMapConfigurationAssignment() {
-                        @Override
-                        public void assign(String propertyKey, Map<String, Object> properties, GiraphConfiguration giraphConfiguration) {
-                        }
-                    })
+                    // Optimizations
+                    .put("optimizations", new GiraphStringListConfigurationAssignment(ConfigBasedOptimizationSetDescriptor.CONF_OPTIMIZATION_CLASSES))
                     .build();
 
     private Set<String> configurations;
@@ -163,9 +161,9 @@ public class YamlConfiguration {
             }
         }
 
-        addPrivateConfiguration(configuration);
-
         addUnrecognizedPropertiesToGiraph(configuration);
+
+        addPrivateConfiguration(configuration);
 
         validateConfiguration(configuration);
     }
@@ -204,9 +202,20 @@ public class YamlConfiguration {
 
         for (String unrecognizedKey : unrecognizedKeys) {
             LOG.info("Invalid YAML key, assuming giraph -ca: " + unrecognizedKey);
-            String value = properties.get(unrecognizedKey).toString();
-            LOG.info("Setting custom argument [" + unrecognizedKey + "] to [" + value + "] in GiraphConfiguration");
-            giraphConfiguration.set(unrecognizedKey, value);
+
+            Object value = properties.get(unrecognizedKey);
+            String valueStr;
+
+            if (!(value instanceof Collection)) {
+                valueStr = value.toString();
+            } else {
+                Collection<Object> collection = (Collection<Object>) value;
+
+                valueStr = StringUtils.join(collection, ',');
+            }
+
+            LOG.info("Setting custom argument [" + unrecognizedKey + "] to [" + valueStr + "] in GiraphConfiguration");
+            giraphConfiguration.set(unrecognizedKey, valueStr);
         }
     }
 
@@ -361,5 +370,27 @@ public class YamlConfiguration {
         }
 
         public abstract void assign(String propertyKey, Map<String, Object> properties, GiraphConfiguration giraphConfiguration);
+    }
+
+    private static class GiraphStringListConfigurationAssignment implements GiraphConfigurationAssignment {
+        private String giraphConfigurationKey;
+
+        public GiraphStringListConfigurationAssignment(String giraphConfigurationKey) {
+            this.giraphConfigurationKey = giraphConfigurationKey;
+        }
+
+        @Override
+        public final void assign(String propertyKey, Object propertyValue, GiraphConfiguration giraphConfiguration) {
+            List<Object> values = (List<Object>) propertyValue;
+            String[] valuesStrs = new String[values.size()];
+
+            int i = 0;
+            for (Object value : values) {
+                valuesStrs[i] = value.toString();
+                ++i;
+            }
+
+            giraphConfiguration.setStrings(giraphConfigurationKey, valuesStrs);
+        }
     }
 }

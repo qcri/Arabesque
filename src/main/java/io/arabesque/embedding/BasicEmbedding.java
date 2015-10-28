@@ -29,7 +29,7 @@ public abstract class BasicEmbedding implements Embedding {
     static final int INC_ARRAY_SIZE = 15;
 
     public BasicEmbedding(int size) {
-        g = MainGraph.get();
+        g = Configuration.get().getMainGraph();
         words = new int[size];
         numWords = 0;
         dirtyPattern = true;
@@ -43,7 +43,7 @@ public abstract class BasicEmbedding implements Embedding {
     public BasicEmbedding(BasicEmbedding other) {
         words = Arrays.copyOf(other.words, other.numWords);
         numWords = other.numWords;
-        g = MainGraph.get();
+        g = Configuration.get().getMainGraph();
         pattern = other.pattern.copy();
         previousVertices = new int[INC_ARRAY_SIZE];
     }

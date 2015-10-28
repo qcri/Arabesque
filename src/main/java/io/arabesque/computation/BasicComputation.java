@@ -4,6 +4,7 @@ import io.arabesque.aggregation.AggregationStorage;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.MainGraph;
+import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 import net.openhft.koloboke.function.IntConsumer;
@@ -43,7 +44,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
             }
         };
 
-        mainGraph = MainGraph.get();
+        mainGraph = Configuration.get().getMainGraph();
         configuration = Configuration.get();
         numChildrenEvaluated = 0;
     }
@@ -63,11 +64,13 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
             aggregationProcess(embedding);
         }
 
-        HashIntSet possibleExtensions = getPossibleExtensions(embedding);
+        IntCollection possibleExtensions = getPossibleExtensions(embedding);
 
-        filter(embedding, possibleExtensions);
+        if (possibleExtensions != null) {
+            filter(embedding, possibleExtensions);
+        }
 
-        if (possibleExtensions.isEmpty()) {
+        if (possibleExtensions == null || possibleExtensions.isEmpty()) {
             handleNoExpansions(embedding);
             return;
         }
@@ -99,7 +102,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         // Empty by default
     }
 
-    private HashIntSet getPossibleExtensions(E embedding) {
+    private IntCollection getPossibleExtensions(E embedding) {
         if (embedding.getNumWords() > 0) {
             return embedding.getExtensibleWordIds();
         } else {
@@ -121,6 +124,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
             endMyWordRange = totalNumWords;
         }
 
+        // TODO: Replace this by a list implementing IntCollection. No need for set.
         HashIntSet initialExtensions = HashIntSets.newMutableSet(numWordsPerPartition);
 
         for (int i = startMyWordRange; i < endMyWordRange; ++i) {
@@ -138,7 +142,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
     }
 
     @Override
-    public void filter(E existingEmbedding, HashIntSet extensionPoints) {
+    public void filter(E existingEmbedding, IntCollection extensionPoints) {
         // Do nothing by default
     }
 

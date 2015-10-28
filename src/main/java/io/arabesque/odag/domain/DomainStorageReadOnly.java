@@ -1,6 +1,7 @@
 package io.arabesque.odag.domain;
 
 import io.arabesque.computation.Computation;
+import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.EdgeInducedEmbedding;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.embedding.VertexInducedEmbedding;
@@ -69,8 +70,8 @@ public class DomainStorageReadOnly extends DomainStorage {
             this.pattern = pattern;
             this.computation = computation;
             this.numPartitions = numPartitions;
-            mainGraph = MainGraph.get();
-            reusableEmbedding = computation.createEmbedding();
+            mainGraph = Configuration.get().getMainGraph();
+            reusableEmbedding = Configuration.get().createEmbedding();
 
             this.numberOfEnumerations = getNumberOfEnumerations();
 

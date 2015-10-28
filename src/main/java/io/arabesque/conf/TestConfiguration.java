@@ -1,8 +1,8 @@
 package io.arabesque.conf;
 
 import io.arabesque.embedding.Embedding;
-import io.arabesque.graph.BasicMainGraph;
 import io.arabesque.graph.MainGraph;
+import io.arabesque.graph.NullDataMainGraph;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 
 import java.io.IOException;
@@ -22,7 +22,7 @@ public class TestConfiguration<O extends Embedding> extends Configuration<O> {
     @Override
     public MainGraph createGraph() {
         try {
-            return new BasicMainGraph(Paths.get(getMainGraphPath()));
+            return new NullDataMainGraph(Paths.get(getMainGraphPath()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

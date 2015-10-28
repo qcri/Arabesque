@@ -1,5 +1,6 @@
 package io.arabesque.computation;
 
+import io.arabesque.embedding.Embedding;
 import io.arabesque.embedding.VertexInducedEmbedding;
 
 public abstract class VertexInducedComputation<E extends VertexInducedEmbedding> extends BasicComputation<E> {
@@ -9,7 +10,7 @@ public abstract class VertexInducedComputation<E extends VertexInducedEmbedding>
     }
 
     @Override
-    public E createEmbedding() {
-        return (E) new VertexInducedEmbedding();
+    public Class<? extends Embedding> getEmbeddingClass() {
+        return VertexInducedEmbedding.class;
     }
 }

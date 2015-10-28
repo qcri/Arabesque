@@ -30,6 +30,8 @@ public class TestPatternAutoSets {
         IntArrayList edgeIds = new IntArrayList(edgesStr.length);
         ArrayList<IntIntPair> edges = new ArrayList<>(edgesStr.length);
 
+        MainGraph mainGraph = Configuration.get().getMainGraph();
+
         for (String edgeStr : edgesStr) {
             String[] edgeComponentsStr = edgeStr.split("-");
 
@@ -43,7 +45,7 @@ public class TestPatternAutoSets {
 
             System.out.println("Found edge " + srcId + ", " + dstId);
 
-            int edgeId = MainGraph.get().getEdgeId(srcId, dstId);
+            int edgeId = mainGraph.getEdgeId(srcId, dstId);
 
             edgeIds.add(edgeId);
         }
@@ -56,7 +58,7 @@ public class TestPatternAutoSets {
         for (int i = 0; i < edgeIds.getSize(); ++i) {
             int edgeId = edgeIds.getUnchecked(i);
             IntIntPair edge = edges.get(i);
-            jblissPattern.addEdgeTest(MainGraph.get().getVertex(edge.getFirst()), MainGraph.get().getVertex(edge.getSecond()));
+            jblissPattern.addEdgeTest(mainGraph.getVertex(edge.getFirst()), mainGraph.getVertex(edge.getSecond()));
             basicPattern.addEdge(edge.getFirst(), edge.getSecond());
         }
 

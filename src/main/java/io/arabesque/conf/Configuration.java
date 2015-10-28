@@ -10,15 +10,18 @@ import io.arabesque.computation.WorkerContext;
 import io.arabesque.computation.comm.CommunicationStrategy;
 import io.arabesque.computation.comm.CommunicationStrategyFactory;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.graph.BasicMainGraph;
 import io.arabesque.graph.MainGraph;
+import io.arabesque.optimization.OptimizationSet;
+import io.arabesque.optimization.OptimizationSetDescriptor;
 import io.arabesque.pattern.Pattern;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
+import org.apache.log4j.Logger;
 
-import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class Configuration<O extends Embedding> {
+    private static final Logger LOG = Logger.getLogger(Configuration.class);
     public static final int KB = 1024;
     public static final int MB = 1024 * KB;
     public static final int GB = 1024 * MB;
@@ -38,10 +42,15 @@ public class Configuration<O extends Embedding> {
     public static final int M = 1000 * K;
     public static final int B = 1000 * M;
 
+    public static final String CONF_MAINGRAPH_CLASS = "arabesque.graph.class";
+    public static final String CONF_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.NullDataMainGraph";
     public static final String CONF_MAINGRAPH_PATH = "arabesque.graph.location";
     public static final String CONF_MAINGRAPH_PATH_DEFAULT = "main.graph";
     public static final String CONF_MAINGRAPH_LOCAL = "arabesque.graph.local";
     public static final boolean CONF_MAINGRAPH_LOCAL_DEFAULT = false;
+
+    public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS = "arabesque.optimizations.descriptor";
+    public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT = "io.arabesque.optimization.ConfigBasedOptimizationSetDescriptor";
 
     private static final String CONF_COMPRESSED_CACHES = "arabesque.caches.compress";
     private static final boolean CONF_COMPRESSED_CACHES_DEFAULT = false;
@@ -90,13 +99,20 @@ public class Configuration<O extends Embedding> {
     private boolean is2LevelAggregationEnabled;
     private boolean forceGC;
     private CommunicationStrategyFactory communicationStrategyFactory;
+
+    private Class<? extends MainGraph> mainGraphClass;
+    private Class<? extends OptimizationSetDescriptor> optimizationSetDescriptorClass;
     private Class<? extends Pattern> patternClass;
     private Class<? extends Computation> computationClass;
     private Class<? extends MasterComputation> masterComputationClass;
+    private Class<? extends Embedding> embeddingClass;
+
     private String outputPath;
     private int defaultAggregatorSplits;
 
     private Map<String, AggregationStorageMetadata> aggregationsMetadata;
+    private MainGraph mainGraph;
+    private boolean initialized = false;
 
     public static <C extends Configuration> C get() {
         if (instance == null) {
@@ -128,6 +144,8 @@ public class Configuration<O extends Embedding> {
         odagNumAggregators = getInteger(CONF_EZIP_AGGREGATORS, CONF_EZIP_AGGREGATORS_DEFAULT);
         is2LevelAggregationEnabled = getBoolean(CONF_2LEVELAGG_ENABLED, CONF_2LEVELAGG_ENABLED_DEFAULT);
         forceGC = getBoolean(CONF_FORCE_GC, CONF_FORCE_GC_DEFAULT);
+        mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
+        optimizationSetDescriptorClass = (Class<? extends OptimizationSetDescriptor>) getClass(CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS, CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT);
         patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
         computationClass = (Class<? extends Computation>) getClass(CONF_COMPUTATION_CLASS, CONF_COMPUTATION_CLASS_DEFAULT);
         masterComputationClass = (Class<? extends MasterComputation>) getClass(CONF_MASTER_COMPUTATION_CLASS, CONF_MASTER_COMPUTATION_CLASS_DEFAULT);
@@ -137,6 +155,28 @@ public class Configuration<O extends Embedding> {
         outputPath = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT);
 
         defaultAggregatorSplits = getInteger(CONF_DEFAULT_AGGREGATOR_SPLITS, CONF_DEFAULT_AGGREGATOR_SPLITS_DEFAULT);
+    }
+
+    public void initialize() {
+        if (initialized) {
+            return;
+        }
+
+        initialized = true;
+        OptimizationSetDescriptor optimizationSetDescriptor = ReflectionUtils.newInstance(optimizationSetDescriptorClass);
+        LOG.info("Initializing configuration");
+        OptimizationSet optimizationSet = optimizationSetDescriptor.describe();
+
+        LOG.info("Active optimizations: " + optimizationSet);
+
+        optimizationSet.applyStartup();
+
+        // Load graph immediately (try to make it so that everyone loads the graph at the same time)
+        // This prevents imbalances if aggregators use the main graph (which means that master
+        // node would load first on superstep -1) then all the others would load on (superstep 0).
+        mainGraph = createGraph();
+
+        optimizationSet.applyAfterGraphLoad();
     }
 
     public ImmutableClassesGiraphConfiguration getUnderlyingConfiguration() {
@@ -171,6 +211,14 @@ public class Configuration<O extends Embedding> {
         }
     }
 
+    public String[] getStrings(String key, String... defaultValues) {
+        return giraphConfiguration.getStrings(key, defaultValues);
+    }
+
+    public Class<?>[] getClasses(String key, Class<?>... defaultValues) {
+        return giraphConfiguration.getClasses(key, defaultValues);
+    }
+
     public Class<? extends Pattern> getPatternClass() {
         return patternClass;
     }
@@ -195,16 +243,40 @@ public class Configuration<O extends Embedding> {
         return infoPeriod;
     }
 
-    public MainGraph createGraph() {
+    public <E extends Embedding> E createEmbedding() {
+        return (E) ReflectionUtils.newInstance(embeddingClass);
+    }
+
+    public Class<? extends Embedding> getEmbeddingClass() {
+        return embeddingClass;
+    }
+
+    public void setEmbeddingClass(Class<? extends Embedding> embeddingClass) {
+        this.embeddingClass = embeddingClass;
+    }
+
+    public <G extends MainGraph> G getMainGraph() {
+        return (G) mainGraph;
+    }
+
+    public <G extends MainGraph> void setMainGraph(G mainGraph) {
+        this.mainGraph = mainGraph;
+    }
+
+    protected MainGraph createGraph() {
         boolean useLocalGraph = getBoolean(CONF_MAINGRAPH_LOCAL, CONF_MAINGRAPH_LOCAL_DEFAULT);
 
         try {
+            Constructor<? extends MainGraph> constructor;
+
             if (useLocalGraph) {
-                return new BasicMainGraph(Paths.get(getMainGraphPath()));
+                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class);
+                return constructor.newInstance(Paths.get(getMainGraphPath()));
             } else {
-                return new BasicMainGraph(new Path(getMainGraphPath()));
+                constructor = mainGraphClass.getConstructor(Path.class);
+                return constructor.newInstance(new Path(getMainGraphPath()));
             }
-        } catch (IOException e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new RuntimeException("Could not load main graph", e);
         }
     }

@@ -84,6 +84,9 @@ public class ExecutionEngine<O extends Embedding>
         computation.setUnderlyingExecutionEngine(this);
 
         if (getPhase() == 0 && getSuperstep() == 0) {
+            if (configuration.getEmbeddingClass() == null) {
+                configuration.setEmbeddingClass(computation.getEmbeddingClass());
+            }
             computation.initAggregations();
         }
 
@@ -182,7 +185,7 @@ public class ExecutionEngine<O extends Embedding>
     }
 
     protected void bootstrap() throws IOException {
-        O embedding = getComputation().createEmbedding();
+        O embedding = configuration.createEmbedding();
         computation.expand(embedding);
     }
 

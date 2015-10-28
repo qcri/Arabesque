@@ -118,7 +118,7 @@ public class CacheCommunicationStrategy<O extends Embedding> extends Communicati
             if (currentObjectCache == null) {
                 return null;
             } else {
-                currentObjectCache.prepareForIteration(getExecutionEngine().getComputation());
+                currentObjectCache.prepareForIteration();
             }
         }
 
