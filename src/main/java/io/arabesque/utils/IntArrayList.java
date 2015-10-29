@@ -68,13 +68,24 @@ public class IntArrayList implements IntCollection, Writable {
             throw new UnsupportedOperationException("IntArrayList does not support long sizes yet");
         }
 
-        int newTargetSize = (int) l;
+        int minimumSize = (int) l;
 
         if (backingArray == null) {
-            backingArray = new int[newTargetSize];
+            backingArray = new int[minimumSize];
         }
-        else if (newTargetSize > backingArray.length) {
-            backingArray = Arrays.copyOf(backingArray, newTargetSize);
+        else if (minimumSize > backingArray.length) {
+            int targetLength = backingArray.length;
+
+            while (targetLength < minimumSize) {
+                targetLength = targetLength << 1;
+
+                if (targetLength < 0) {
+                    targetLength = minimumSize;
+                    break;
+                }
+            }
+
+            backingArray = Arrays.copyOf(backingArray, targetLength);
         }
         else {
             return false;

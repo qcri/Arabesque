@@ -34,6 +34,7 @@ public class VertexPositionEquivalences {
 
     public void addEquivalence(int pos1, int pos2) {
         equivalences[pos1].add(pos2);
+        equivalences[pos2].add(pos1);
     }
 
     public IntSet getEquivalences(int pos) {
@@ -54,7 +55,7 @@ public class VertexPositionEquivalences {
                         continue;
                     }
 
-                    equivalences[i].addAll(equivalences[equivalentPosition]);
+                    equivalences[equivalentPosition].addAll(currentVertexEquivalences);
                 }
             }
         }

@@ -8,6 +8,7 @@ import io.arabesque.graph.Vertex;
 import io.arabesque.utils.IntArrayList;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
+import org.apache.log4j.Logger;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -15,6 +16,8 @@ import java.io.IOException;
 import java.util.Collection;
 
 public abstract class BasicPattern extends Pattern {
+    private static final Logger LOG = Logger.getLogger(BasicPattern.class);
+
     // Basic structure {{
     private IntArrayList vertices;
     private PatternEdgeArrayList edges;
@@ -23,8 +26,8 @@ public abstract class BasicPattern extends Pattern {
 
     // Incremental building {{
     private IntArrayList previousWords;
-    private int numVerticesAddedFromPrevious = -1;
-    private int numAddedEdgesFromPrevious = 0;
+    private int numVerticesAddedFromPrevious;
+    private int numAddedEdgesFromPrevious;
     // }}
 
     // Isomorphisms {{
@@ -46,7 +49,7 @@ public abstract class BasicPattern extends Pattern {
 
         vertices = new IntArrayList();
         edges = createPatternEdgeArrayList();
-        vertexPositions = HashIntIntMaps.newMutableMap();
+        vertexPositions = HashIntIntMaps.getDefaultFactory().withDefaultValue(-1).newMutableMap();
         previousWords = new IntArrayList();
         edgePool = null;
 
@@ -78,8 +81,7 @@ public abstract class BasicPattern extends Pattern {
         edges.clear();
         vertexPositions.clear();
 
-        dirtyVertexPositionEquivalences = true;
-        dirtyCanonicalLabelling = true;
+        setDirty();
 
         resetIncremental();
     }
@@ -92,11 +94,20 @@ public abstract class BasicPattern extends Pattern {
 
     @Override
     public void setEmbedding(Embedding embedding) {
+        //LOG.info("Setting from embedding " + embedding);
+
         if (canDoIncremental(embedding)) {
+            //LOG.info("Do it incrementally");
             setEmbeddingIncremental(embedding);
         } else {
+            //LOG.info("Do it from scratch");
             setEmbeddingFromScratch(embedding);
         }
+
+        //LOG.info("previousWords=" + previousWords);
+        //LOG.info("numVerticesAddedFromPrevious=" + numVerticesAddedFromPrevious);
+        //LOG.info("numAddedEdgesFromPrevious=" + numAddedEdgesFromPrevious);
+        //LOG.info("vertices=" + vertices);
     }
 
     /**
@@ -146,14 +157,14 @@ public abstract class BasicPattern extends Pattern {
         int[] words = embedding.getWords();
 
         for (int i = 0; i < embeddingNumWords; i++) {
-            previousWords.set(i, words[i]);
+            previousWords.add(words[i]);
         }
     }
 
     private void resetToPrevious() {
         removeLastNEdges(numAddedEdgesFromPrevious);
         removeLastNVertices(numVerticesAddedFromPrevious);
-        dirtyVertexPositionEquivalences = true;
+        setDirty();
     }
 
     private void removeLastNEdges(int n) {
@@ -168,7 +179,14 @@ public abstract class BasicPattern extends Pattern {
         int targetI = vertices.size() - n;
 
         for (int i = vertices.size() - 1; i >= targetI; --i) {
-            vertexPositions.remove(vertices.remove(i));
+            try {
+                vertexPositions.remove(vertices.remove(i));
+            } catch (IllegalArgumentException e) {
+                System.err.println(e.toString());
+                System.err.println("i=" + i);
+                System.err.println("targetI=" + targetI);
+                throw e;
+            }
         }
     }
 
@@ -318,7 +336,7 @@ public abstract class BasicPattern extends Pattern {
             patternEdge.setDestLabel(srcLabel);
         }
 
-        dirtyVertexPositionEquivalences = true;
+        setDirty();
 
         return true;
     }
@@ -327,13 +345,18 @@ public abstract class BasicPattern extends Pattern {
         int pos = vertexPositions.get(vertexId);
 
         if (pos == -1) {
+            pos = vertices.size();
             vertices.add(vertexId);
             vertexPositions.put(vertexId, pos);
+            setDirty();
         }
 
-        dirtyVertexPositionEquivalences = true;
-
         return pos;
+    }
+
+    private void setDirty() {
+        dirtyCanonicalLabelling = true;
+        dirtyVertexPositionEquivalences = true;
     }
 
     @Override
@@ -487,6 +510,10 @@ public abstract class BasicPattern extends Pattern {
     }
 
     protected void reclaimPatternEdges(Collection<PatternEdge> patternEdges) {
+        if (edgePool == null) {
+            edgePool = new PatternEdgeArrayList();
+        }
+
         edgePool.ensureCapacity(edgePool.size() + patternEdges.size());
 
         for (PatternEdge patternEdge : patternEdges) {
@@ -496,34 +523,38 @@ public abstract class BasicPattern extends Pattern {
 
     @Override
     public String toString() {
-        return "BasicPattern{" +
-                "edges=" + edges +
-                '}';
+        return toOutputString();
     }
 
     @Override
     public String toOutputString() {
-        StringBuilder strBuilder = new StringBuilder();
-        boolean first = true;
+        if (getNumberOfEdges() > 0) {
+            StringBuilder strBuilder = new StringBuilder();
+            boolean first = true;
 
-        for (PatternEdge edge : edges) {
-            if (!first) {
-                strBuilder.append(',');
+            for (PatternEdge edge : edges) {
+                if (!first) {
+                    strBuilder.append(',');
+                }
+
+                strBuilder.append(edge.getSrcId());
+                strBuilder.append("(");
+                strBuilder.append(edge.getSrcLabel());
+                strBuilder.append(")");
+                strBuilder.append('-');
+                strBuilder.append(edge.getDestId());
+                strBuilder.append("(");
+                strBuilder.append(edge.getDestLabel());
+                strBuilder.append(")");
+                first = false;
             }
 
-            strBuilder.append(edge.getSrcId());
-            strBuilder.append("(");
-            strBuilder.append(edge.getSrcLabel());
-            strBuilder.append(")");
-            strBuilder.append('-');
-            strBuilder.append(edge.getDestId());
-            strBuilder.append("(");
-            strBuilder.append(edge.getDestLabel());
-            strBuilder.append(")");
-            first = false;
-        }
+            return strBuilder.toString();
+        } else {
+            Vertex<?> vertex = mainGraph.getVertex(vertices.get(0));
 
-        return strBuilder.toString();
+            return "0(" + vertex.getVertexLabel() + ")";
+        }
     }
 
     @Override
