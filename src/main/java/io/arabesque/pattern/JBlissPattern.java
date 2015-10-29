@@ -7,9 +7,6 @@ import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 import org.apache.log4j.Logger;
 
-/**
- * Created by afonseca on 3/15/2015.
- */
 public class JBlissPattern extends BasicPattern {
     private static final Logger LOG = Logger.getLogger(JBlissPattern.class);
 
@@ -64,5 +61,12 @@ public class JBlissPattern extends BasicPattern {
     @Override
     protected void fillCanonicalLabelling(IntIntMap canonicalLabelling) {
         jblissGraph.fillCanonicalLabeling(canonicalLabelling);
+    }
+
+    @Override
+    public boolean turnCanonical() {
+        dirtyVertexPositionEquivalences = true;
+
+        return super.turnCanonical();
     }
 }

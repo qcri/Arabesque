@@ -1,6 +1,8 @@
 package io.arabesque.pattern;
 
 import net.openhft.koloboke.collect.IntCursor;
+import net.openhft.koloboke.collect.map.IntIntCursor;
+import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.IntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
@@ -13,6 +15,11 @@ public class VertexPositionEquivalences {
 
     public VertexPositionEquivalences() {
         this.equivalences = null;
+    }
+
+    public VertexPositionEquivalences(VertexPositionEquivalences other) {
+        setNumVertices(other.numVertices);
+        addAll(other);
     }
 
     public void setNumVertices(int numVertices) {
@@ -32,7 +39,20 @@ public class VertexPositionEquivalences {
         }
     }
 
+
+    public void addAll(VertexPositionEquivalences vertexPositionEquivalences) {
+        setNumVertices(vertexPositionEquivalences.numVertices);
+
+        for (int i = 0; i < numVertices; ++i) {
+            equivalences[i].addAll(vertexPositionEquivalences.equivalences[i]);
+        }
+    }
+
     public void addEquivalence(int pos1, int pos2) {
+        if (pos1 == pos2) {
+            return;
+        }
+
         equivalences[pos1].add(pos2);
         equivalences[pos2].add(pos1);
     }
@@ -124,5 +144,30 @@ public class VertexPositionEquivalences {
         }
 
         return result;
+    }
+
+    public void convertBasedOnRelabelling(IntIntMap relabelling) {
+        VertexPositionEquivalences oldEquivalences = new VertexPositionEquivalences(this);
+
+        clear();
+
+        IntIntCursor relabellingCursor = relabelling.cursor();
+
+        while (relabellingCursor.moveNext()) {
+            int oldPos = relabellingCursor.key();
+            IntSet oldEquivalencesForOldPos = oldEquivalences.getEquivalences(oldPos);
+
+            int newPos = relabellingCursor.value();
+            IntSet newEquivalencesForNewPos = equivalences[newPos];
+
+            IntCursor oldEquivalencesForOldPosCursor = oldEquivalencesForOldPos.cursor();
+
+            while (oldEquivalencesForOldPosCursor.moveNext()) {
+                int oldEquivalentPosition = oldEquivalencesForOldPosCursor.elem();
+                int newEquivalentPosition = relabelling.get(oldEquivalentPosition);
+
+                newEquivalencesForNewPos.add(newEquivalentPosition);
+            }
+        }
     }
 }

@@ -20,7 +20,7 @@ public abstract class Pattern implements Writable {
 
     public abstract int getNumberOfEdges();
 
-    public abstract void turnCanonical();
+    public abstract boolean turnCanonical();
 
     public abstract IntArrayList getVertices();
 

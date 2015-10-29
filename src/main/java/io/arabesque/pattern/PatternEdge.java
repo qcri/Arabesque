@@ -12,30 +12,36 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
     private int srcLabel;
     private int destId;
     private int destLabel;
-    private boolean type; //true : forward , false : backward
+    private boolean isForward;
 
     public PatternEdge() {
-        type = true;
+        this(-1, -1, -1, -1, true);
     }
 
     public PatternEdge(PatternEdge edge) {
-        this(edge.getSrcId(), edge.getSrcLabel(), edge.getDestId(), edge.getDestLabel(), edge.getType());
+        setFromOther(edge);
     }
 
     public PatternEdge(int srcId, int srcLabel, int destId, int destLabel) {
-        this.srcId = srcId;
-        this.srcLabel = srcLabel;
-        this.destId = destId;
-        this.destLabel = destLabel;
-        type = true;
+        this(srcId, srcLabel, destId, destLabel, true);
     }
 
-    public PatternEdge(int srcId, int srcLabel, int destId, int destLabel, boolean type) {
+    public PatternEdge(int srcId, int srcLabel, int destId, int destLabel, boolean isForward) {
         this.srcId = srcId;
         this.srcLabel = srcLabel;
         this.destId = destId;
         this.destLabel = destLabel;
-        this.type = type;
+        this.isForward = isForward;
+    }
+
+    public void setFromOther(PatternEdge edge) {
+        setSrcId(edge.getSrcId());
+        setSrcLabel(edge.getSrcLabel());
+
+        setDestId(edge.getDestId());
+        setDestLabel(edge.getDestLabel());
+
+        isForward(edge.isForward());
     }
 
     public int getSrcId() {
@@ -70,18 +76,18 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.destLabel = destLabel;
     }
 
-    public boolean getType() {
-        return type;
+    public boolean isForward() {
+        return isForward;
     }
 
-    public void setType(boolean type) {
-        this.type = type;
+    public void isForward(boolean type) {
+        this.isForward = type;
     }
 
 
     public String toString() {
         StringBuilder result = new StringBuilder();
-        result.append("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "-" + type + "]");
+        result.append("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "-" + isForward + "]");
 
         return result.toString();
     }
@@ -92,7 +98,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         out.writeInt(this.srcLabel);
         out.writeInt(this.destId);
         out.writeInt(this.destLabel);
-        out.writeBoolean(this.type);
+        out.writeBoolean(this.isForward);
     }
 
     @Override
@@ -101,7 +107,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.srcLabel = in.readInt();
         this.destId = in.readInt();
         this.destLabel = in.readInt();
-        this.type = in.readBoolean();
+        this.isForward = in.readBoolean();
     }
 
     public boolean isSmaller(PatternEdge e) {
@@ -117,7 +123,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
             }
         } else {
             //fwd, fwd
-            if (this.type == true && e.getType() == true) {
+            if (this.isForward && e.isForward()) {
                 if (this.destId < e.getDestId())
                     isSmaller = true;
                 else if (this.destId == e.getDestId()) {
@@ -126,7 +132,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
                 }
             }
             //bwd, bwd
-            else if (this.type == false && e.getType() == false) {
+            else if (!this.isForward && !e.isForward()) {
                 if (this.srcId < e.getSrcId())
                     isSmaller = true;
                 if (this.srcId == e.getSrcId()) {
@@ -136,7 +142,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
             }
 
             //fwd, bwd
-            else if (this.type == true && e.getType() == false) {
+            else if (this.isForward && !e.isForward()) {
                 if (this.destId <= e.getSrcId()) {
                     isSmaller = true;
                 }
@@ -180,14 +186,5 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         else if (isSmaller(o)) return -1;
         else return 1;
 
-    }
-
-    ;
-
-    public int getTypeInt() {
-        if (type) {
-            return 1;
-        }
-        return 0;
     }
 }

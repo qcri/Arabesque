@@ -6,7 +6,9 @@ import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
 import io.arabesque.utils.IntArrayList;
+import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
+import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import org.apache.log4j.Logger;
 
@@ -17,6 +19,8 @@ import java.util.Collection;
 
 public abstract class BasicPattern extends Pattern {
     private static final Logger LOG = Logger.getLogger(BasicPattern.class);
+
+    protected HashIntIntMapFactory positionMapFactory = HashIntIntMaps.getDefaultFactory().withDefaultValue(-1);
 
     // Basic structure {{
     private IntArrayList vertices;
@@ -37,10 +41,10 @@ public abstract class BasicPattern extends Pattern {
 
     // Others {{
     protected final MainGraph<?, ?, ?, ?> mainGraph;
-    private PatternEdgeArrayList edgePool;
+    private PatternEdgeArrayList patternEdgeListPool;
 
-    private volatile boolean dirtyVertexPositionEquivalences;
-    private volatile boolean dirtyCanonicalLabelling;
+    protected volatile boolean dirtyVertexPositionEquivalences;
+    protected volatile boolean dirtyCanonicalLabelling;
     // }}
 
 
@@ -49,9 +53,9 @@ public abstract class BasicPattern extends Pattern {
 
         vertices = new IntArrayList();
         edges = createPatternEdgeArrayList();
-        vertexPositions = HashIntIntMaps.getDefaultFactory().withDefaultValue(-1).newMutableMap();
+        vertexPositions = positionMapFactory.newMutableMap();
         previousWords = new IntArrayList();
-        edgePool = null;
+        patternEdgeListPool = null;
 
         init();
     }
@@ -94,20 +98,11 @@ public abstract class BasicPattern extends Pattern {
 
     @Override
     public void setEmbedding(Embedding embedding) {
-        //LOG.info("Setting from embedding " + embedding);
-
         if (canDoIncremental(embedding)) {
-            //LOG.info("Do it incrementally");
             setEmbeddingIncremental(embedding);
         } else {
-            //LOG.info("Do it from scratch");
             setEmbeddingFromScratch(embedding);
         }
-
-        //LOG.info("previousWords=" + previousWords);
-        //LOG.info("numVerticesAddedFromPrevious=" + numVerticesAddedFromPrevious);
-        //LOG.info("numAddedEdgesFromPrevious=" + numAddedEdgesFromPrevious);
-        //LOG.info("vertices=" + vertices);
     }
 
     /**
@@ -304,12 +299,6 @@ public abstract class BasicPattern extends Pattern {
         return addEdge(srcId, src.getVertexLabel(), dstId, dst.getVertexLabel());
     }
 
-    @Override
-    public boolean addEdge(PatternEdge patternEdge) {
-        return addEdge(patternEdge.getSrcId(), patternEdge.getSrcLabel(),
-                patternEdge.getDestId(), patternEdge.getDestLabel());
-    }
-
     public boolean addEdge(int srcId, int srcLabel, int dstId, int dstLabel) {
         int srcPos = addVertex(srcId);
         int dstPos = addVertex(dstId);
@@ -318,27 +307,34 @@ public abstract class BasicPattern extends Pattern {
     }
 
     private boolean addEdgeWithPositions(int srcPos, int srcLabel, int dstPos, int dstLabel) {
-        PatternEdge patternEdge = createPatternEdge();
-
-        edges.add(patternEdge);
+        int minPos;
+        int minLbl;
+        int maxPos;
+        int maxLbl;
 
         if (srcPos < dstPos) {
-            patternEdge.setSrcId(srcPos);
-            patternEdge.setDestId(dstPos);
-
-            patternEdge.setSrcLabel(srcLabel);
-            patternEdge.setDestLabel(dstLabel);
+            minPos = srcPos;
+            minLbl = srcLabel;
+            maxPos = dstPos;
+            maxLbl = dstLabel;
         } else {
-            patternEdge.setSrcId(dstPos);
-            patternEdge.setDestId(srcPos);
-
-            patternEdge.setSrcLabel(dstLabel);
-            patternEdge.setDestLabel(srcLabel);
+            maxPos = srcPos;
+            maxLbl = srcLabel;
+            minPos = dstPos;
+            minLbl = dstLabel;
         }
+
+        PatternEdge patternEdge = createPatternEdge(minPos, minLbl, maxPos, maxLbl, true);
+
+        return addEdge(patternEdge);
+    }
+
+    public boolean addEdge(PatternEdge edge) {
+        edges.add(edge);
 
         setDirty();
 
-        return true;
+        return  true;
     }
 
     public int addVertex(int vertexId) {
@@ -354,7 +350,7 @@ public abstract class BasicPattern extends Pattern {
         return pos;
     }
 
-    private void setDirty() {
+    protected void setDirty() {
         dirtyCanonicalLabelling = true;
         dirtyVertexPositionEquivalences = true;
     }
@@ -422,10 +418,29 @@ public abstract class BasicPattern extends Pattern {
     protected abstract void fillCanonicalLabelling(IntIntMap canonicalLabelling);
 
     @Override
-    public void turnCanonical() {
+    public boolean turnCanonical() {
         resetIncremental();
 
         IntIntMap canonicalLabelling = getCanonicalLabeling();
+
+        IntIntCursor canonicalLabellingCursor = canonicalLabelling.cursor();
+
+        boolean allEqual = true;
+
+        while (canonicalLabellingCursor.moveNext()) {
+            int oldPos = canonicalLabellingCursor.key();
+            int newPos = canonicalLabellingCursor.value();
+
+            if (oldPos != newPos) {
+                allEqual = false;
+            }
+        }
+
+        if (allEqual) {
+            // TODO: Test if this works
+            //edges.sort();
+            return false;
+        }
 
         IntArrayList oldVertices = new IntArrayList(vertices);
 
@@ -467,8 +482,14 @@ public abstract class BasicPattern extends Pattern {
             }
         }
 
-        edges.sort();
-        dirtyVertexPositionEquivalences = true;
+        // TODO: Test if this works
+        //edges.sort();
+
+        for (int i = 0; i < getNumberOfVertices(); ++i) {
+            canonicalLabelling.put(i, i);
+        }
+
+        return true;
     }
 
     @Override
@@ -493,28 +514,40 @@ public abstract class BasicPattern extends Pattern {
         return new PatternEdgeArrayList();
     }
 
-    protected PatternEdge createPatternEdge() {
-        if (edgePool != null && !edgePool.isEmpty()) {
-            return edgePool.remove(edgePool.size() - 1);
+    protected PatternEdge createPatternEdge(int srcPos, int srcLabel, int dstPos, int dstLabel, boolean isForward) {
+        PatternEdge patternEdge;
+
+        if (patternEdgeListPool != null && !patternEdgeListPool.isEmpty()) {
+            patternEdge = patternEdgeListPool.remove(patternEdgeListPool.size() - 1);
         } else {
-            return new PatternEdge();
+            patternEdge = new PatternEdge();
         }
+
+        patternEdge.setSrcId(srcPos);
+        patternEdge.setDestId(dstPos);
+
+        patternEdge.setSrcLabel(srcLabel);
+        patternEdge.setDestLabel(dstLabel);
+
+        patternEdge.isForward(isForward);
+
+        return patternEdge;
     }
 
     protected void reclaimPatternEdge(PatternEdge patternEdge) {
-        if (edgePool == null) {
-            edgePool = new PatternEdgeArrayList();
+        if (patternEdgeListPool == null) {
+            patternEdgeListPool = new PatternEdgeArrayList();
         }
 
-        edgePool.add(patternEdge);
+        patternEdgeListPool.add(patternEdge);
     }
 
     protected void reclaimPatternEdges(Collection<PatternEdge> patternEdges) {
-        if (edgePool == null) {
-            edgePool = new PatternEdgeArrayList();
+        if (patternEdgeListPool == null) {
+            patternEdgeListPool = new PatternEdgeArrayList();
         }
 
-        edgePool.ensureCapacity(edgePool.size() + patternEdges.size());
+        patternEdgeListPool.ensureCapacity(patternEdgeListPool.size() + patternEdges.size());
 
         for (PatternEdge patternEdge : patternEdges) {
             reclaimPatternEdge(patternEdge);
@@ -571,5 +604,9 @@ public abstract class BasicPattern extends Pattern {
     @Override
     public int hashCode() {
         return edges.hashCode();
+    }
+
+    protected int getVertexIdAtPosition(int pos) {
+        return vertexPositions.get(pos);
     }
 }
