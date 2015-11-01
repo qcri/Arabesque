@@ -19,9 +19,9 @@ public class BACPattern extends BasicPattern {
     private static final Logger LOG = Logger.getLogger(BACPattern.class);
 
     // Underlying pattern (the one represented by BasicPattern) extra stuff {{
-    // Index = vertex position, Value = vertex label
+    // Index = underlying vertex position, Value = vertex label
     private IntArrayList underlyingPosToLabel;
-    // Index = vertex position, Value = list of neighbour ids of that vertex
+    // Index = underlying vertex position, Value = list of neighbour ids of that vertex
     private ObjArrayList<IntArrayList> patternAdjacencyList;
     // IntArrayList pool to reduce # of allocations
     private ObjArrayList<IntArrayList> intArrayListPool;
@@ -110,11 +110,10 @@ public class BACPattern extends BasicPattern {
 
         resetAdjacencyList();
 
-        IntCursor vertexPosCursor = getVertices().cursor();
+        IntCursor vertexIdCursor = getVertices().cursor();
 
-        while (vertexPosCursor.moveNext()) {
-            int vertexPos = vertexPosCursor.elem();
-            int vertexId = getVertexIdAtPosition(vertexPos);
+        while (vertexIdCursor.moveNext()) {
+            int vertexId = vertexIdCursor.elem();
             Vertex<?> vertex = mainGraph.getVertex(vertexId);
             underlyingPosToLabel.add(vertex.getVertexLabel());
         }
@@ -436,10 +435,11 @@ public class BACPattern extends BasicPattern {
     }
 
     private IntCollection getUnderlyingVertexPosThatExtendTmp() {
+        int numTmpVertices = tmpLabelling.size();
         int numTmpEdges = tmpEdges.size();
 
         if (numTmpEdges == 0) {
-            return getVertices();
+            return getVertexPositions();
         }
 
         underlyingVertexPosThatExtendTmp.clear();

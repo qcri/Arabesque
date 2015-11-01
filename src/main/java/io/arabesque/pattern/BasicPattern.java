@@ -6,6 +6,7 @@ import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
 import io.arabesque.utils.IntArrayList;
+import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
@@ -25,6 +26,7 @@ public abstract class BasicPattern extends Pattern {
     // Basic structure {{
     private IntArrayList vertices;
     private PatternEdgeArrayList edges;
+    // K = vertex id, V = vertex position
     private IntIntMap vertexPositions;
     // }}
 
@@ -485,9 +487,9 @@ public abstract class BasicPattern extends Pattern {
         // TODO: Test if this works
         //edges.sort();
 
-        for (int i = 0; i < getNumberOfVertices(); ++i) {
+        /*for (int i = 0; i < getNumberOfVertices(); ++i) {
             canonicalLabelling.put(i, i);
-        }
+        }*/
 
         return true;
     }
@@ -606,7 +608,11 @@ public abstract class BasicPattern extends Pattern {
         return edges.hashCode();
     }
 
-    protected int getVertexIdAtPosition(int pos) {
+    protected int getVertexPositionAtId(int pos) {
         return vertexPositions.get(pos);
+    }
+
+    protected IntCollection getVertexPositions() {
+        return vertexPositions.values();
     }
 }

@@ -42,6 +42,17 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
     }
 
     @Override
+    public K getKey(K key) {
+        K superKey = super.getKey(key);
+
+        if (superKey == null) {
+            superKey = quick2CanonicalMap.get(key);
+        }
+
+        return superKey;
+    }
+
+    @Override
     public V getValue(K key) {
         V value = super.getValue(key);
 
