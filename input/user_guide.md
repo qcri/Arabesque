@@ -44,7 +44,7 @@ public interface Computation<E extends Embedding> {
 
 The class *E* can be either *VertexInducedEmbedding* or *EdgeInducedEmbedding*, depending on the type of computation we are using.
 
-Computation classes can have a local state, which will be replicated at each Arabesque thread running the job.  The init method initializes this internal state (it must start with a call to *super.init()*). The filter method executes the filter function and the process method executes the process function. 
+Computation classes can have a local state, which will be replicated at each Arabesque worker thread running the job.  The init method initializes this internal state (it must start with a call to *super.init()*). The filter method executes the filter function and the process method executes the process function. 
 Finally, the method shouldExpand implements the termination filter function. These methods are sufficient to implement the basic filter-process model.
 
 Algorithms using aggregation can also override the aggregation filter and aggregation process functions. In order to use aggregations, applications need to register them by specifying the key and value classes, as well as the reduction function. This must be done in the initAggregations method, which typically looks like the following example.
