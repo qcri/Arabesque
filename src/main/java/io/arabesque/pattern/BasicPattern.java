@@ -439,8 +439,6 @@ public abstract class BasicPattern extends Pattern {
         }
 
         if (allEqual) {
-            // TODO: Test if this works
-            //edges.sort();
             return false;
         }
 
@@ -483,13 +481,6 @@ public abstract class BasicPattern extends Pattern {
                 edge.setDestLabel(tmp);
             }
         }
-
-        // TODO: Test if this works
-        //edges.sort();
-
-        /*for (int i = 0; i < getNumberOfVertices(); ++i) {
-            canonicalLabelling.put(i, i);
-        }*/
 
         return true;
     }
