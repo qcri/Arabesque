@@ -47,12 +47,17 @@ public class JBlissPattern extends BasicPattern {
                 int newPos = generatorCursor.value();
 
                 equivalences.addEquivalence(oldPos, newPos);
+                //equivalences.addEquivalence(newPos, oldPos);
             }
         }
     }
 
     @Override
     protected void fillVertexPositionEquivalences(VertexPositionEquivalences vertexPositionEquivalences) {
+        for (int i = 0; i < getNumberOfVertices(); ++i) {
+            vertexPositionEquivalences.addEquivalence(i, i);
+        }
+
         VertexPositionEquivalencesReporter reporter = new VertexPositionEquivalencesReporter(vertexPositionEquivalences);
         jblissGraph.findAutomorphisms(reporter, null);
         vertexPositionEquivalences.propagateEquivalences();

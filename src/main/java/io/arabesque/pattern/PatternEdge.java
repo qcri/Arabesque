@@ -86,10 +86,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
 
 
     public String toString() {
-        StringBuilder result = new StringBuilder();
-        result.append("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "-" + isForward + "]");
-
-        return result.toString();
+        return ("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "-" + (isForward ? 'F' : 'B') + "]");
     }
 
     @Override
@@ -157,16 +154,19 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         return isSmaller;
     }
 
-
     @Override
     public boolean equals(Object o) {
-        PatternEdge e = (PatternEdge) o;
-        if (this.srcId == e.getSrcId() &&
-                this.srcLabel == e.getSrcLabel() &&
-                this.destId == e.getDestId() &&
-                this.destLabel == e.getDestLabel())
-            return true;
-        return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        PatternEdge that = (PatternEdge) o;
+
+        if (srcId != that.srcId) return false;
+        if (srcLabel != that.srcLabel) return false;
+        if (destId != that.destId) return false;
+        if (destLabel != that.destLabel) return false;
+        return true;
+        //return isForward == that.isForward;
 
     }
 
@@ -176,6 +176,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         result = 31 * result + srcLabel;
         result = 31 * result + destId;
         result = 31 * result + destLabel;
+        //result = 31 * result + (isForward ? 1 : 0);
         return result;
     }
 

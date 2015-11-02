@@ -16,6 +16,7 @@ public class TestConfiguration<O extends Embedding> extends Configuration<O> {
     public TestConfiguration(String graphPath) {
         this();
 
+        getUnderlyingConfiguration().set(CONF_COMPUTATION_CLASS, "io.arabesque.examples.clique.CliqueComputation");
         getUnderlyingConfiguration().set(CONF_MAINGRAPH_PATH, graphPath);
     }
 

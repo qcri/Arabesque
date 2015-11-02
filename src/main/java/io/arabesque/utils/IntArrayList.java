@@ -498,7 +498,7 @@ public class IntArrayList implements IntCollection, Writable {
 
     private void checkIndex(int index) {
         if (index < 0 || index >= numElements) {
-            throw new ArrayIndexOutOfBoundsException();
+            throw new ArrayIndexOutOfBoundsException(index);
         }
     }
 

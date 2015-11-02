@@ -134,6 +134,12 @@ public class Configuration<O extends Embedding> {
 
     public Configuration(ImmutableClassesGiraphConfiguration giraphConfiguration) {
         this.giraphConfiguration = giraphConfiguration;
+    }
+
+    public void initialize() {
+        if (initialized) {
+            return;
+        }
 
         useCompressedCaches = getBoolean(CONF_COMPRESSED_CACHES, CONF_COMPRESSED_CACHES_DEFAULT);
         cacheThresholdSize = getInteger(CONF_CACHE_THRESHOLD_SIZE, CONF_CACHE_THRESHOLD_SIZE_DEFAULT);
@@ -155,12 +161,6 @@ public class Configuration<O extends Embedding> {
         outputPath = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT);
 
         defaultAggregatorSplits = getInteger(CONF_DEFAULT_AGGREGATOR_SPLITS, CONF_DEFAULT_AGGREGATOR_SPLITS_DEFAULT);
-    }
-
-    public void initialize() {
-        if (initialized) {
-            return;
-        }
 
         initialized = true;
         OptimizationSetDescriptor optimizationSetDescriptor = ReflectionUtils.newInstance(optimizationSetDescriptorClass);

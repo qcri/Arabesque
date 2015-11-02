@@ -4,7 +4,10 @@ import io.arabesque.conf.Configuration;
 import io.arabesque.conf.TestConfiguration;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.pattern.JBlissPattern;
+import io.arabesque.pattern.Pattern;
+import io.arabesque.pattern.VICPattern;
 import io.arabesque.pattern.VertexPositionEquivalences;
+import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 
@@ -21,6 +24,7 @@ public class TestPatternAutoSets {
         }
 
         Configuration.setIfUnset(new TestConfiguration(args[0]));
+        Configuration.get().initialize();
 
         String embeddingStr = args[1];
 
@@ -51,23 +55,39 @@ public class TestPatternAutoSets {
         }
 
         JBlissPattern jblissPattern = new JBlissPattern();
-        //BasicPattern basicPattern = new BasicPattern();
-
-        //basicPattern.setupStructures(vertexIds.size(), edgeIds.getSize());
+        VICPattern vicPattern = new VICPattern();
 
         for (int i = 0; i < edgeIds.getSize(); ++i) {
             int edgeId = edgeIds.getUnchecked(i);
-            IntIntPair edge = edges.get(i);
             jblissPattern.addEdge(edgeId);
-            //basicPattern.addEdge(edge.getFirst(), edge.getSecond());
+            vicPattern.addEdge(edgeId);
         }
 
-        //basicPattern.turnCanonical();
+        printPattern("vic", vicPattern);
+        printCanonicalLabelling("vic", vicPattern.getCanonicalLabeling());
+        printVertexPositionEquivalences("vic", vicPattern.getVertexPositionEquivalences());
+        vicPattern.turnCanonical();
+        printPattern("vic-min", vicPattern);
+        printCanonicalLabelling("vic-min", vicPattern.getCanonicalLabeling());
+        printVertexPositionEquivalences("vic-min", vicPattern.getVertexPositionEquivalences());
 
+        printPattern("jbliss", jblissPattern);
+        printCanonicalLabelling("jbliss", jblissPattern.getCanonicalLabeling());
         printVertexPositionEquivalences("jbliss", jblissPattern.getVertexPositionEquivalences());
         jblissPattern.turnCanonical();
+        printPattern("jbliss-min", jblissPattern);
+        printCanonicalLabelling("jbliss-min", jblissPattern.getCanonicalLabeling());
         printVertexPositionEquivalences("jbliss-min", jblissPattern.getVertexPositionEquivalences());
-        //printVertexPositionEquivalences("basic", basicPattern.getVertexPositionEquivalences());
+    }
+
+    public static void printPattern(String title, Pattern pattern) {
+        System.out.println("Pattern of " + title);
+        System.out.println(pattern.toString());
+    }
+
+    public static void printCanonicalLabelling(String title, IntIntMap canonicalLabelling) {
+        System.out.println("Canonical labelling of " + title);
+        System.out.println(canonicalLabelling.toString());
     }
 
     public static void printVertexPositionEquivalences(String title, VertexPositionEquivalences vertexPositionEquivalences) {

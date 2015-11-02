@@ -34,9 +34,9 @@ public class VertexPositionEquivalences {
             equivalences[i].clear();
         }
 
-        for (int i = 0; i < numVertices; ++i) {
+        /*for (int i = 0; i < numVertices; ++i) {
             equivalences[i].add(i);
-        }
+        }*/
     }
 
 
@@ -49,12 +49,12 @@ public class VertexPositionEquivalences {
     }
 
     public void addEquivalence(int pos1, int pos2) {
-        if (pos1 == pos2) {
+        /*if (pos1 == pos2) {
             return;
-        }
+        }*/
 
         equivalences[pos1].add(pos2);
-        equivalences[pos2].add(pos1);
+        //equivalences[pos2].add(pos1);
     }
 
     public IntSet getEquivalences(int pos) {

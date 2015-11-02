@@ -108,14 +108,16 @@ public class ExecutionEngine<O extends Embedding>
     public void postSuperstep() {
         super.postSuperstep();
 
-        for (Map.Entry<String, AggregationStorage> aggregationStorageEntry : aggregationStorages.entrySet()) {
-            String aggregationStorageName = aggregationStorageEntry.getKey();
-            AggregationStorage aggregationStorage = aggregationStorageEntry.getValue();
+        try {
+            for (Map.Entry<String, AggregationStorage> aggregationStorageEntry : aggregationStorages.entrySet()) {
+                String aggregationStorageName = aggregationStorageEntry.getKey();
+                AggregationStorage aggregationStorage = aggregationStorageEntry.getValue();
 
-            /*LOG.info("Final thread aggregation " + aggregationStorageName);
-            LOG.info(aggregationStorage);*/
-
-            workerContext.addAggregationStorage(aggregationStorageName, aggregationStorage);
+                workerContext.addAggregationStorage(aggregationStorageName, aggregationStorage);
+            }
+        } catch (RuntimeException e) {
+            LOG.error(e);
+            throw e;
         }
 
         LongWritable longWritable = new LongWritable();

@@ -11,6 +11,7 @@ import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.io.DataInput;
@@ -20,6 +21,7 @@ import java.util.Collection;
 
 public abstract class BasicPattern extends Pattern {
     private static final Logger LOG = Logger.getLogger(BasicPattern.class);
+    private static final int MAX_EDGE_POOL_SIZE = 1000;
 
     protected HashIntIntMapFactory positionMapFactory = HashIntIntMaps.getDefaultFactory().withDefaultValue(-1);
 
@@ -49,7 +51,6 @@ public abstract class BasicPattern extends Pattern {
     protected volatile boolean dirtyCanonicalLabelling;
     // }}
 
-
     public BasicPattern() {
         mainGraph = Configuration.get().getMainGraph();
 
@@ -70,7 +71,7 @@ public abstract class BasicPattern extends Pattern {
         edges.ensureCapacity(basicPattern.edges.size());
 
         for (PatternEdge otherEdge : basicPattern.edges) {
-            edges.add(new PatternEdge(otherEdge));
+            edges.add(createPatternEdge(otherEdge));
         }
 
         vertexPositions.putAll(basicPattern.vertexPositions);
@@ -198,22 +199,19 @@ public abstract class BasicPattern extends Pattern {
         numVerticesAddedFromPrevious = embedding.getNumVerticesAddedWithExpansion();
         numAddedEdgesFromPrevious = embedding.getNumEdgesAddedWithExpansion();
 
-        int numEdgesInEmbedding = embedding.getNumEdges();
-        int numVerticesInEmbedding = embedding.getNumVertices();
-
         ensureCanStoreNewVertices(numVerticesAddedFromPrevious);
         ensureCanStoreNewEdges(numAddedEdgesFromPrevious);
 
         int[] embeddingVertices = embedding.getVertices();
-
+        int numVerticesInEmbedding = embedding.getNumVertices();
         for (int i = (numVerticesInEmbedding - numVerticesAddedFromPrevious); i < numVerticesInEmbedding; ++i) {
             addVertex(embeddingVertices[i]);
         }
 
         int[] embeddingEdges = embedding.getEdges();
-
+        int numEdgesInEmbedding = embedding.getNumEdges();
         for (int i = (numEdgesInEmbedding - numAddedEdgesFromPrevious); i < numEdgesInEmbedding; ++i) {
-            addEdgeWithPositions(embeddingEdges[i]);
+            addEdge(embeddingEdges[i]);
         }
 
         updateUsedEmbeddingIncremental(embedding);
@@ -279,21 +277,6 @@ public abstract class BasicPattern extends Pattern {
         return addEdge(srcId, dstId);
     }
 
-    private boolean addEdgeWithPositions(int edgeId) {
-        Edge<?> edge = mainGraph.getEdge(edgeId);
-
-        int srcId = edge.getSourceId();
-        int dstId = edge.getDestinationId();
-
-        Vertex<?> src = mainGraph.getVertex(srcId);
-        Vertex<?> dst = mainGraph.getVertex(dstId);
-
-        int srcPos = vertexPositions.get(srcId);
-        int dstPos = vertexPositions.get(dstId);
-
-        return addEdgeWithPositions(srcPos, src.getVertexLabel(), dstPos, dst.getVertexLabel());
-    }
-
     public boolean addEdge(int srcId, int dstId) {
         Vertex<?> src = mainGraph.getVertex(srcId);
         Vertex<?> dst = mainGraph.getVertex(dstId);
@@ -305,10 +288,10 @@ public abstract class BasicPattern extends Pattern {
         int srcPos = addVertex(srcId);
         int dstPos = addVertex(dstId);
 
-        return addEdgeWithPositions(srcPos, srcLabel, dstPos, dstLabel);
+        return addEdgeWithPositions(srcPos, srcLabel, dstPos, dstLabel, true);
     }
 
-    private boolean addEdgeWithPositions(int srcPos, int srcLabel, int dstPos, int dstLabel) {
+    private boolean addEdgeWithPositions(int srcPos, int srcLabel, int dstPos, int dstLabel, boolean isForwardEdge) {
         int minPos;
         int minLbl;
         int maxPos;
@@ -326,7 +309,7 @@ public abstract class BasicPattern extends Pattern {
             minLbl = dstLabel;
         }
 
-        PatternEdge patternEdge = createPatternEdge(minPos, minLbl, maxPos, maxLbl, true);
+        PatternEdge patternEdge = createPatternEdge(minPos, minLbl, maxPos, maxLbl, isForwardEdge);
 
         return addEdge(patternEdge);
     }
@@ -439,6 +422,7 @@ public abstract class BasicPattern extends Pattern {
         }
 
         if (allEqual) {
+            edges.sort();
             return false;
         }
 
@@ -482,6 +466,16 @@ public abstract class BasicPattern extends Pattern {
             }
         }
 
+        edges.sort();
+
+        /*if (vertexPositionEquivalences != null && !dirtyVertexPositionEquivalences) {
+            vertexPositionEquivalences.convertBasedOnRelabelling(canonicalLabelling);
+        }
+
+        for (int i = 0; i < canonicalLabelling.size(); ++i) {
+            canonicalLabelling.put(i, i);
+        }*/
+
         return true;
     }
 
@@ -505,6 +499,11 @@ public abstract class BasicPattern extends Pattern {
 
     protected PatternEdgeArrayList createPatternEdgeArrayList() {
         return new PatternEdgeArrayList();
+    }
+
+    protected PatternEdge createPatternEdge(PatternEdge otherEdge) {
+        return createPatternEdge(otherEdge.getSrcId(), otherEdge.getSrcLabel(),
+                otherEdge.getDestId(), otherEdge.getDestLabel(), otherEdge.isForward());
     }
 
     protected PatternEdge createPatternEdge(int srcPos, int srcLabel, int dstPos, int dstLabel, boolean isForward) {
@@ -532,7 +531,9 @@ public abstract class BasicPattern extends Pattern {
             patternEdgeListPool = new PatternEdgeArrayList();
         }
 
-        patternEdgeListPool.add(patternEdge);
+        if (patternEdgeListPool.size() < MAX_EDGE_POOL_SIZE) {
+            patternEdgeListPool.add(patternEdge);
+        }
     }
 
     protected void reclaimPatternEdges(Collection<PatternEdge> patternEdges) {
@@ -555,31 +556,15 @@ public abstract class BasicPattern extends Pattern {
     @Override
     public String toOutputString() {
         if (getNumberOfEdges() > 0) {
-            StringBuilder strBuilder = new StringBuilder();
-            boolean first = true;
-
-            for (PatternEdge edge : edges) {
-                if (!first) {
-                    strBuilder.append(',');
-                }
-
-                strBuilder.append(edge.getSrcId());
-                strBuilder.append("(");
-                strBuilder.append(edge.getSrcLabel());
-                strBuilder.append(")");
-                strBuilder.append('-');
-                strBuilder.append(edge.getDestId());
-                strBuilder.append("(");
-                strBuilder.append(edge.getDestLabel());
-                strBuilder.append(")");
-                first = false;
-            }
-
-            return strBuilder.toString();
-        } else {
+            return StringUtils.join(edges, ", ");
+        }
+        else if (getNumberOfVertices() == 1) {
             Vertex<?> vertex = mainGraph.getVertex(vertices.get(0));
 
             return "0(" + vertex.getVertexLabel() + ")";
+        }
+        else {
+            return "";
         }
     }
 

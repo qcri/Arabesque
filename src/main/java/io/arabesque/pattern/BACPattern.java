@@ -11,10 +11,12 @@ import net.openhft.koloboke.collect.map.IntObjMap;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.IntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;
 
+@Deprecated
 public class BACPattern extends BasicPattern {
     private static final Logger LOG = Logger.getLogger(BACPattern.class);
 
@@ -23,6 +25,8 @@ public class BACPattern extends BasicPattern {
     private IntArrayList underlyingPosToLabel;
     // Index = underlying vertex position, Value = list of neighbour ids of that vertex
     private ObjArrayList<IntArrayList> patternAdjacencyList;
+    // Collection of underlying ordered positions: 0, 1, 2, 3, 4, 5, ..., <num vertices>
+    private IntArrayList underlyingOrderedPositions;
     // IntArrayList pool to reduce # of allocations
     private ObjArrayList<IntArrayList> intArrayListPool;
     // }}
@@ -64,6 +68,9 @@ public class BACPattern extends BasicPattern {
 
     public BACPattern() {
         super();
+        if (true != false) {
+            throw new UnsupportedOperationException("Use VICPattern instead");
+        }
     }
 
     public BACPattern(BACPattern other) {
@@ -89,6 +96,14 @@ public class BACPattern extends BasicPattern {
             underlyingPosToLabel.ensureCapacity(numVertices);
         }
 
+        if (underlyingOrderedPositions == null) {
+            underlyingOrderedPositions = new IntArrayList(numVertices);
+        }
+        else {
+            underlyingOrderedPositions.clear();
+            underlyingOrderedPositions.ensureCapacity(numVertices);
+        }
+
         if (patternAdjacencyList == null) {
             patternAdjacencyList = new ObjArrayList<>(numVertices);
         }
@@ -99,6 +114,7 @@ public class BACPattern extends BasicPattern {
         }
 
         for (int i = 0; i < numVertices; ++i) {
+            underlyingOrderedPositions.add(i);
             patternAdjacencyList.add(createIntArrayList());
         }
     }
@@ -214,7 +230,10 @@ public class BACPattern extends BasicPattern {
         for (int i = 0; i < numVertices; ++i) {
             minLabelling.put(i, i);
         }
-        minEdges.addAll(getEdges());
+
+        for (PatternEdge patternEdge : getEdges()) {
+            minEdges.add(createPatternEdge(patternEdge));
+        }
     }
 
     private void resetAuxStructures() {
@@ -261,6 +280,20 @@ public class BACPattern extends BasicPattern {
         vertexPositionEquivalences.propagateEquivalences();
     }
 
+    private void debugTmp() {
+        StringBuilder strBuilder = new StringBuilder();
+
+        strBuilder.append("TMP: {" );
+
+        strBuilder.append(" edges=[");
+        strBuilder.append(StringUtils.join(", ", tmpEdges));
+        strBuilder.append("], labelling=");
+        strBuilder.append(tmpLabelling);
+        strBuilder.append("}");
+
+        System.out.println(strBuilder.toString());
+    }
+
     private void _findCanonicalLabelling(boolean tmpPreviouslyEqualToMin) {
         IntCollection underlyingVertexPosThatExtendTmp = getUnderlyingVertexPosThatExtendTmp();
         IntCursor underlyingVertexPosThatExtendTmpCursor = underlyingVertexPosThatExtendTmp.cursor();
@@ -269,7 +302,11 @@ public class BACPattern extends BasicPattern {
 
         while (underlyingVertexPosThatExtendTmpCursor.moveNext()) {
             int currentUnderlyingPos = underlyingVertexPosThatExtendTmpCursor.elem();
+
             int currentLabel = underlyingPosToLabel.get(currentUnderlyingPos);
+
+            // TODO: Debug
+            //System.out.println("Trying to expand via vertex position " + currentUnderlyingPos + " (" + currentLabel + ")");
 
             IntArrayList neighbourUnderlyingPositions = patternAdjacencyList.get(currentUnderlyingPos);
             IntCursor neighbourUnderlyingPositionsCursor = neighbourUnderlyingPositions.cursor();
@@ -278,12 +315,18 @@ public class BACPattern extends BasicPattern {
                 int neighbourUnderlyingPos = neighbourUnderlyingPositionsCursor.elem();
                 int neighbourLabel = underlyingPosToLabel.get(neighbourUnderlyingPos);
 
+                // TODO: Debug
+                //System.out.println("Expanding with neighbour " + neighbourUnderlyingPos + " (" + neighbourLabel + ")");
+
                 PatternEdge newEdge = addTmpEdge(currentUnderlyingPos, currentLabel, neighbourUnderlyingPos, neighbourLabel);
 
                 // If insertion failed
                 if (newEdge == null) {
                     continue;
                 }
+
+                // TODO: Debug
+                //debugTmp();
 
                 // Is this tmp pattern we are constructing promising?
                 // Promising = potentially smaller than current minPattern
@@ -314,21 +357,11 @@ public class BACPattern extends BasicPattern {
                         // Then this tmp becomes the new min (unless it already is)
                         if (!equalToMinTmpPattern) {
                             copyTmpToMin();
-                            // Since we found a new minimum, clear vertex equivalences
+                            // Since we found a new minimum, clear previous vertex equivalences
                             vertexPositionEquivalences.clear();
-
-                            // And add this new equivalence based on the minimum labelling
-                            IntIntCursor minLabellingCursor = minLabelling.cursor();
-
-                            while (minLabellingCursor.moveNext()) {
-                                int underlyingPos = minLabellingCursor.key();
-                                int minEquivalentPos = minLabellingCursor.value();
-                                vertexPositionEquivalences.addEquivalence(minEquivalentPos, underlyingPos);
-                            }
                         }
-                        /* If it is equal to the minimum, add current positions to the equivalence list.
-                         *
-                         * We'll reach the minimum x times where x is the number of automorphisms that exist.
+
+                        /* We'll reach the minimum x times where x is the number of automorphisms that exist.
                          * Each automorphism corresponds to a different vertex equivalence.
                          *
                          * Example:
@@ -338,15 +371,13 @@ public class BACPattern extends BasicPattern {
                          *     - One by adding the right edge first and the left edge after.
                          *     - One by adding the left edge first and the right edge after.
                          */
-                        else {
-                            // Add this new equivalence based on the tmp labelling
-                            IntIntCursor tmpLabellingCursor = tmpLabelling.cursor();
+                        // Add this new equivalence based on the tmp labelling
+                        IntIntCursor tmpLabellingCursor = tmpLabelling.cursor();
 
-                            while (tmpLabellingCursor.moveNext()) {
-                                int underlyingPos = tmpLabellingCursor.key();
-                                int tmpEquivalentPos = tmpLabellingCursor.value();
-                                vertexPositionEquivalences.addEquivalence(tmpEquivalentPos, underlyingPos);
-                            }
+                        while (tmpLabellingCursor.moveNext()) {
+                            int underlyingPos = tmpLabellingCursor.key();
+                            int tmpEquivalentPos = tmpLabellingCursor.value();
+                            vertexPositionEquivalences.addEquivalence(tmpEquivalentPos, underlyingPos);
                         }
                     }
                     // If it's promising and we still haven't reached the target size, continue!
@@ -379,15 +410,17 @@ public class BACPattern extends BasicPattern {
         if (tmpEdge.isForward()) {
             removeTmpVertex(tmpLabelling.size() - 1);
         }
+
+        reclaimPatternEdge(tmpEdge);
     }
 
     private PatternEdge addTmpEdge(int srcPos, int srcLbl, int dstPos, int dstLbl) {
         int tmpSrcPos = tmpLabelling.get(srcPos);
         int tmpDstPos = tmpLabelling.get(dstPos);
 
-        // If we had not seen the srcPos or the dstPos before, then this vertex
+        // If we had not seen the srcPos or the dstPos before and we already have one edge, then this edge
         // is disconnected from the rest of the edges in the tmp pattern
-        if (tmpSrcPos == -1 && tmpDstPos == -1) {
+        if (tmpEdges.size() > 0 && tmpSrcPos == -1 && tmpDstPos == -1) {
             return null;
         }
 
@@ -404,11 +437,14 @@ public class BACPattern extends BasicPattern {
             // If is backwards connection, remember this
             isForward = false;
         }
-        else if (tmpSrcPos == -1) {
-            tmpSrcPos = addTmpVertex(srcPos);
-        }
         else {
-            tmpDstPos = addTmpVertex(dstPos);
+            if (tmpSrcPos == -1) {
+                tmpSrcPos = addTmpVertex(srcPos);
+            }
+
+            if (tmpDstPos == -1) {
+                tmpDstPos = addTmpVertex(dstPos);
+            }
         }
 
         PatternEdge patternEdge = createPatternEdge(tmpSrcPos, srcLbl, tmpDstPos, dstLbl, isForward);
@@ -439,7 +475,7 @@ public class BACPattern extends BasicPattern {
         int numTmpEdges = tmpEdges.size();
 
         if (numTmpEdges == 0) {
-            return getVertexPositions();
+            return underlyingOrderedPositions;
         }
 
         underlyingVertexPosThatExtendTmp.clear();
