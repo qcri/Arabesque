@@ -86,7 +86,8 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
 
 
     public String toString() {
-        return ("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "-" + (isForward ? 'F' : 'B') + "]");
+        //return ("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "-" + (isForward ? 'F' : 'B') + "]");
+        return ("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "]");
     }
 
     @Override
