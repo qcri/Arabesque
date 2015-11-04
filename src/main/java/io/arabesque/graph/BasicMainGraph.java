@@ -7,6 +7,7 @@ import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -311,7 +312,7 @@ public abstract class BasicMainGraph<
 
     protected void readFromInputStream(InputStream is) {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(is)));
 
             String line = reader.readLine();
             boolean firstLine = true;
