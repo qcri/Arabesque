@@ -87,7 +87,6 @@ public class ExecutionEngine<O extends Embedding>
             if (configuration.getEmbeddingClass() == null) {
                 configuration.setEmbeddingClass(computation.getEmbeddingClass());
             }
-            computation.initAggregations();
         }
 
         computation.init();
