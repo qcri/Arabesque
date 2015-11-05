@@ -141,6 +141,8 @@ public class Configuration<O extends Embedding> {
             return;
         }
 
+        LOG.info("Initializing Configuration...");
+
         useCompressedCaches = getBoolean(CONF_COMPRESSED_CACHES, CONF_COMPRESSED_CACHES_DEFAULT);
         cacheThresholdSize = getInteger(CONF_CACHE_THRESHOLD_SIZE, CONF_CACHE_THRESHOLD_SIZE_DEFAULT);
         infoPeriod = getLong(INFO_PERIOD, INFO_PERIOD_DEFAULT);
@@ -162,9 +164,10 @@ public class Configuration<O extends Embedding> {
 
         defaultAggregatorSplits = getInteger(CONF_DEFAULT_AGGREGATOR_SPLITS, CONF_DEFAULT_AGGREGATOR_SPLITS_DEFAULT);
 
-        initialized = true;
+        Computation<?> computation = createComputation();
+        computation.initAggregations();
+
         OptimizationSetDescriptor optimizationSetDescriptor = ReflectionUtils.newInstance(optimizationSetDescriptorClass);
-        LOG.info("Initializing configuration");
         OptimizationSet optimizationSet = optimizationSetDescriptor.describe();
 
         LOG.info("Active optimizations: " + optimizationSet);
@@ -177,6 +180,8 @@ public class Configuration<O extends Embedding> {
         mainGraph = createGraph();
 
         optimizationSet.applyAfterGraphLoad();
+        initialized = true;
+        LOG.info("Configuration initialized");
     }
 
     public ImmutableClassesGiraphConfiguration getUnderlyingConfiguration() {
