@@ -72,7 +72,7 @@ public class Graph<V extends Comparable> {
     }
 
 	private long createBliss() {
-		MainGraph<?, ?, ?, ?> mainGraph = Configuration.get().getMainGraph();
+		MainGraph mainGraph = Configuration.get().getMainGraph();
 		IntArrayList vertices = pattern.getVertices();
 		int numVertices = vertices.size();
 		PatternEdgeArrayList edges = pattern.getEdges();
@@ -83,7 +83,7 @@ public class Graph<V extends Comparable> {
 		IntCursor vertexCursor = vertices.cursor();
 
 		while (vertexCursor.moveNext()) {
-			Vertex<?> vertex = mainGraph.getVertex(vertexCursor.elem());
+			Vertex vertex = mainGraph.getVertex(vertexCursor.elem());
 			_add_vertex(bliss, vertex.getVertexLabel());
 		}
 
@@ -92,10 +92,10 @@ public class Graph<V extends Comparable> {
 		while (edgeCursor.moveNext()) {
 			PatternEdge edge = edgeCursor.elem();
 
-			if (edge.getSrcId() >= numVertices || edge.getDestId() >= numVertices) {
-				throw new RuntimeException("Wrong (possibly old?) pattern edge found. Src (" + edge.getSrcId() + "), Dst (" + edge.getDestId() + ") or both are higher than numVertices (" + numVertices + ")");
+			if (edge.getSrcPos() >= numVertices || edge.getDestPos() >= numVertices) {
+				throw new RuntimeException("Wrong (possibly old?) pattern edge found. Src (" + edge.getSrcPos() + "), Dst (" + edge.getDestPos() + ") or both are higher than numVertices (" + numVertices + ")");
 			}
-			_add_edge(bliss, edge.getSrcId(), edge.getDestId());
+			_add_edge(bliss, edge.getSrcPos(), edge.getDestPos());
 		}
 
 		return bliss;

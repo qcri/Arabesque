@@ -312,4 +312,7 @@ public class ObjArrayList<O> implements ObjCollection<O>, List<O> {
         sort(ComparatorUtils.naturalComparator());
     }
 
+    public O pop() {
+        return remove(size() - 1);
+    }
 }

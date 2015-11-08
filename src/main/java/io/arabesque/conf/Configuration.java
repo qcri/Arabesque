@@ -48,6 +48,8 @@ public class Configuration<O extends Embedding> {
     public static final String CONF_MAINGRAPH_PATH_DEFAULT = "main.graph";
     public static final String CONF_MAINGRAPH_LOCAL = "arabesque.graph.local";
     public static final boolean CONF_MAINGRAPH_LOCAL_DEFAULT = false;
+    public static final String CONF_MAINGRAPH_EDGE_LABELLED = "arabesque.graph.edge_labelled";
+    public static final boolean CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT = false;
 
     public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS = "arabesque.optimizations.descriptor";
     public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT = "io.arabesque.optimization.ConfigBasedOptimizationSetDescriptor";
@@ -112,6 +114,7 @@ public class Configuration<O extends Embedding> {
 
     private Map<String, AggregationStorageMetadata> aggregationsMetadata;
     private MainGraph mainGraph;
+    private boolean isGraphEdgeLabelled;
     private boolean initialized = false;
 
     public static <C extends Configuration> C get() {
@@ -153,6 +156,7 @@ public class Configuration<O extends Embedding> {
         is2LevelAggregationEnabled = getBoolean(CONF_2LEVELAGG_ENABLED, CONF_2LEVELAGG_ENABLED_DEFAULT);
         forceGC = getBoolean(CONF_FORCE_GC, CONF_FORCE_GC_DEFAULT);
         mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
+        isGraphEdgeLabelled = getBoolean(CONF_MAINGRAPH_EDGE_LABELLED, CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT);
         optimizationSetDescriptorClass = (Class<? extends OptimizationSetDescriptor>) getClass(CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS, CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT);
         patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
         computationClass = (Class<? extends Computation>) getClass(CONF_COMPUTATION_CLASS, CONF_COMPUTATION_CLASS_DEFAULT);
@@ -369,6 +373,10 @@ public class Configuration<O extends Embedding> {
 
     public MasterComputation createMasterComputation() {
         return ReflectionUtils.newInstance(masterComputationClass);
+    }
+
+    public boolean isGraphEdgeLabelled() {
+        return isGraphEdgeLabelled;
     }
 }
 

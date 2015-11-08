@@ -39,7 +39,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         StringBuilder sb = new StringBuilder();
 
         for (int i = 0; i < numWords; ++i) {
-            Edge<?> edge = g.getEdge(words[i]);
+            Edge edge = g.getEdge(words[i]);
             sb.append(edge.getSourceId());
             sb.append("-");
             sb.append(edge.getDestinationId());
@@ -258,7 +258,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
     }
 
     private void updateVertices(int word) {
-        final Edge<?> edge = g.getEdge(word);
+        final Edge edge = g.getEdge(word);
 
         int added = 0;
         if (vertices.add(edge.getSourceId())) {

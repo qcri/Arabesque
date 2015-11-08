@@ -5,6 +5,7 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
+import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.IntArrayList;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntCursor;
@@ -17,11 +18,9 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 
 public abstract class BasicPattern extends Pattern {
     private static final Logger LOG = Logger.getLogger(BasicPattern.class);
-    private static final int MAX_EDGE_POOL_SIZE = 1000;
 
     protected HashIntIntMapFactory positionMapFactory = HashIntIntMaps.getDefaultFactory().withDefaultValue(-1);
 
@@ -44,8 +43,8 @@ public abstract class BasicPattern extends Pattern {
     // }}
 
     // Others {{
-    protected final MainGraph<?, ?, ?, ?> mainGraph;
-    private PatternEdgeArrayList patternEdgeListPool;
+    private final MainGraph mainGraph;
+    private boolean edgesHaveLabels;
 
     protected volatile boolean dirtyVertexPositionEquivalences;
     protected volatile boolean dirtyCanonicalLabelling;
@@ -58,7 +57,8 @@ public abstract class BasicPattern extends Pattern {
         edges = createPatternEdgeArrayList();
         vertexPositions = positionMapFactory.newMutableMap();
         previousWords = new IntArrayList();
-        patternEdgeListPool = null;
+
+        edgesHaveLabels = Configuration.get().isGraphEdgeLabelled();
 
         init();
     }
@@ -84,7 +84,7 @@ public abstract class BasicPattern extends Pattern {
     @Override
     public void reset() {
         vertices.clear();
-        reclaimPatternEdges(edges);
+        PatternEdgePool.instance().reclaimObjects(edges);
         edges.clear();
         vertexPositions.clear();
 
@@ -168,8 +168,10 @@ public abstract class BasicPattern extends Pattern {
     private void removeLastNEdges(int n) {
         int targetI = edges.size() - n;
 
+        PatternEdgePool patternEdgePool = PatternEdgePool.instance();
+
         for (int i = edges.size() - 1; i >= targetI; --i) {
-            reclaimPatternEdge(edges.remove(i));
+            patternEdgePool.reclaimObject(edges.remove(i));
         }
     }
 
@@ -269,52 +271,27 @@ public abstract class BasicPattern extends Pattern {
 
     @Override
     public boolean addEdge(int edgeId) {
-        Edge<?> edge = mainGraph.getEdge(edgeId);
+        Edge edge = mainGraph.getEdge(edgeId);
 
+        return addEdge(edge);
+    }
+
+    public boolean addEdge(Edge edge) {
         int srcId = edge.getSourceId();
-        int dstId = edge.getDestinationId();
-
-        return addEdge(srcId, dstId);
-    }
-
-    public boolean addEdge(int srcId, int dstId) {
-        Vertex<?> src = mainGraph.getVertex(srcId);
-        Vertex<?> dst = mainGraph.getVertex(dstId);
-
-        return addEdge(srcId, src.getVertexLabel(), dstId, dst.getVertexLabel());
-    }
-
-    public boolean addEdge(int srcId, int srcLabel, int dstId, int dstLabel) {
         int srcPos = addVertex(srcId);
-        int dstPos = addVertex(dstId);
+        int dstPos = addVertex(edge.getDestinationId());
 
-        return addEdgeWithPositions(srcPos, srcLabel, dstPos, dstLabel, true);
-    }
-
-    private boolean addEdgeWithPositions(int srcPos, int srcLabel, int dstPos, int dstLabel, boolean isForwardEdge) {
-        int minPos;
-        int minLbl;
-        int maxPos;
-        int maxLbl;
-
-        if (srcPos < dstPos) {
-            minPos = srcPos;
-            minLbl = srcLabel;
-            maxPos = dstPos;
-            maxLbl = dstLabel;
-        } else {
-            maxPos = srcPos;
-            maxLbl = srcLabel;
-            minPos = dstPos;
-            minLbl = dstLabel;
-        }
-
-        PatternEdge patternEdge = createPatternEdge(minPos, minLbl, maxPos, maxLbl, isForwardEdge);
+        PatternEdge patternEdge = createPatternEdge(edge, srcPos, dstPos, srcId);
 
         return addEdge(patternEdge);
     }
 
     public boolean addEdge(PatternEdge edge) {
+        // TODO: Remove when we have directed edges
+        if (edge.getSrcPos() > edge.getDestPos()) {
+            edge.invert();
+        }
+
         edges.add(edge);
 
         setDirty();
@@ -445,23 +422,23 @@ public abstract class BasicPattern extends Pattern {
         for (int i = 0; i < edges.size(); ++i) {
             PatternEdge edge = edges.get(i);
 
-            int srcPos = edge.getSrcId();
-            int dstPos = edge.getDestId();
+            int srcPos = edge.getSrcPos();
+            int dstPos = edge.getDestPos();
 
             int convertedSrcPos = canonicalLabelling.get(srcPos);
             int convertedDstPos = canonicalLabelling.get(dstPos);
 
             if (convertedSrcPos < convertedDstPos) {
-                edge.setSrcId(convertedSrcPos);
-                edge.setDestId(convertedDstPos);
+                edge.setSrcPos(convertedSrcPos);
+                edge.setDestPos(convertedDstPos);
             } else {
                 // If we changed the position of source and destination due to
                 // relabel, we also have to change the labels to match this
                 // change.
                 int tmp = edge.getSrcLabel();
-                edge.setSrcId(convertedDstPos);
+                edge.setSrcPos(convertedDstPos);
                 edge.setSrcLabel(edge.getDestLabel());
-                edge.setDestId(convertedSrcPos);
+                edge.setDestPos(convertedSrcPos);
                 edge.setDestLabel(tmp);
             }
         }
@@ -501,51 +478,20 @@ public abstract class BasicPattern extends Pattern {
         return new PatternEdgeArrayList();
     }
 
-    protected PatternEdge createPatternEdge(PatternEdge otherEdge) {
-        return createPatternEdge(otherEdge.getSrcId(), otherEdge.getSrcLabel(),
-                otherEdge.getDestId(), otherEdge.getDestLabel(), otherEdge.isForward());
-    }
+    protected PatternEdge createPatternEdge(Edge edge, int srcPos, int dstPos, int srcId) {
+        PatternEdge patternEdge = PatternEdgePool.instance().createObject();
 
-    protected PatternEdge createPatternEdge(int srcPos, int srcLabel, int dstPos, int dstLabel, boolean isForward) {
-        PatternEdge patternEdge;
-
-        if (patternEdgeListPool != null && !patternEdgeListPool.isEmpty()) {
-            patternEdge = patternEdgeListPool.remove(patternEdgeListPool.size() - 1);
-        } else {
-            patternEdge = new PatternEdge();
-        }
-
-        patternEdge.setSrcId(srcPos);
-        patternEdge.setDestId(dstPos);
-
-        patternEdge.setSrcLabel(srcLabel);
-        patternEdge.setDestLabel(dstLabel);
-
-        patternEdge.isForward(isForward);
+        patternEdge.setFromEdge(edge, srcPos, dstPos);
 
         return patternEdge;
     }
 
-    protected void reclaimPatternEdge(PatternEdge patternEdge) {
-        if (patternEdgeListPool == null) {
-            patternEdgeListPool = new PatternEdgeArrayList();
-        }
+    protected PatternEdge createPatternEdge(PatternEdge otherEdge) {
+        PatternEdge patternEdge = PatternEdgePool.instance().createObject();
 
-        if (patternEdgeListPool.size() < MAX_EDGE_POOL_SIZE) {
-            patternEdgeListPool.add(patternEdge);
-        }
-    }
+        patternEdge.setFromOther(otherEdge);
 
-    protected void reclaimPatternEdges(Collection<PatternEdge> patternEdges) {
-        if (patternEdgeListPool == null) {
-            patternEdgeListPool = new PatternEdgeArrayList();
-        }
-
-        patternEdgeListPool.ensureCapacity(patternEdgeListPool.size() + patternEdges.size());
-
-        for (PatternEdge patternEdge : patternEdges) {
-            reclaimPatternEdge(patternEdge);
-        }
+        return patternEdge;
     }
 
     @Override
@@ -559,7 +505,7 @@ public abstract class BasicPattern extends Pattern {
             return StringUtils.join(edges, ", ");
         }
         else if (getNumberOfVertices() == 1) {
-            Vertex<?> vertex = mainGraph.getVertex(vertices.get(0));
+            Vertex vertex = mainGraph.getVertex(vertices.get(0));
 
             return "0(" + vertex.getVertexLabel() + ")";
         }
@@ -590,5 +536,9 @@ public abstract class BasicPattern extends Pattern {
 
     protected IntCollection getVertexPositions() {
         return vertexPositions.values();
+    }
+
+    public MainGraph getMainGraph() {
+        return mainGraph;
     }
 }

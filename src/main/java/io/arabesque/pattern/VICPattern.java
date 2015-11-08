@@ -1,17 +1,19 @@
 package io.arabesque.pattern;
 
+import io.arabesque.graph.Edge;
+import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
+import io.arabesque.pattern.pool.PatternEdgeArrayListPool;
+import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.IntArrayList;
 import io.arabesque.utils.ObjArrayList;
+import io.arabesque.utils.pool.IntArrayListPool;
+import io.arabesque.utils.pool.Pool;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.set.IntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
-
-import java.util.Collection;
 
 public class VICPattern extends BasicPattern {
     private static final Logger LOG = Logger.getLogger(VICPattern.class);
@@ -21,8 +23,6 @@ public class VICPattern extends BasicPattern {
     private IntArrayList underlyingPosToLabel;
     // Index = underlying vertex position, Value = list of neighbour ids of that vertex
     private ObjArrayList<IntArrayList> underlyingAdjacencyList;
-    // IntArrayList pool to reduce # of allocations
-    private ObjArrayList<IntArrayList> intArrayListPool;
     // }}
 
     // Temporary pattern stuff (the one we construct to find the canonical relabelling) {{
@@ -37,9 +37,6 @@ public class VICPattern extends BasicPattern {
     // Edges of our temporary pattern
     // Index = tmp vertex position, Value = list of pattern edges added when we added the associated tmp vertex position
     private ObjArrayList<PatternEdgeArrayList> tmpEdges;
-
-    private ObjArrayList<IntSet> intSetPool;
-    private ObjArrayList<PatternEdgeArrayList> patternEdgeArrayListPool;
     // }}
 
     // Minimum pattern stuff (the smallest one we found while searching for the canonical version) {{
@@ -90,17 +87,19 @@ public class VICPattern extends BasicPattern {
             underlyingPosToLabel.ensureCapacity(numVertices);
         }
 
+        IntArrayListPool intArrayListPool = IntArrayListPool.instance();
+
         if (underlyingAdjacencyList == null) {
             underlyingAdjacencyList = new ObjArrayList<>(numVertices);
         }
         else {
-            reclaimIntArrayLists(underlyingAdjacencyList);
+            intArrayListPool.reclaimObjects(underlyingAdjacencyList);
             underlyingAdjacencyList.clear();
             underlyingAdjacencyList.ensureCapacity(numVertices);
         }
 
         for (int i = 0; i < numVertices; ++i) {
-            underlyingAdjacencyList.add(createIntArrayList());
+            underlyingAdjacencyList.add(intArrayListPool.createObject());
         }
     }
 
@@ -113,15 +112,17 @@ public class VICPattern extends BasicPattern {
 
         IntCursor vertexIdCursor = getVertices().cursor();
 
+        MainGraph mainGraph = getMainGraph();
+
         while (vertexIdCursor.moveNext()) {
             int vertexId = vertexIdCursor.elem();
-            Vertex<?> vertex = mainGraph.getVertex(vertexId);
+            Vertex vertex = mainGraph.getVertex(vertexId);
             underlyingPosToLabel.add(vertex.getVertexLabel());
         }
 
         for (PatternEdge edge : getEdges()) {
-            int srcPos = edge.getSrcId();
-            int dstPos = edge.getDestId();
+            int srcPos = edge.getSrcPos();
+            int dstPos = edge.getDestPos();
 
             underlyingAdjacencyList.get(srcPos).add(dstPos);
             underlyingAdjacencyList.get(dstPos).add(srcPos);
@@ -152,7 +153,7 @@ public class VICPattern extends BasicPattern {
             tmpEdges = new ObjArrayList<>(numVertices);
         }
         else {
-            reclaimPatternEdgeArrayLists(tmpEdges);
+            PatternEdgeArrayListPool.instance().reclaimObjects(tmpEdges);
             tmpEdges.clear();
             tmpEdges.ensureCapacity(numEdges);
         }
@@ -184,7 +185,7 @@ public class VICPattern extends BasicPattern {
             minEdges = new ObjArrayList<>(numVertices);
         }
         else {
-            reclaimPatternEdgeArrayLists(minEdges);
+            PatternEdgeArrayListPool.instance().reclaimObjects(minEdges);
             minEdges.clear();
             minEdges.ensureCapacity(numEdges);
         }
@@ -319,10 +320,8 @@ public class VICPattern extends BasicPattern {
                     continue;
                 }
 
-                int neighbourLabel = underlyingPosToLabel.get(neighbourUnderlyingPos);
-
                 // Add edge connecting existing tmp vertex to new tmp vertex
-                PatternEdge newEdge = createPatternEdge(neighbourTmpPos, neighbourLabel, newTmpVertexPos, newTmpVertexLabel, true);
+                PatternEdge newEdge = createCandidatePatternEdge(neighbourUnderlyingPos, neighbourTmpPos, underlyingVertexPosToAdd, newTmpVertexPos);
 
                 edgesToAdd.add(newEdge);
             }
@@ -437,24 +436,40 @@ public class VICPattern extends BasicPattern {
                 }
                 // If not prosiming, discard these edges
                 else {
-                    reclaimPatternEdgeArrayList(edgesToAdd);
+                    PatternEdgeArrayListPool.instance().reclaimObject(edgesToAdd);
                 }
             }
 
             removeLastTmpVertex();
         }
 
-        reclaimIntArrayList(underlyingVertexPosThatExtendTmp);
+        IntArrayListPool.instance().reclaimObject(underlyingVertexPosThatExtendTmp);
+    }
+
+    private PatternEdge createCandidatePatternEdge(int neighbourUnderlyingPos, int neighbourTmpPos, int underlyingVertexPosToAdd, int newTmpVertexPos) {
+        MainGraph mainGraph = getMainGraph();
+
+        IntArrayList vertices = getVertices();
+
+        int neighbourVertexId = vertices.get(neighbourUnderlyingPos);
+        int newVertexId = vertices.get(underlyingVertexPosToAdd);
+
+        int edgeId = mainGraph.getEdgeId(neighbourVertexId, newVertexId);
+        Edge edge = mainGraph.getEdge(edgeId);
+
+        return createPatternEdge(edge, neighbourTmpPos, newTmpVertexPos, neighbourVertexId);
     }
 
     private void copyTmpToMin() {
         int numVertices = tmpLabelling.size();
 
+        Pool<PatternEdge> patternEdgePool = PatternEdgePool.instance();
+
         for (int i = 0; i < numVertices; ++i) {
             PatternEdgeArrayList tmpEdgesAddedByPos = tmpEdges.get(i);
             PatternEdgeArrayList minEdgesAddedByPos = minEdges.get(i);
 
-            reclaimPatternEdges(minEdgesAddedByPos);
+            patternEdgePool.reclaimObjects(minEdgesAddedByPos);
             minEdgesAddedByPos.clear();
 
             for (int j = 0; j < tmpEdgesAddedByPos.size(); ++j) {
@@ -476,7 +491,7 @@ public class VICPattern extends BasicPattern {
     }
 
     private void removeLastTmpEdges() {
-        reclaimPatternEdgeArrayList(tmpEdges.remove(tmpEdges.size() - 1));
+        PatternEdgeArrayListPool.instance().reclaimObject(tmpEdges.remove(tmpEdges.size() - 1));
     }
 
     private int addTmpVertex(int underlyingPos) {
@@ -494,7 +509,7 @@ public class VICPattern extends BasicPattern {
     private IntArrayList getUnderlyingVertexPosThatExtendTmp() {
         int numUnderlyingVertices = getNumberOfVertices();
 
-        IntArrayList underlyingVertexPosThatExtendTmp = createIntArrayList();
+        IntArrayList underlyingVertexPosThatExtendTmp = IntArrayListPool.instance().createObject();
         underlyingVertexPosThatExtendTmp.ensureCapacity(numUnderlyingVertices);
 
         for (int i = 0; i < numUnderlyingVertices; ++i) {
@@ -504,96 +519,5 @@ public class VICPattern extends BasicPattern {
         }
 
         return underlyingVertexPosThatExtendTmp;
-    }
-
-    protected IntArrayList createIntArrayList() {
-        if (intArrayListPool != null && !intArrayListPool.isEmpty()) {
-            return intArrayListPool.remove(intArrayListPool.size() - 1);
-        } else {
-            return new IntArrayList();
-        }
-    }
-
-    protected void reclaimIntArrayList(IntArrayList intArrayList) {
-        if (intArrayListPool == null) {
-            intArrayListPool = new ObjArrayList<>();
-        }
-
-        intArrayList.clear();
-
-        intArrayListPool.add(intArrayList);
-    }
-
-    protected void reclaimIntArrayLists(Collection<IntArrayList> intArrayLists) {
-        if (intArrayListPool == null) {
-            intArrayListPool = new ObjArrayList<>(intArrayLists.size());
-        }
-
-        intArrayListPool.ensureCapacity(intArrayListPool.size() + intArrayLists.size());
-
-        for (IntArrayList intArrayList : intArrayLists) {
-            reclaimIntArrayList(intArrayList);
-        }
-    }
-
-    protected PatternEdgeArrayList createPatternEdgeArrayList() {
-        if (patternEdgeArrayListPool != null && !patternEdgeArrayListPool.isEmpty()) {
-            return patternEdgeArrayListPool.remove(patternEdgeArrayListPool.size() - 1);
-        } else {
-            return new PatternEdgeArrayList();
-        }
-    }
-
-    protected void reclaimPatternEdgeArrayList(PatternEdgeArrayList patternEdgeArrayList) {
-        if (patternEdgeArrayListPool == null) {
-            patternEdgeArrayListPool = new ObjArrayList<>();
-        }
-
-        reclaimPatternEdges(patternEdgeArrayList);
-        patternEdgeArrayList.clear();
-
-        patternEdgeArrayListPool.add(patternEdgeArrayList);
-    }
-
-    protected void reclaimPatternEdgeArrayLists(Collection<PatternEdgeArrayList> patternEdgeArrayLists) {
-        if (patternEdgeArrayListPool == null) {
-            patternEdgeArrayListPool = new ObjArrayList<>(patternEdgeArrayLists.size());
-        }
-
-        patternEdgeArrayListPool.ensureCapacity(patternEdgeArrayListPool.size() + patternEdgeArrayLists.size());
-
-        for (PatternEdgeArrayList patternEdgeArrayList : patternEdgeArrayLists) {
-            reclaimPatternEdgeArrayList(patternEdgeArrayList);
-        }
-    }
-
-    protected IntSet createIntSet() {
-        if (intSetPool != null && !intSetPool.isEmpty()) {
-            return intSetPool.remove(intSetPool.size() - 1);
-        } else {
-            return HashIntSets.newMutableSet();
-        }
-    }
-
-    protected void reclaimIntSet(IntSet intSet) {
-        if (intSetPool == null) {
-            intSetPool = new ObjArrayList<>();
-        }
-
-        intSet.clear();
-
-        intSetPool.add(intSet);
-    }
-
-    protected void reclaimIntSets(Collection<IntSet> intSets) {
-        if (intSetPool == null) {
-            intSetPool = new ObjArrayList<>(intSets.size());
-        }
-
-        intSetPool.ensureCapacity(intSetPool.size() + intSets.size());
-
-        for (IntSet intSet : intSets) {
-            reclaimIntSet(intSet);
-        }
     }
 }

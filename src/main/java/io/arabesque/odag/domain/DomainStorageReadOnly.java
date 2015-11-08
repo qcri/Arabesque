@@ -52,7 +52,7 @@ public class DomainStorageReadOnly extends DomainStorage {
     }
 
     public class Reader implements StorageReader {
-        private final MainGraph<?, ?, ?, ?> mainGraph;
+        private final MainGraph mainGraph;
         private final Embedding reusableEmbedding;
         private final long numberOfEnumerations;
 
@@ -145,8 +145,8 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                 PatternEdge equivalentPatternEdge = edges.get(reusableEdgeEmbedding.getNumWords());
 
-                int equivalentPatternEdgeSrcIndex = equivalentPatternEdge.getSrcId();
-                int equivalentPatternEdgeDestIndex = equivalentPatternEdge.getDestId();
+                int equivalentPatternEdgeSrcIndex = equivalentPatternEdge.getSrcPos();
+                int equivalentPatternEdgeDestIndex = equivalentPatternEdge.getDestPos();
 
                 reusableEdgeEmbedding.addWord(wordId);
                 int[] embeddingVertices = reusableEdgeEmbedding.getVertices();
@@ -206,10 +206,10 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                 for (int i = 0; i < numEdgesPattern; ++i) {
                     PatternEdge edgePattern = edgesPattern.get(i);
-                    Edge<?> edgeEmbedding = mainGraph.getEdge(edgesEmbedding[i]);
+                    Edge edgeEmbedding = mainGraph.getEdge(edgesEmbedding[i]);
 
-                    if (!edgeEmbedding.hasVertex(verticesEmbedding[edgePattern.getSrcId()]) ||
-                            !edgeEmbedding.hasVertex(verticesEmbedding[edgePattern.getDestId()])) {
+                    if (!edgeEmbedding.hasVertex(verticesEmbedding[edgePattern.getSrcPos()]) ||
+                            !edgeEmbedding.hasVertex(verticesEmbedding[edgePattern.getDestPos()])) {
                         return false;
                     }
                 }
@@ -220,7 +220,6 @@ public class DomainStorageReadOnly extends DomainStorage {
 
         public boolean getEnumerationWithStack(int targetSize) {
             long currentId = 0;
-            long initialEnumId = targetEnumId;
 
             while (!enumerationStack.isEmpty() && targetEnumId >= currentId) {
                 EnumerationStep lastEnumerationStep = enumerationStack.pop();

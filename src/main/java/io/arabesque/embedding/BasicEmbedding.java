@@ -13,7 +13,7 @@ public abstract class BasicEmbedding implements Embedding {
 
     int words[];
 
-    protected MainGraph<?, ?, ?, ?> g;
+    protected MainGraph g;
     protected int numWords;
 
     private Pattern pattern;

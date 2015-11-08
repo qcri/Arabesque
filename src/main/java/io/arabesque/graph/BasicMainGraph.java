@@ -1,5 +1,6 @@
 package io.arabesque.graph;
 
+import io.arabesque.conf.Configuration;
 import io.arabesque.utils.IntArrayList;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntCursor;
@@ -9,8 +10,6 @@ import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -23,17 +22,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.StringTokenizer;
 
-public abstract class BasicMainGraph<
-        VD extends Writable,
-        QV extends Vertex<VD>,
-        EL extends WritableComparable,
-        QE extends Edge<EL>> implements MainGraph<VD,QV,EL,QE> {
+public class BasicMainGraph implements MainGraph {
     private static final Logger LOG = Logger.getLogger(BasicMainGraph.class);
 
     private static final int INITIAL_ARRAY_SIZE = 4096;
 
-    private Vertex<VD>[] vertexIndexF;
-    private Edge<EL>[] edgeIndexF;
+    private Vertex[] vertexIndexF;
+    private Edge[] edgeIndexF;
 
     private int numVertices;
     private int numEdges;
@@ -42,11 +37,12 @@ public abstract class BasicMainGraph<
 
     private HashIntIntMap[] vertexPairToEdge;
 
-    private IntArrayList[] edgeNeighbourhoodIndex;
     private IntArrayList[] vertexNeighbourhoodIndex;
 
     private static final IntArrayList EMPTY_INT_ARRAY_LIST = new IntArrayList(0);
     private static final IntIntMap EMPTY_INT_INT_MAP = HashIntIntMaps.newImmutableMap(new HashMap<Integer, Integer>());
+
+    private boolean edgeLabelled;
 
     private void init(Object path) throws IOException {
         long start = 0;
@@ -62,10 +58,13 @@ public abstract class BasicMainGraph<
 
         vertexPairToEdge = null;
 
-        edgeNeighbourhoodIndex = null;
         vertexNeighbourhoodIndex = null;
 
         reset();
+
+        Configuration conf = Configuration.get();
+
+        edgeLabelled = conf.isGraphEdgeLabelled();
 
         if (LOG.isInfoEnabled()) {
             LOG.info("Done in " + (System.currentTimeMillis() - start));
@@ -191,7 +190,7 @@ public abstract class BasicMainGraph<
      * @return
      */
     @Override
-    public MainGraph<VD, QV, EL, QE> addVertex(QV vertex) {
+    public MainGraph addVertex(Vertex vertex) {
         ensureCanStoreNewVertex();
         vertexIndexF[numVertices++] = vertex;
 
@@ -199,13 +198,13 @@ public abstract class BasicMainGraph<
     }
 
     @Override
-    public QV[] getVertices() {
-        return (QV[]) vertexIndexF;
+    public Vertex[] getVertices() {
+        return vertexIndexF;
     }
 
     @Override
-    public QV getVertex(int vertexId) {
-        return (QV) vertexIndexF[vertexId];
+    public Vertex getVertex(int vertexId) {
+        return vertexIndexF[vertexId];
     }
 
     @Override
@@ -214,13 +213,13 @@ public abstract class BasicMainGraph<
     }
 
     @Override
-    public QE[] getEdges() {
-        return (QE[]) edgeIndexF;
+    public Edge[] getEdges() {
+        return edgeIndexF;
     }
 
     @Override
-    public QE getEdge(int edgeId) {
-        return (QE) edgeIndexF[edgeId];
+    public Edge getEdge(int edgeId) {
+        return edgeIndexF[edgeId];
     }
 
     @Override
@@ -250,7 +249,7 @@ public abstract class BasicMainGraph<
     }
 
     @Override
-    public MainGraph<VD, QV, EL, QE> addEdge(QE edge) {
+    public MainGraph addEdge(Edge edge) {
         // Assuming input graph contains all edges but we treat it as undirected
         // TODO: What if input only contains one of the edges? Should we enforce
         // this via a sanity check?
@@ -341,18 +340,10 @@ public abstract class BasicMainGraph<
                     }
                 }
 
-                int vertexId = Integer.parseInt(tokenizer.nextToken());
-                int vertexLabel = Integer.parseInt(tokenizer.nextToken());
-                VD vertexValue = readVertexData(tokenizer);
-
-                QV vertex = createVertex(vertexId, vertexLabel, vertexValue);
-
-                addVertex(vertex);
+                int vertexId = parseVertex(tokenizer);
 
                 while (tokenizer.hasMoreTokens()) {
-                    int neighborId = Integer.parseInt(tokenizer.nextToken());
-                    QE edge = createEdge(vertexId, neighborId);
-                    addEdge(edge);
+                    parseEdge(tokenizer, vertexId);
                 }
 
                 line = reader.readLine();
@@ -364,6 +355,34 @@ public abstract class BasicMainGraph<
         }
     }
 
+    protected void parseEdge(StringTokenizer tokenizer, int vertexId) {
+        int neighborId = Integer.parseInt(tokenizer.nextToken());
+
+        Edge edge;
+
+        if (!edgeLabelled) {
+            edge = createEdge(vertexId, neighborId);
+        }
+        else {
+            int edgeLabel = Integer.parseInt(tokenizer.nextToken());
+
+            edge = createEdge(vertexId, neighborId, edgeLabel);
+        }
+
+        addEdge(edge);
+    }
+
+    protected int parseVertex(StringTokenizer tokenizer) {
+        int vertexId = Integer.parseInt(tokenizer.nextToken());
+        int vertexLabel = Integer.parseInt(tokenizer.nextToken());
+
+        Vertex vertex = createVertex(vertexId, vertexLabel);
+
+        addVertex(vertex);
+
+        return vertexId;
+    }
+
     @Override
     public String toString() {
         return "Vertices: " + Arrays.toString(vertexIndexF) + "\n Edges: " + Arrays.toString(edgeIndexF);
@@ -371,8 +390,8 @@ public abstract class BasicMainGraph<
 
     @Override
     public boolean areEdgesNeighbors(int edge1Id, int edge2Id) {
-        Edge<EL> edge1 = edgeIndexF[edge1Id];
-        Edge<EL> edge2 = edgeIndexF[edge2Id];
+        Edge edge1 = edgeIndexF[edge1Id];
+        Edge edge2 = edgeIndexF[edge2Id];
 
         return edge1.neighborWith(edge2);
     }
@@ -388,15 +407,17 @@ public abstract class BasicMainGraph<
         return (dest1 == src2 || dest1 == dest2 || src1 == dest2);
     }
 
-    protected abstract VD readVertexData(StringTokenizer tokenizer);
+    protected Vertex createVertex(int id, int label) {
+        return new Vertex(id, label);
+    }
 
-    protected abstract QV createVertex();
+    protected Edge createEdge(int srcId, int destId) {
+        return new Edge(srcId, destId);
+    }
 
-    protected abstract QV createVertex(int id, int label, VD data);
-
-    protected abstract QE createEdge();
-
-    protected abstract QE createEdge(int srcId, int destId);
+    protected Edge createEdge(int srcId, int destId, int label) {
+        return new LabelledEdge(srcId, destId, label);
+    }
 
     @Override
     public IntIntMap getVertexNeighbourhood(int vertexId) {
