@@ -98,8 +98,8 @@ public class ExecutionEngine<O extends Embedding>
         computation.finish();
     }
 
-    protected void output(Embedding embedding) {
-        workerContext.outputEmbedding(embedding);
+    protected void output(String outputString) {
+        workerContext.output(outputString);
         numberOfEmbeddingsOutput++;
     }
 
