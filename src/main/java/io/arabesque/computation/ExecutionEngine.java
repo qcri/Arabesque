@@ -80,22 +80,27 @@ public class ExecutionEngine<O extends Embedding>
 
         firstVertex = true;
 
-        computation = configuration.createComputation();
-        computation.setUnderlyingExecutionEngine(this);
+        if (getPhase() == 0) {
+            computation = configuration.createComputation();
+            computation.setUnderlyingExecutionEngine(this);
 
-        if (getPhase() == 0 && getSuperstep() == 0) {
-            if (configuration.getEmbeddingClass() == null) {
-                configuration.setEmbeddingClass(computation.getEmbeddingClass());
+            if (getPhase() == 0 && getSuperstep() == 0) {
+                if (configuration.getEmbeddingClass() == null) {
+                    configuration.setEmbeddingClass(computation.getEmbeddingClass());
+                }
             }
-        }
 
-        computation.init();
+            computation.init();
+        }
     }
 
     @Override
     public void postComputations() {
         communicationStrategy.finish();
-        computation.finish();
+
+        if (getPhase() == 0) {
+            computation.finish();
+        }
     }
 
     protected void output(String outputString) {

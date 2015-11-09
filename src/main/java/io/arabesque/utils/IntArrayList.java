@@ -490,10 +490,28 @@ public class IntArrayList implements IntCollection, Writable {
 
     @Override
     public String toString() {
-        return "IntArrayList{" +
-                "backingArray=" + Arrays.toString(backingArray) +
-                ", numElements=" + numElements +
-                '}';
+        StringBuilder strBuilder = new StringBuilder();
+
+        strBuilder.append("IntArrayList{");
+        strBuilder.append("backingArray=");
+
+        boolean first = true;
+
+        for (int i = 0; i < numElements; ++i) {
+            if (!first) {
+                strBuilder.append(", ");
+            }
+
+            strBuilder.append(backingArray[i]);
+
+            first = false;
+        }
+
+        strBuilder.append(", numElements=");
+        strBuilder.append(numElements);
+        strBuilder.append("}");
+
+        return strBuilder.toString();
     }
 
     private void checkIndex(int index) {

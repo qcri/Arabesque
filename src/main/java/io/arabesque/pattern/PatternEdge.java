@@ -135,7 +135,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         out.writeInt(this.srcLabel);
         out.writeInt(this.destPos);
         out.writeInt(this.destLabel);
-        out.writeBoolean(this.isForward);
+        //out.writeBoolean(this.isForward);
     }
 
     @Override
@@ -144,7 +144,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.srcLabel = in.readInt();
         this.destPos = in.readInt();
         this.destLabel = in.readInt();
-        this.isForward = in.readBoolean();
+        //this.isForward = in.readBoolean();
     }
 
     public boolean isSmaller(PatternEdge e) {

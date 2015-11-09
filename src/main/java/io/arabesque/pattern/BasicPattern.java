@@ -296,7 +296,7 @@ public abstract class BasicPattern extends Pattern {
 
         setDirty();
 
-        return  true;
+        return true;
     }
 
     public int addVertex(int vertexId) {

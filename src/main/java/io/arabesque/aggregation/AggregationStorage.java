@@ -76,7 +76,7 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
     }
 
     public K getKey(K key) {
-        if (containsKey(key)) {
+        if (keyValueMap.containsKey(key)) {
             return key;
         } else {
             return null;

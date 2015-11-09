@@ -323,11 +323,29 @@ public class VertexInducedEmbedding extends BasicEmbedding {
 
     private void _updateEdges() {
         edgesSize = 0;
-        for (int i = 0; i < numWords - 1; ++i) {
+        /*for (int i = 0; i < numWords - 1; ++i) {
             int srcVertexId = words[i];
 
             for (int j = i + 1; j < numWords; ++j) {
                 int dstVertexId = words[j];
+
+                int edgeId = g.getEdgeId(srcVertexId, dstVertexId);
+
+                if (edgeId != -1) {
+                    if (edgesSize >= edges.length) {
+                        edges = Arrays.copyOf(edges, edgesSize + INC_ARRAY_SIZE);
+                    }
+
+                    edges[edgesSize++] = edgeId;
+                }
+            }
+        }*/
+
+        for (int i = 1; i < numWords; ++i) {
+            int dstVertexId = words[i];
+
+            for (int j = 0; j < i; ++j) {
+                int srcVertexId = words[j];
 
                 int edgeId = g.getEdgeId(srcVertexId, dstVertexId);
 

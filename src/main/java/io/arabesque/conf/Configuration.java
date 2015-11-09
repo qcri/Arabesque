@@ -43,7 +43,7 @@ public class Configuration<O extends Embedding> {
     public static final int B = 1000 * M;
 
     public static final String CONF_MAINGRAPH_CLASS = "arabesque.graph.class";
-    public static final String CONF_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.NullDataMainGraph";
+    public static final String CONF_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.BasicMainGraph";
     public static final String CONF_MAINGRAPH_PATH = "arabesque.graph.location";
     public static final String CONF_MAINGRAPH_PATH_DEFAULT = "main.graph";
     public static final String CONF_MAINGRAPH_LOCAL = "arabesque.graph.local";
