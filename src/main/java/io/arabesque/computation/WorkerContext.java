@@ -5,7 +5,6 @@ import io.arabesque.aggregation.AggregationStorageFactory;
 import io.arabesque.aggregation.AggregationStorageMetadata;
 import io.arabesque.aggregation.AggregationStorageWrapper;
 import io.arabesque.conf.Configuration;
-import io.arabesque.embedding.Embedding;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.partition.PartitionOwner;
@@ -39,7 +38,7 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
     private ConcurrentMap<Integer, AtomicLong> depthProcessedInfo;
     private int maxProcessedDepthReached;
     private Timer infoTimer;
-    private OutputStreamWriter embeddingOutputStream;
+    private OutputStreamWriter outputStream;
     private OutputStreamWriter aggregationOutputStream;
 
     private CyclicBarrier barrier;
@@ -103,7 +102,7 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
         if (Configuration.get().isOutputActive()) {
             try {
                 FileSystem fs = FileSystem.get(getConf());
-                embeddingOutputStream = new OutputStreamWriter(
+                outputStream = new OutputStreamWriter(
                         fs.create(
                                 new Path(OUTPUT_PATH,
                                         Integer.toString(getConf().getTaskPartition()))));
@@ -117,9 +116,9 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
 
     @Override
     public void postApplication() {
-        if (embeddingOutputStream != null) {
+        if (outputStream != null) {
             try {
-                embeddingOutputStream.close();
+                outputStream.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -148,13 +147,13 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
         }
     }
 
-    public void outputEmbedding(Embedding embedding) {
-        if (embeddingOutputStream == null) {
+    public void output(String outputString) {
+        if (outputStream == null) {
             return;
         }
 
         try {
-            embeddingOutputStream.write(embedding.toOutputString() + '\n');
+            outputStream.write(outputString + '\n');
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
