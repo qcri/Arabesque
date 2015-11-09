@@ -92,9 +92,7 @@ public class LabelledPatternEdge extends PatternEdge {
 
     @Override
     public String toString() {
-        return "LabelledPatternEdge{" +
-                "label=" + label +
-                "} " + super.toString();
+        return ("[" + getSrcPos() + "(" + getSrcLabel() + ")--(" + label + ")--" + getDestPos() + "(" + getDestLabel() + ")]");
     }
 
     @Override
