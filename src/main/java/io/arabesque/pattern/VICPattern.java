@@ -361,13 +361,13 @@ public class VICPattern extends BasicPattern {
                     }
 
                     // Is this tmp pattern we are constructing equal to min (up until now)?
-                    // It is if it previously was and these edges we are about to add also are equal
+                    // It is if it previously was and these edges/vertex we are about to add also are equal
                     equalToMinTmpPattern = equalToMinTmpPattern && comparisonResult == 0;
 
                     // If we were equal to the min pattern up until now but no longer are, then this last
-                    // edge will tell us if this is a promising path or not.
+                    // edge/vertex will tell us if this is a promising path or not.
                     if (tmpPreviouslyEqualToMin && !equalToMinTmpPattern) {
-                        // If these new edges are leading to a higher pattern, tmp pattern no longer looks promising
+                        // If these new edges/vertex are leading to a higher pattern, tmp pattern no longer looks promising
                         if (comparisonResult > 0) {
                             promisingTmpPattern = false;
                         }

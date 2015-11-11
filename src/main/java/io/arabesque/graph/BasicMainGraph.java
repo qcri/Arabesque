@@ -44,12 +44,11 @@ public class BasicMainGraph implements MainGraph {
 
     private boolean edgeLabelled;
 
-    private void init(Object path) throws IOException {
+    private void init() {
         long start = 0;
-        long totalStart = 0;
 
         if (LOG.isInfoEnabled()) {
-            totalStart = start = System.currentTimeMillis();
+            start = System.currentTimeMillis();
             LOG.info("Initializing");
         }
 
@@ -68,6 +67,15 @@ public class BasicMainGraph implements MainGraph {
 
         if (LOG.isInfoEnabled()) {
             LOG.info("Done in " + (System.currentTimeMillis() - start));
+        }
+    }
+
+    private void init(Object path) throws IOException {
+        init();
+
+        long start = 0;
+
+        if (LOG.isInfoEnabled()) {
             LOG.info("Reading graph");
             start = System.currentTimeMillis();
         }
@@ -84,7 +92,6 @@ public class BasicMainGraph implements MainGraph {
 
         if (LOG.isInfoEnabled()) {
             LOG.info("Done in " + (System.currentTimeMillis() - start));
-            LOG.info("Finished in " + (System.currentTimeMillis() - totalStart) + " miliseconds");
             LOG.info("Number vertices: " + numVertices);
             LOG.info("Number edges: " + numEdges);
         }
@@ -177,6 +184,10 @@ public class BasicMainGraph implements MainGraph {
 
     private void ensureCanStoreNewEdge() {
         ensureCanStoreNewEdges(1);
+    }
+
+    public BasicMainGraph() {
+        init();
     }
 
     public BasicMainGraph(Path filePath)

@@ -9,15 +9,13 @@ import java.io.IOException;
 import java.nio.file.Paths;
 
 public class TestConfiguration<O extends Embedding> extends Configuration<O> {
-    public TestConfiguration() {
-        super(new ImmutableClassesGiraphConfiguration(new org.apache.hadoop.conf.Configuration()));
+    public TestConfiguration(MainGraph mainGraph) {
+        this(new ImmutableClassesGiraphConfiguration(new org.apache.hadoop.conf.Configuration()));
     }
 
-    public TestConfiguration(String graphPath) {
-        this();
-
+    public TestConfiguration(ImmutableClassesGiraphConfiguration underlyingConfiguration) {
+        super(underlyingConfiguration);
         getUnderlyingConfiguration().set(CONF_COMPUTATION_CLASS, "io.arabesque.examples.clique.CliqueComputation");
-        getUnderlyingConfiguration().set(CONF_MAINGRAPH_PATH, graphPath);
     }
 
     @Override

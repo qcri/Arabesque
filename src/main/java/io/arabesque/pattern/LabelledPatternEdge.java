@@ -24,11 +24,7 @@ public class LabelledPatternEdge extends PatternEdge {
     }
 
     public LabelledPatternEdge(int srcPos, int srcLabel, int destPos, int destLabel, int label) {
-        this(srcPos, srcLabel, destPos, destLabel, label, true);
-    }
-
-    public LabelledPatternEdge(int srcPos, int srcLabel, int destPos, int destLabel, int label, boolean isForward) {
-        super(srcPos, srcLabel, destPos, destLabel, isForward);
+        super(srcPos, srcLabel, destPos, destLabel);
 
         this.label = label;
     }

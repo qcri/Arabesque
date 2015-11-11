@@ -16,10 +16,9 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
     private int srcLabel;
     private int destPos;
     private int destLabel;
-    private boolean isForward;
 
     public PatternEdge() {
-        this(-1, -1, -1, -1, true);
+        this(-1, -1, -1, -1);
     }
 
     public PatternEdge(PatternEdge edge) {
@@ -27,15 +26,10 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
     }
 
     public PatternEdge(int srcPos, int srcLabel, int destPos, int destLabel) {
-        this(srcPos, srcLabel, destPos, destLabel, true);
-    }
-
-    public PatternEdge(int srcPos, int srcLabel, int destPos, int destLabel, boolean isForward) {
         this.srcPos = srcPos;
         this.srcLabel = srcLabel;
         this.destPos = destPos;
         this.destLabel = destLabel;
-        this.isForward = isForward;
     }
 
     public void setFromOther(PatternEdge edge) {
@@ -44,8 +38,6 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
 
         setDestPos(edge.getDestPos());
         setDestLabel(edge.getDestLabel());
-
-        isForward(edge.isForward());
     }
 
     public void setFromEdge(Edge edge, int srcPos, int dstPos) {
@@ -61,8 +53,6 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         setDestPos(dstPos);
         setSrcLabel(srcVertex.getVertexLabel());
         setDestLabel(dstVertex.getVertexLabel());
-
-        isForward(true);
     }
 
     public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
@@ -115,15 +105,6 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.destLabel = destLabel;
     }
 
-    public boolean isForward() {
-        return isForward;
-    }
-
-    public void isForward(boolean type) {
-        this.isForward = type;
-    }
-
-
     public String toString() {
         //return ("[" + srcPos + "," + srcLabel + "-" + destPos + "," + destLabel + "-" + (isForward ? 'F' : 'B') + "]");
         return ("[" + srcPos + "," + srcLabel + "-" + destPos + "," + destLabel + "]");
@@ -147,12 +128,12 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         //this.isForward = in.readBoolean();
     }
 
-    public boolean isSmaller(PatternEdge e) {
+    /*public boolean isSmaller(PatternEdge e) {
         boolean isSmaller = false;
 
         if (this.srcPos == e.getSrcPos() && this.destPos == e.getDestPos()) {
             if (this.srcLabel == e.getSrcLabel()) {
-                if (this.destLabel < e.getDestPos()) {
+                if (this.destLabel < e.getDestLabel()) {
                     isSmaller = true;
                 }
             } else if (this.srcLabel < e.getSrcLabel()) {
@@ -192,7 +173,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
             }
         }
         return isSmaller;
-    }
+    }*/
 
     @Override
     public boolean equals(Object o) {
@@ -222,10 +203,30 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
 
     @Override
     public int compareTo(PatternEdge o) {
-        if (equals(o))
+        if (equals(o)) {
             return 0;
-        else if (isSmaller(o)) return -1;
-        else return 1;
+        }
 
+        int result;
+
+        boolean srcPosEqual = this.srcPos == o.getSrcPos();
+        boolean dstPosEqual = this.destPos == o.getDestPos();
+
+        if (srcPosEqual && dstPosEqual) {
+            if (this.srcLabel == o.getSrcLabel()) {
+                result = Integer.compare(destLabel, o.getDestLabel());
+            }
+            else {
+                result = Integer.compare(srcLabel, o.getSrcLabel());
+            }
+        }
+        else if (dstPosEqual) {
+            result = -1 * Integer.compare(srcPos, o.getSrcPos());
+        }
+        else {
+            result = Integer.compare(destPos, o.getDestPos());
+        }
+
+        return result;
     }
 }

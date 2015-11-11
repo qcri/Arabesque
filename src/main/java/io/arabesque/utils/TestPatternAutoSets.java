@@ -10,6 +10,7 @@ import io.arabesque.pattern.VertexPositionEquivalences;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 
 import java.util.ArrayList;
 
@@ -23,7 +24,9 @@ public class TestPatternAutoSets {
             throw new IllegalArgumentException("No embedding given");
         }
 
-        Configuration.setIfUnset(new TestConfiguration(args[0]));
+        org.apache.hadoop.conf.Configuration giraphConfiguration = new org.apache.hadoop.conf.Configuration();
+        giraphConfiguration.set(Configuration.CONF_MAINGRAPH_PATH, args[0]);
+        Configuration.setIfUnset(new TestConfiguration(new ImmutableClassesGiraphConfiguration(giraphConfiguration)));
         Configuration.get().initialize();
 
         String embeddingStr = args[1];
