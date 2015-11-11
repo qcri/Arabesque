@@ -125,27 +125,41 @@ public class BasicMainGraph implements MainGraph {
     }
 
     private void ensureCanStoreNewVertices(int numVerticesToAdd) {
-        if (vertexIndexF == null) {
-            vertexIndexF = new Vertex[Math.max(numVerticesToAdd, INITIAL_ARRAY_SIZE)];
-        } else if (vertexIndexF.length < numVertices + numVerticesToAdd) {
-            vertexIndexF = Arrays.copyOf(vertexIndexF, (vertexIndexF.length + numVerticesToAdd) << 1);
-        }
+        int newMaxVertexId = numVertices + numVerticesToAdd;
 
-        if (vertexPairToEdge == null) {
-            vertexPairToEdge = new HashIntIntMap[Math.max(numVerticesToAdd, INITIAL_ARRAY_SIZE)];
-        } else if (vertexPairToEdge.length < numVertices + numVerticesToAdd) {
-            vertexPairToEdge = Arrays.copyOf(vertexPairToEdge, (vertexPairToEdge.length + numVerticesToAdd) << 1);
-        }
+        ensureCanStoreUpToVertex(newMaxVertexId);
     }
 
     private void ensureCanStoreUpToVertex(int maxVertexId) {
-        int delta = maxVertexId - vertexIndexF.length;
+        int targetSize = maxVertexId + 1;
 
-        if (delta < 0) {
-            return;
+        if (vertexIndexF == null) {
+            vertexIndexF = new Vertex[Math.max(targetSize, INITIAL_ARRAY_SIZE)];
+        } else if (vertexIndexF.length < targetSize) {
+            vertexIndexF = Arrays.copyOf(vertexIndexF, getSizeWithPaddingWithoutOverflow(targetSize, vertexIndexF.length));
         }
 
-        ensureCanStoreNewVertices(delta + 1);
+        if (vertexPairToEdge == null) {
+            vertexPairToEdge = new HashIntIntMap[Math.max(targetSize, INITIAL_ARRAY_SIZE)];
+        } else if (vertexPairToEdge.length < targetSize) {
+            vertexPairToEdge = Arrays.copyOf(vertexPairToEdge, getSizeWithPaddingWithoutOverflow(targetSize, vertexPairToEdge.length));
+        }
+    }
+
+    private int getSizeWithPaddingWithoutOverflow(int targetSize, int currentSize) {
+        if (currentSize > targetSize) {
+            return currentSize;
+        }
+
+        int sizeWithPadding = targetSize + ((targetSize - currentSize) << 1);
+
+        // If we saw an overflow, return simple targetSize
+        if (sizeWithPadding < targetSize) {
+            return targetSize;
+        }
+        else {
+            return sizeWithPadding;
+        }
     }
 
     private void ensureCanStoreNewVertex() {
@@ -156,7 +170,8 @@ public class BasicMainGraph implements MainGraph {
         if (edgeIndexF == null) {
             edgeIndexF = new Edge[Math.max(numEdgesToAdd, INITIAL_ARRAY_SIZE)];
         } else if (edgeIndexF.length < numEdges + numEdgesToAdd) {
-            edgeIndexF = Arrays.copyOf(edgeIndexF, (edgeIndexF.length + numEdgesToAdd) << 1);
+            int targetSize = edgeIndexF.length + numEdgesToAdd;
+            edgeIndexF = Arrays.copyOf(edgeIndexF, getSizeWithPaddingWithoutOverflow(targetSize, edgeIndexF.length));
         }
     }
 
@@ -277,7 +292,10 @@ public class BasicMainGraph implements MainGraph {
 
             srcConnections.put(edge.getDestinationId(), edge.getEdgeId());
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new ArrayIndexOutOfBoundsException("Tried to access index " + edge.getSourceId() + " of array with size " + vertexPairToEdge.length);
+            LOG.error("Tried to access index " + edge.getSourceId() + " of array with size " + vertexPairToEdge.length);
+            LOG.error("vertexIndexF.length=" + vertexIndexF.length);
+            LOG.error("vertexPairToEdge.length=" + vertexPairToEdge.length);
+            throw e;
         }
 
         try {
@@ -290,7 +308,10 @@ public class BasicMainGraph implements MainGraph {
 
             dstConnections.put(edge.getSourceId(), edge.getEdgeId());
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new ArrayIndexOutOfBoundsException("Tried to access index " + edge.getDestinationId() + " of array with size " + vertexPairToEdge.length);
+            LOG.error("Tried to access index " + edge.getDestinationId() + " of array with size " + vertexPairToEdge.length);
+            LOG.error("vertexIndexF.length=" + vertexIndexF.length);
+            LOG.error("vertexPairToEdge.length=" + vertexPairToEdge.length);
+            throw e;
         }
 
         return this;
