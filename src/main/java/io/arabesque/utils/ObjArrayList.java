@@ -304,7 +304,7 @@ public class ObjArrayList<O> implements ObjCollection<O>, List<O> {
         return backingArray.subList(fromIndex, toIndex);
     }
 
-    public void sort(Comparator<O> comparator) {
+    public void sort(Comparator<? super O> comparator) {
         Collections.sort(backingArray, comparator);
     }
 
