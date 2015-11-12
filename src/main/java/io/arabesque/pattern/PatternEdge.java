@@ -106,7 +106,6 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
     }
 
     public String toString() {
-        //return ("[" + srcPos + "," + srcLabel + "-" + destPos + "," + destLabel + "-" + (isForward ? 'F' : 'B') + "]");
         return ("[" + srcPos + "," + srcLabel + "-" + destPos + "," + destLabel + "]");
     }
 
@@ -116,7 +115,6 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         out.writeInt(this.srcLabel);
         out.writeInt(this.destPos);
         out.writeInt(this.destLabel);
-        //out.writeBoolean(this.isForward);
     }
 
     @Override
@@ -125,55 +123,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.srcLabel = in.readInt();
         this.destPos = in.readInt();
         this.destLabel = in.readInt();
-        //this.isForward = in.readBoolean();
     }
-
-    /*public boolean isSmaller(PatternEdge e) {
-        boolean isSmaller = false;
-
-        if (this.srcPos == e.getSrcPos() && this.destPos == e.getDestPos()) {
-            if (this.srcLabel == e.getSrcLabel()) {
-                if (this.destLabel < e.getDestLabel()) {
-                    isSmaller = true;
-                }
-            } else if (this.srcLabel < e.getSrcLabel()) {
-                isSmaller = true;
-            }
-        } else {
-            //fwd, fwd
-            if (this.isForward && e.isForward()) {
-                if (this.destPos < e.getDestPos())
-                    isSmaller = true;
-                else if (this.destPos == e.getDestPos()) {
-                    if (this.srcPos > e.getSrcPos())
-                        isSmaller = true;
-                }
-            }
-            //bwd, bwd
-            else if (!this.isForward && !e.isForward()) {
-                if (this.srcPos < e.getSrcPos())
-                    isSmaller = true;
-                if (this.srcPos == e.getSrcPos()) {
-                    if (this.destPos < e.getDestPos())
-                        isSmaller = true;
-                }
-            }
-
-            //fwd, bwd
-            else if (this.isForward && !e.isForward()) {
-                if (this.destPos <= e.getSrcPos()) {
-                    isSmaller = true;
-                }
-            }
-            //bwd, fwd
-            else {
-                if (this.srcPos < e.getDestPos()) {
-                    isSmaller = true;
-                }
-            }
-        }
-        return isSmaller;
-    }*/
 
     @Override
     public boolean equals(Object o) {

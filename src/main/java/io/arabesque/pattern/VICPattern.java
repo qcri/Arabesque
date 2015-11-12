@@ -12,7 +12,6 @@ import io.arabesque.utils.pool.Pool;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
 
 public class VICPattern extends BasicPattern {
@@ -218,17 +217,6 @@ public class VICPattern extends BasicPattern {
     }
 
     @Override
-    public boolean turnCanonical() {
-        boolean changed = super.turnCanonical();
-
-        /*if (changed) {
-            vertexPositionEquivalences.convertBasedOnRelabelling(minLabelling);
-        }*/
-
-        return changed;
-    }
-
-    @Override
     protected void fillVertexPositionEquivalences(VertexPositionEquivalences vertexPositionEquivalences) {
         findCanonicalLabelling();
         vertexPositionEquivalences.addAll(this.vertexPositionEquivalences);
@@ -251,34 +239,6 @@ public class VICPattern extends BasicPattern {
         dirtyMinimumStuff = false;
     }
 
-    private void debugTmp() {
-        StringBuilder strBuilder = new StringBuilder();
-
-        strBuilder.append("TMP: {" );
-
-        strBuilder.append(" edges=[");
-        strBuilder.append(StringUtils.join(", ", tmpEdges));
-        strBuilder.append("], labelling=");
-        strBuilder.append(tmpLabelling);
-        strBuilder.append("}");
-
-        System.out.println(strBuilder.toString());
-    }
-
-    private void debugMin() {
-        StringBuilder strBuilder = new StringBuilder();
-
-        strBuilder.append("MIN: {" );
-
-        strBuilder.append(" edges=[");
-        strBuilder.append(StringUtils.join(", ", minEdges));
-        strBuilder.append("], labelling=");
-        strBuilder.append(minLabelling);
-        strBuilder.append("}");
-
-        System.out.println(strBuilder.toString());
-    }
-
     /**
      * Find the canonical labelling by increasing a tmpPattern one vertex at a time and comparing it with the
      * previous minimum.
@@ -289,9 +249,6 @@ public class VICPattern extends BasicPattern {
         IntArrayList underlyingVertexPosThatExtendTmp = getUnderlyingVertexPosThatExtendTmp();
         IntCursor underlyingVertexPosThatExtendTmpCursor = underlyingVertexPosThatExtendTmp.cursor();
 
-        // TODO: Debug
-        //debugTmp();
-
         // For each underlying vertex position we can add as the next tmp vertex position...
         while (underlyingVertexPosThatExtendTmpCursor.moveNext()) {
             int underlyingVertexPosToAdd = underlyingVertexPosThatExtendTmpCursor.elem();
@@ -299,9 +256,6 @@ public class VICPattern extends BasicPattern {
             // Add it...
             int newTmpVertexPos = addTmpVertex(underlyingVertexPosToAdd);
             int newTmpVertexLabel = underlyingPosToLabel.get(underlyingVertexPosToAdd);
-
-            // TODO: Debug
-            //System.out.println("Trying to expand by adding underlying pos " + underlyingVertexPosToAdd + " at new tmp pos " + newTmpVertexPos + " (" + newTmpVertexLabel + ")");
 
             // And find its neighbours
             IntArrayList neighbourUnderlyingPositions = underlyingAdjacencyList.get(underlyingVertexPosToAdd);
@@ -325,9 +279,6 @@ public class VICPattern extends BasicPattern {
 
                 edgesToAdd.add(newEdge);
             }
-
-            // TODO: Debug
-            //System.out.println("Which means adding the following edges: " + edgesToAdd);
 
             // If adding this new vertex position is valid (it is connected to previous vertex positions or is the first one)
             if (edgesToAdd.size() > 0 || newTmpVertexPos == 0) {
@@ -374,9 +325,6 @@ public class VICPattern extends BasicPattern {
                     }
                 }
 
-                // TODO: Debug
-                //System.out.println("promising=" + promisingTmpPattern + ", foundMinimum=" + foundMinimum + ", equalToMinTmpPattern=" + equalToMinTmpPattern);
-
                 // If the tmp pattern is still promising...
                 if (promisingTmpPattern) {
 
@@ -387,11 +335,7 @@ public class VICPattern extends BasicPattern {
                     if (tmpLabelling.size() == getNumberOfVertices()) {
                         // Then this tmp becomes the new min (unless it already is)
                         if (!equalToMinTmpPattern || !foundMinimum) {
-                            // TODO:Debug
-                            //System.out.println("copied to minimum!");
                             copyTmpToMin();
-                            // TODO:Debug
-                            //debugMin();
                             // Since we found a new minimum, clear previous vertex equivalences
                             vertexPositionEquivalences.clear();
                         }
@@ -411,10 +355,6 @@ public class VICPattern extends BasicPattern {
                          *
                          */
                         // Add this new equivalence based on the tmp labelling
-                        // TODO: Debug
-                        //System.out.println("!!!!Equal to minimum!!!!");
-                        // TODO: Debug
-                        //System.out.println("vertexPositionEquivalances=" + vertexPositionEquivalences);
                         IntIntCursor tmpLabellingCursor = tmpLabelling.cursor();
 
                         while (tmpLabellingCursor.moveNext()) {
@@ -423,9 +363,6 @@ public class VICPattern extends BasicPattern {
                             int underlyingPosAccordingToMin = minInverseLabelling.get(tmpEquivalentPos);
                             vertexPositionEquivalences.addEquivalence(underlyingPos, underlyingPosAccordingToMin);
                         }
-
-                        // TODO: Debug
-                        //System.out.println("vertexPositionEquivalances (after)=" + vertexPositionEquivalences);
                     }
                     // If it's promising and we still haven't reached the target size, continue!
                     else {
