@@ -2,31 +2,29 @@ package io.arabesque.graph;
 
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntMap;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
-public interface MainGraph<VD extends Writable, QV extends Vertex<VD>, EL extends WritableComparable, QE extends Edge<EL>> {
+public interface MainGraph {
     void reset();
 
     boolean isNeighborVertex(int v1, int v2);
 
-    MainGraph<VD, QV, EL, QE> addVertex(QV vertex);
+    MainGraph addVertex(Vertex vertex);
 
-    QV[] getVertices();
+    Vertex[] getVertices();
 
-    QV getVertex(int vertexId);
+    Vertex getVertex(int vertexId);
 
     int getNumberVertices();
 
-    QE[] getEdges();
+    Edge[] getEdges();
 
-    QE getEdge(int edgeId);
+    Edge getEdge(int edgeId);
 
     int getNumberEdges();
 
     int getEdgeId(int v1, int v2);
 
-    MainGraph<VD, QV, EL, QE> addEdge(QE edge);
+    MainGraph addEdge(Edge edge);
 
     boolean areEdgesNeighbors(int edge1Id, int edge2Id);
 

@@ -7,7 +7,7 @@ import io.arabesque.embedding.VertexInducedEmbedding;
 import org.apache.hadoop.io.LongWritable;
 
 public class MotifComputation extends VertexInducedComputation<VertexInducedEmbedding> {
-    private static final String AGG_MOTIFS = "motifs";
+    public static final String AGG_MOTIFS = "motifs";
     private static final String MAXSIZE = "arabesque.motif.maxsize";
     private static final int MAXSIZE_DEFAULT = 4;
 

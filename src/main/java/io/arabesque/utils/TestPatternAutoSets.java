@@ -3,10 +3,14 @@ package io.arabesque.utils;
 import io.arabesque.conf.Configuration;
 import io.arabesque.conf.TestConfiguration;
 import io.arabesque.graph.MainGraph;
-import io.arabesque.pattern.BasicPattern;
 import io.arabesque.pattern.JBlissPattern;
+import io.arabesque.pattern.Pattern;
+import io.arabesque.pattern.VICPattern;
+import io.arabesque.pattern.VertexPositionEquivalences;
+import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 
 import java.util.ArrayList;
 
@@ -20,7 +24,10 @@ public class TestPatternAutoSets {
             throw new IllegalArgumentException("No embedding given");
         }
 
-        Configuration.setIfUnset(new TestConfiguration(args[0]));
+        org.apache.hadoop.conf.Configuration giraphConfiguration = new org.apache.hadoop.conf.Configuration();
+        giraphConfiguration.set(Configuration.CONF_MAINGRAPH_PATH, args[0]);
+        Configuration.setIfUnset(new TestConfiguration(new ImmutableClassesGiraphConfiguration(giraphConfiguration)));
+        Configuration.get().initialize();
 
         String embeddingStr = args[1];
 
@@ -51,32 +58,43 @@ public class TestPatternAutoSets {
         }
 
         JBlissPattern jblissPattern = new JBlissPattern();
-        BasicPattern basicPattern = new BasicPattern();
-
-        basicPattern.setupStructures(vertexIds.size(), edgeIds.getSize());
+        VICPattern vicPattern = new VICPattern();
 
         for (int i = 0; i < edgeIds.getSize(); ++i) {
             int edgeId = edgeIds.getUnchecked(i);
-            IntIntPair edge = edges.get(i);
-            jblissPattern.addEdgeTest(mainGraph.getVertex(edge.getFirst()), mainGraph.getVertex(edge.getSecond()));
-            basicPattern.addEdge(edge.getFirst(), edge.getSecond());
+            jblissPattern.addEdge(edgeId);
+            vicPattern.addEdge(edgeId);
         }
 
-        basicPattern.generateMinPatternCode();
+        printPattern("vic", vicPattern);
+        printCanonicalLabelling("vic", vicPattern.getCanonicalLabeling());
+        printVertexPositionEquivalences("vic", vicPattern.getVertexPositionEquivalences());
+        vicPattern.turnCanonical();
+        printPattern("vic-min", vicPattern);
+        printCanonicalLabelling("vic-min", vicPattern.getCanonicalLabeling());
+        printVertexPositionEquivalences("vic-min", vicPattern.getVertexPositionEquivalences());
 
-        printAutoVertexSet("jbliss", jblissPattern.getAutoVertexSetTest());
-        jblissPattern.generateMinPatternCode();
-        printAutoVertexSet("jbliss-min", jblissPattern.getAutoVertexSet());
-        printAutoVertexSet("basic", basicPattern.getAutoVertexSet());
+        printPattern("jbliss", jblissPattern);
+        printCanonicalLabelling("jbliss", jblissPattern.getCanonicalLabeling());
+        printVertexPositionEquivalences("jbliss", jblissPattern.getVertexPositionEquivalences());
+        jblissPattern.turnCanonical();
+        printPattern("jbliss-min", jblissPattern);
+        printCanonicalLabelling("jbliss-min", jblissPattern.getCanonicalLabeling());
+        printVertexPositionEquivalences("jbliss-min", jblissPattern.getVertexPositionEquivalences());
     }
 
-    public static void printAutoVertexSet(String title, HashIntSet[] autoVertexSet) {
-        System.out.println("Autovertex set of " + title);
+    public static void printPattern(String title, Pattern pattern) {
+        System.out.println("Pattern of " + title);
+        System.out.println(pattern.toString());
+    }
 
-        int i = 0;
-        for (HashIntSet entry : autoVertexSet) {
-            System.out.println(i + " :" + entry);
-            ++i;
-        }
+    public static void printCanonicalLabelling(String title, IntIntMap canonicalLabelling) {
+        System.out.println("Canonical labelling of " + title);
+        System.out.println(canonicalLabelling.toString());
+    }
+
+    public static void printVertexPositionEquivalences(String title, VertexPositionEquivalences vertexPositionEquivalences) {
+        System.out.println("Autovertex set of " + title);
+        System.out.println(vertexPositionEquivalences.toString());
     }
 }

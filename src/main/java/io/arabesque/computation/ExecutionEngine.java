@@ -80,22 +80,27 @@ public class ExecutionEngine<O extends Embedding>
 
         firstVertex = true;
 
-        computation = configuration.createComputation();
-        computation.setUnderlyingExecutionEngine(this);
+        if (getPhase() == 0) {
+            computation = configuration.createComputation();
+            computation.setUnderlyingExecutionEngine(this);
 
-        if (getPhase() == 0 && getSuperstep() == 0) {
-            if (configuration.getEmbeddingClass() == null) {
-                configuration.setEmbeddingClass(computation.getEmbeddingClass());
+            if (getPhase() == 0 && getSuperstep() == 0) {
+                if (configuration.getEmbeddingClass() == null) {
+                    configuration.setEmbeddingClass(computation.getEmbeddingClass());
+                }
             }
-        }
 
-        computation.init();
+            computation.init();
+        }
     }
 
     @Override
     public void postComputations() {
         communicationStrategy.finish();
-        computation.finish();
+
+        if (getPhase() == 0) {
+            computation.finish();
+        }
     }
 
     protected void output(String outputString) {
@@ -107,14 +112,16 @@ public class ExecutionEngine<O extends Embedding>
     public void postSuperstep() {
         super.postSuperstep();
 
-        for (Map.Entry<String, AggregationStorage> aggregationStorageEntry : aggregationStorages.entrySet()) {
-            String aggregationStorageName = aggregationStorageEntry.getKey();
-            AggregationStorage aggregationStorage = aggregationStorageEntry.getValue();
+        try {
+            for (Map.Entry<String, AggregationStorage> aggregationStorageEntry : aggregationStorages.entrySet()) {
+                String aggregationStorageName = aggregationStorageEntry.getKey();
+                AggregationStorage aggregationStorage = aggregationStorageEntry.getValue();
 
-            /*LOG.info("Final thread aggregation " + aggregationStorageName);
-            LOG.info(aggregationStorage);*/
-
-            workerContext.addAggregationStorage(aggregationStorageName, aggregationStorage);
+                workerContext.addAggregationStorage(aggregationStorageName, aggregationStorage);
+            }
+        } catch (RuntimeException e) {
+            LOG.error(e);
+            throw e;
         }
 
         LongWritable longWritable = new LongWritable();

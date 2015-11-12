@@ -175,6 +175,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
 
             // We ignore the last one since it always changes!!!
             if (i < numVertices - 1) {
+                growIncrementalVertexCountIfNeeded(i);
                 if (incrementalVertexCount[i] == null) {
                     incrementalVertexCount[i] = HashIntIntMaps.newMutableMap(extensionVertexIdMap);
                 } else {
@@ -182,6 +183,8 @@ public class VertexInducedEmbedding extends BasicEmbedding {
                     incrementalVertexCount[i].putAll(extensionVertexIdMap);
                 }
             }
+
+            growPreviousVerticesIfNeeded(i);
             previousVertices[i] = vertexId;
         }
 
@@ -193,6 +196,12 @@ public class VertexInducedEmbedding extends BasicEmbedding {
 
 //		System.out.println("Incremental:"+vertices + "   " + extensionEdgeIds.size() + " common:"+common);
         return extensionVertexIdMap;
+    }
+
+    private void growIncrementalVertexCountIfNeeded(int i) {
+        if (i >= incrementalVertexCount.length) {
+            incrementalVertexCount = Arrays.copyOf(incrementalVertexCount, i + INC_ARRAY_SIZE);
+        }
     }
 
     /**
@@ -216,6 +225,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
             }
 
             if (numC > 2) {
+                growIncrementalVertexCountIfNeeded(i);
                 //Prepare for incremental.
                 if (incrementalVertexCount[i] == null) {
                     incrementalVertexCount[i] =
@@ -225,6 +235,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
                     incrementalVertexCount[i].putAll(extensionVertexIdMap);
                 }
 
+                growPreviousVerticesIfNeeded(i);
                 previousVertices[i] = vertexId;
             }
         }
@@ -235,6 +246,12 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         }
 // 		System.out.println("Scratch" + Arrays.toString(vertA) + "   " + extensionEdgeIds.size());
         return extensionVertexIdMap;
+    }
+
+    private void growPreviousVerticesIfNeeded(int i) {
+        if (i >= previousVertices.length) {
+            previousVertices = Arrays.copyOf(previousVertices, i + INC_ARRAY_SIZE);
+        }
     }
 
     protected IntCollection getValidNeighboursForExpansion(int vertexId) {
@@ -299,14 +316,14 @@ public class VertexInducedEmbedding extends BasicEmbedding {
             }
         }
         if (numAdded.length < numWords) {
-            numAdded = Arrays.copyOf(numAdded, numAdded.length + INC_ARRAY_SIZE);
+            numAdded = Arrays.copyOf(numAdded, numWords + INC_ARRAY_SIZE);
         }
         numAdded[numWords - 1] = addedEdges;
     }
 
     private void _updateEdges() {
         edgesSize = 0;
-        for (int i = 0; i < numWords; ++i) {
+        /*for (int i = 0; i < numWords - 1; ++i) {
             int srcVertexId = words[i];
 
             for (int j = i + 1; j < numWords; ++j) {
@@ -322,7 +339,43 @@ public class VertexInducedEmbedding extends BasicEmbedding {
                     edges[edgesSize++] = edgeId;
                 }
             }
+        }*/
+
+        for (int i = 1; i < numWords; ++i) {
+            int dstVertexId = words[i];
+
+            for (int j = 0; j < i; ++j) {
+                int srcVertexId = words[j];
+
+                int edgeId = g.getEdgeId(srcVertexId, dstVertexId);
+
+                if (edgeId != -1) {
+                    if (edgesSize >= edges.length) {
+                        edges = Arrays.copyOf(edges, edgesSize + INC_ARRAY_SIZE);
+                    }
+
+                    edges[edgesSize++] = edgeId;
+                }
+            }
         }
+
+        int lastWord = words[numWords - 1];
+        int addedEdges = 0;
+
+        //We exclude itself (the last one added).
+        for (int i = 0; i < numWords - 1; ++i) {
+            int dstVertexId = words[i];
+            int edgeId = g.getEdgeId(lastWord, dstVertexId);
+
+            if (edgeId != -1) {
+                ++addedEdges;
+            }
+        }
+
+        if (numAdded.length < numWords) {
+            numAdded = Arrays.copyOf(numAdded, numWords + INC_ARRAY_SIZE);
+        }
+        numAdded[numWords - 1] = addedEdges;
     }
 
     public int[] getEdges() {

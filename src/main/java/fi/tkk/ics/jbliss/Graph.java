@@ -13,6 +13,11 @@ import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.JBlissPattern;
 import io.arabesque.pattern.PatternEdge;
+import io.arabesque.pattern.PatternEdgeArrayList;
+import io.arabesque.utils.IntArrayList;
+import net.openhft.koloboke.collect.IntCursor;
+import net.openhft.koloboke.collect.ObjCursor;
+import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import org.apache.commons.lang3.SystemUtils;
@@ -67,27 +72,30 @@ public class Graph<V extends Comparable> {
     }
 
 	private long createBliss() {
-		MainGraph<?, ?, ?, ?> mainGraph = Configuration.get().getMainGraph();
-		int numVertices = pattern.getNumberOfVertices();
-		int[] vertices = pattern.getVertices();
-
-		int numEdges = pattern.getNumberOfEdges();
-		PatternEdge[] edges = pattern.getEdges();
+		MainGraph mainGraph = Configuration.get().getMainGraph();
+		IntArrayList vertices = pattern.getVertices();
+		int numVertices = vertices.size();
+		PatternEdgeArrayList edges = pattern.getEdges();
 
 		long bliss = create();
 		assert bliss != 0;
 
-		for (int i = 0; i < numVertices; ++i) {
-			Vertex<?> vertex = mainGraph.getVertex(vertices[i]);
+		IntCursor vertexCursor = vertices.cursor();
+
+		while (vertexCursor.moveNext()) {
+			Vertex vertex = mainGraph.getVertex(vertexCursor.elem());
 			_add_vertex(bliss, vertex.getVertexLabel());
 		}
 
-		for (int i = 0; i < numEdges; ++i) {
-			PatternEdge edge = edges[i];
-			if (edge.getSrcId() >= numVertices || edge.getDestId() >= numVertices) {
-				throw new RuntimeException("Wrong (possibly old?) pattern edge found. Src (" + edge.getSrcId() + "), Dst (" + edge.getDestId() + ") or both are higher than numVertices (" + numVertices + ")");
+		ObjCursor<PatternEdge> edgeCursor = edges.cursor();
+
+		while (edgeCursor.moveNext()) {
+			PatternEdge edge = edgeCursor.elem();
+
+			if (edge.getSrcPos() >= numVertices || edge.getDestPos() >= numVertices) {
+				throw new RuntimeException("Wrong (possibly old?) pattern edge found. Src (" + edge.getSrcPos() + "), Dst (" + edge.getDestPos() + ") or both are higher than numVertices (" + numVertices + ")");
 			}
-			_add_edge(bliss, edge.getSrcId(), edge.getDestId());
+			_add_edge(bliss, edge.getSrcPos(), edge.getDestPos());
 		}
 
 		return bliss;
@@ -104,11 +112,11 @@ public class Graph<V extends Comparable> {
 		_reporter_param = null;
 	}
 
-	public HashIntIntMap getCanonicalLabeling() {
-		return getCanonicalLabeling(null, null);
+	public void fillCanonicalLabeling(IntIntMap canonicalLabelling) {
+		fillCanonicalLabeling(null, null, canonicalLabelling);
 	}
 
-	public HashIntIntMap getCanonicalLabeling(Reporter reporter, Object reporter_param) {
+	public void fillCanonicalLabeling(Reporter reporter, Object reporter_param, IntIntMap canonicalLabellling) {
 		int numVertices = pattern.getNumberOfVertices();
 		long bliss = createBliss();
 
@@ -116,15 +124,15 @@ public class Graph<V extends Comparable> {
 		_reporter_param = reporter_param;
 		int[] cf = _canonical_labeling(bliss, _reporter);
 		destroy(bliss);
-		HashIntIntMap labeling = HashIntIntMaps.newMutableMap(numVertices);
+
+		canonicalLabellling.clear();
 
 		for (int i = 0; i < numVertices; ++i) {
-			labeling.put(i, cf[i]);
+			canonicalLabellling.put(i, cf[i]);
 		}
 
 		_reporter = null;
 		_reporter_param = null;
-		return labeling;
 	}
 
     static {

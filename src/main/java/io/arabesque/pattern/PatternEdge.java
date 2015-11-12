@@ -1,5 +1,9 @@
 package io.arabesque.pattern;
 
+import io.arabesque.conf.Configuration;
+import io.arabesque.graph.Edge;
+import io.arabesque.graph.MainGraph;
+import io.arabesque.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
@@ -8,42 +12,73 @@ import java.io.IOException;
 
 public class PatternEdge implements Comparable<PatternEdge>, Writable {
 
-    private int srcId;
+    private int srcPos;
     private int srcLabel;
-    private int destId;
+    private int destPos;
     private int destLabel;
-    private boolean type; //true : forward , false : backward
 
     public PatternEdge() {
-        type = true;
+        this(-1, -1, -1, -1);
     }
 
     public PatternEdge(PatternEdge edge) {
-        this(edge.getSrcId(), edge.getSrcLabel(), edge.getDestId(), edge.getDestLabel(), edge.getType());
+        setFromOther(edge);
     }
 
-    public PatternEdge(int srcId, int srcLabel, int destId, int destLabel) {
-        this.srcId = srcId;
+    public PatternEdge(int srcPos, int srcLabel, int destPos, int destLabel) {
+        this.srcPos = srcPos;
         this.srcLabel = srcLabel;
-        this.destId = destId;
+        this.destPos = destPos;
         this.destLabel = destLabel;
-        type = true;
     }
 
-    public PatternEdge(int srcId, int srcLabel, int destId, int destLabel, boolean type) {
-        this.srcId = srcId;
-        this.srcLabel = srcLabel;
-        this.destId = destId;
-        this.destLabel = destLabel;
-        this.type = type;
+    public void setFromOther(PatternEdge edge) {
+        setSrcPos(edge.getSrcPos());
+        setSrcLabel(edge.getSrcLabel());
+
+        setDestPos(edge.getDestPos());
+        setDestLabel(edge.getDestLabel());
     }
 
-    public int getSrcId() {
-        return srcId;
+    public void setFromEdge(Edge edge, int srcPos, int dstPos) {
+        MainGraph mainGraph = Configuration.get().getMainGraph();
+
+        int srcVertexId = edge.getSourceId();
+        int dstVertexId = edge.getDestinationId();
+
+        Vertex srcVertex = mainGraph.getVertex(srcVertexId);
+        Vertex dstVertex = mainGraph.getVertex(dstVertexId);
+
+        setSrcPos(srcPos);
+        setDestPos(dstPos);
+        setSrcLabel(srcVertex.getVertexLabel());
+        setDestLabel(dstVertex.getVertexLabel());
     }
 
-    public void setSrcId(int srcId) {
-        this.srcId = srcId;
+    public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
+        setFromEdge(edge, srcPos, dstPos);
+
+        if (edge.getSourceId() != srcId) {
+            invert();
+        }
+    }
+
+    public void invert() {
+        int tmp = srcPos;
+        srcPos = destPos;
+        destPos = tmp;
+
+        tmp = srcLabel;
+        srcLabel = destLabel;
+        destLabel = tmp;
+    }
+
+    public int getSrcPos() {
+        return srcPos;
+    }
+
+    public void setSrcPos(int srcPos) {
+        this.srcPos = srcPos;
     }
 
     public int getSrcLabel() {
@@ -54,12 +89,12 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.srcLabel = srcLabel;
     }
 
-    public int getDestId() {
-        return destId;
+    public int getDestPos() {
+        return destPos;
     }
 
-    public void setDestId(int destId) {
-        this.destId = destId;
+    public void setDestPos(int destPos) {
+        this.destPos = destPos;
     }
 
     public int getDestLabel() {
@@ -70,124 +105,78 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.destLabel = destLabel;
     }
 
-    public boolean getType() {
-        return type;
-    }
-
-    public void setType(boolean type) {
-        this.type = type;
-    }
-
-
     public String toString() {
-        StringBuilder result = new StringBuilder();
-        result.append("[" + srcId + "," + srcLabel + "-" + destId + "," + destLabel + "-" + type + "]");
-
-        return result.toString();
+        return ("[" + srcPos + "," + srcLabel + "-" + destPos + "," + destLabel + "]");
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeInt(this.srcId);
+        out.writeInt(this.srcPos);
         out.writeInt(this.srcLabel);
-        out.writeInt(this.destId);
+        out.writeInt(this.destPos);
         out.writeInt(this.destLabel);
-        out.writeBoolean(this.type);
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        this.srcId = in.readInt();
+        this.srcPos = in.readInt();
         this.srcLabel = in.readInt();
-        this.destId = in.readInt();
+        this.destPos = in.readInt();
         this.destLabel = in.readInt();
-        this.type = in.readBoolean();
     }
-
-    public boolean isSmaller(PatternEdge e) {
-        boolean isSmaller = false;
-
-        if (this.srcId == e.getSrcId() && this.destId == e.getDestId()) {
-            if (this.srcLabel == e.getSrcLabel()) {
-                if (this.destLabel < e.getDestId()) {
-                    isSmaller = true;
-                }
-            } else if (this.srcLabel < e.getSrcLabel()) {
-                isSmaller = true;
-            }
-        } else {
-            //fwd, fwd
-            if (this.type == true && e.getType() == true) {
-                if (this.destId < e.getDestId())
-                    isSmaller = true;
-                else if (this.destId == e.getDestId()) {
-                    if (this.srcId > e.getSrcId())
-                        isSmaller = true;
-                }
-            }
-            //bwd, bwd
-            else if (this.type == false && e.getType() == false) {
-                if (this.srcId < e.getSrcId())
-                    isSmaller = true;
-                if (this.srcId == e.getSrcId()) {
-                    if (this.destId < e.getDestId())
-                        isSmaller = true;
-                }
-            }
-
-            //fwd, bwd
-            else if (this.type == true && e.getType() == false) {
-                if (this.destId <= e.getSrcId()) {
-                    isSmaller = true;
-                }
-            }
-            //bwd, fwd
-            else {
-                if (this.srcId < e.getDestId()) {
-                    isSmaller = true;
-                }
-            }
-        }
-        return isSmaller;
-    }
-
 
     @Override
     public boolean equals(Object o) {
-        PatternEdge e = (PatternEdge) o;
-        if (this.srcId == e.getSrcId() &&
-                this.srcLabel == e.getSrcLabel() &&
-                this.destId == e.getDestId() &&
-                this.destLabel == e.getDestLabel())
-            return true;
-        return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        PatternEdge that = (PatternEdge) o;
+
+        if (srcPos != that.srcPos) return false;
+        if (srcLabel != that.srcLabel) return false;
+        if (destPos != that.destPos) return false;
+        if (destLabel != that.destLabel) return false;
+        return true;
+        //return isForward == that.isForward;
 
     }
 
     @Override
     public int hashCode() {
-        int result = srcId;
+        int result = srcPos;
         result = 31 * result + srcLabel;
-        result = 31 * result + destId;
+        result = 31 * result + destPos;
         result = 31 * result + destLabel;
+        //result = 31 * result + (isForward ? 1 : 0);
         return result;
     }
 
     @Override
     public int compareTo(PatternEdge o) {
-        if (equals(o))
+        if (equals(o)) {
             return 0;
-        else if (isSmaller(o)) return -1;
-        else return 1;
-
-    }
-
-    ;
-
-    public int getTypeInt() {
-        if (type) {
-            return 1;
         }
-        return 0;
+
+        int result;
+
+        boolean srcPosEqual = this.srcPos == o.getSrcPos();
+        boolean dstPosEqual = this.destPos == o.getDestPos();
+
+        if (srcPosEqual && dstPosEqual) {
+            if (this.srcLabel == o.getSrcLabel()) {
+                result = Integer.compare(destLabel, o.getDestLabel());
+            }
+            else {
+                result = Integer.compare(srcLabel, o.getSrcLabel());
+            }
+        }
+        else if (dstPosEqual) {
+            result = -1 * Integer.compare(srcPos, o.getSrcPos());
+        }
+        else {
+            result = Integer.compare(destPos, o.getDestPos());
+        }
+
+        return result;
     }
 }

@@ -5,13 +5,17 @@ import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.IntIterator;
 import net.openhft.koloboke.function.IntConsumer;
 import net.openhft.koloboke.function.IntPredicate;
+import org.apache.hadoop.io.Writable;
 
 import javax.annotation.Nonnull;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 
-public class IntArrayList implements IntCollection {
+public class IntArrayList implements IntCollection, Writable {
     private static final int INITIAL_SIZE = 16;
 
     private int[] backingArray;
@@ -29,6 +33,11 @@ public class IntArrayList implements IntCollection {
     public IntArrayList(Collection<Integer> collection) {
         this.ensureCapacity(collection.size());
         addAll(collection);
+    }
+
+    public IntArrayList(IntArrayList intArrayList) {
+        numElements = intArrayList.numElements;
+        backingArray = Arrays.copyOf(intArrayList.backingArray, numElements);
     }
 
     public int getSize() {
@@ -59,13 +68,24 @@ public class IntArrayList implements IntCollection {
             throw new UnsupportedOperationException("IntArrayList does not support long sizes yet");
         }
 
-        int newTargetSize = (int) l;
+        int minimumSize = (int) l;
 
         if (backingArray == null) {
-            backingArray = new int[newTargetSize];
+            backingArray = new int[minimumSize];
         }
-        else if (newTargetSize > backingArray.length) {
-            backingArray = Arrays.copyOf(backingArray, newTargetSize);
+        else if (minimumSize > backingArray.length) {
+            int targetLength = backingArray.length;
+
+            while (targetLength < minimumSize) {
+                targetLength = targetLength << 1;
+
+                if (targetLength < 0) {
+                    targetLength = minimumSize;
+                    break;
+                }
+            }
+
+            backingArray = Arrays.copyOf(backingArray, targetLength);
         }
         else {
             return false;
@@ -183,6 +203,28 @@ public class IntArrayList implements IntCollection {
         }
 
         numElements = targetPosition;
+    }
+
+    @Override
+    public void write(DataOutput dataOutput) throws IOException {
+        dataOutput.writeInt(numElements);
+
+        for (int i = 0; i < numElements; ++i) {
+            dataOutput.writeInt(backingArray[i]);
+        }
+    }
+
+    @Override
+    public void readFields(DataInput dataInput) throws IOException {
+        clear();
+
+        numElements = dataInput.readInt();
+
+        ensureCanAddNElements(numElements);
+
+        for (int i = 0; i < numElements; ++i) {
+            backingArray[i] = dataInput.readInt();
+        }
     }
 
     private class IntArrayListCursor implements IntCursor {
@@ -332,6 +374,8 @@ public class IntArrayList implements IntCollection {
 
     @Override
     public boolean addAll(Collection<? extends Integer> c) {
+        ensureCanAddNElements(c.size());
+
         for (int o : c) {
             add(o);
         }
@@ -394,14 +438,20 @@ public class IntArrayList implements IntCollection {
         return removedAtLeastOne;
     }
 
-    public void remove(int index) {
+    public int remove(int index) {
         if (index < 0 || index >= numElements) {
             throw new IllegalArgumentException();
         }
 
+        int removedElement = backingArray[index];
+
         --numElements;
 
-        System.arraycopy(backingArray, index + 1, backingArray, index, numElements - index);
+        if (index != numElements) {
+            System.arraycopy(backingArray, index + 1, backingArray, index, numElements - index);
+        }
+
+        return removedElement;
     }
 
     public int get(int index) {
@@ -440,15 +490,33 @@ public class IntArrayList implements IntCollection {
 
     @Override
     public String toString() {
-        return "IntArrayList{" +
-                "backingArray=" + Arrays.toString(backingArray) +
-                ", numElements=" + numElements +
-                '}';
+        StringBuilder strBuilder = new StringBuilder();
+
+        strBuilder.append("IntArrayList{");
+        strBuilder.append("backingArray=");
+
+        boolean first = true;
+
+        for (int i = 0; i < numElements; ++i) {
+            if (!first) {
+                strBuilder.append(", ");
+            }
+
+            strBuilder.append(backingArray[i]);
+
+            first = false;
+        }
+
+        strBuilder.append(", numElements=");
+        strBuilder.append(numElements);
+        strBuilder.append("}");
+
+        return strBuilder.toString();
     }
 
     private void checkIndex(int index) {
         if (index < 0 || index >= numElements) {
-            throw new ArrayIndexOutOfBoundsException();
+            throw new ArrayIndexOutOfBoundsException(index);
         }
     }
 

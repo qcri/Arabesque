@@ -42,7 +42,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
         Configuration conf = Configuration.get();
 
-        conf.registerAggregation(AGG_SUPPORT, conf.getPatternClass(), DomainSupport.class, true,
+        conf.registerAggregation(AGG_SUPPORT, conf.getPatternClass(), DomainSupport.class, false,
                 new DomainSupportReducer(), new DomainSupportEndAggregationFunction());
     }
 

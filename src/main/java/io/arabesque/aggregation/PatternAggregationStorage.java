@@ -4,6 +4,7 @@ import io.arabesque.pattern.Pattern;
 import net.openhft.koloboke.collect.map.hash.HashObjByteMap;
 import net.openhft.koloboke.collect.map.hash.HashObjByteMaps;
 import org.apache.hadoop.io.Writable;
+import org.apache.log4j.Logger;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -15,6 +16,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PatternAggregationStorage<K extends Pattern, V extends Writable> extends AggregationStorage<K, V> {
+    private static final Logger LOG = Logger.getLogger(PatternAggregationStorage.class);
+
     private final HashObjByteMap<K> reservations;
     private final ConcurrentHashMap<K, K> quick2CanonicalMap;
 
@@ -39,6 +42,17 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
         if (quick2CanonicalMap != null) {
             quick2CanonicalMap.clear();
         }
+    }
+
+    @Override
+    public K getKey(K key) {
+        K superKey = super.getKey(key);
+
+        if (superKey == null) {
+            superKey = quick2CanonicalMap.get(key);
+        }
+
+        return superKey;
     }
 
     @Override
@@ -215,10 +229,18 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
                 } else {
                     reservations.put(quickPattern, (byte) 1);
                 }
+
+                //LOG.info("Quick 2 canonical map: ");
+                //LOG.info(quick2CanonicalMap);
+
+                //LOG.info("Reservations: ");
+                //LOG.info(reservations);
             }
 
+            //LOG.info("Calculate canonical pattern of quick pattern: " + quickPattern);
             canonicalPattern = (K) quickPattern.copy();
-            canonicalPattern.generateMinPatternCode();
+            canonicalPattern.turnCanonical();
+            //LOG.info("Canonical pattern: " + canonicalPattern);
 
             quick2CanonicalMap.put(quickPattern, canonicalPattern);
         }

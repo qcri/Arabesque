@@ -14,6 +14,7 @@ import io.arabesque.graph.MainGraph;
 import io.arabesque.optimization.OptimizationSet;
 import io.arabesque.optimization.OptimizationSetDescriptor;
 import io.arabesque.pattern.Pattern;
+import io.arabesque.pattern.VICPattern;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.fs.Path;
@@ -43,11 +44,13 @@ public class Configuration<O extends Embedding> {
     public static final int B = 1000 * M;
 
     public static final String CONF_MAINGRAPH_CLASS = "arabesque.graph.class";
-    public static final String CONF_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.NullDataMainGraph";
+    public static final String CONF_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.BasicMainGraph";
     public static final String CONF_MAINGRAPH_PATH = "arabesque.graph.location";
     public static final String CONF_MAINGRAPH_PATH_DEFAULT = "main.graph";
     public static final String CONF_MAINGRAPH_LOCAL = "arabesque.graph.local";
     public static final boolean CONF_MAINGRAPH_LOCAL_DEFAULT = false;
+    public static final String CONF_MAINGRAPH_EDGE_LABELLED = "arabesque.graph.edge_labelled";
+    public static final boolean CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT = false;
 
     public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS = "arabesque.optimizations.descriptor";
     public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT = "io.arabesque.optimization.ConfigBasedOptimizationSetDescriptor";
@@ -112,6 +115,7 @@ public class Configuration<O extends Embedding> {
 
     private Map<String, AggregationStorageMetadata> aggregationsMetadata;
     private MainGraph mainGraph;
+    private boolean isGraphEdgeLabelled;
     private boolean initialized = false;
 
     public static <C extends Configuration> C get() {
@@ -134,6 +138,12 @@ public class Configuration<O extends Embedding> {
 
     public Configuration(ImmutableClassesGiraphConfiguration giraphConfiguration) {
         this.giraphConfiguration = giraphConfiguration;
+    }
+
+    public void initialize() {
+        if (initialized) {
+            return;
+        }
 
         LOG.info("Initializing Configuration...");
 
@@ -147,8 +157,15 @@ public class Configuration<O extends Embedding> {
         is2LevelAggregationEnabled = getBoolean(CONF_2LEVELAGG_ENABLED, CONF_2LEVELAGG_ENABLED_DEFAULT);
         forceGC = getBoolean(CONF_FORCE_GC, CONF_FORCE_GC_DEFAULT);
         mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
+        isGraphEdgeLabelled = getBoolean(CONF_MAINGRAPH_EDGE_LABELLED, CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT);
         optimizationSetDescriptorClass = (Class<? extends OptimizationSetDescriptor>) getClass(CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS, CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT);
-        patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
+
+        if (isGraphEdgeLabelled) {
+            patternClass = VICPattern.class;
+        } else {
+            patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
+        }
+
         computationClass = (Class<? extends Computation>) getClass(CONF_COMPUTATION_CLASS, CONF_COMPUTATION_CLASS_DEFAULT);
         masterComputationClass = (Class<? extends MasterComputation>) getClass(CONF_MASTER_COMPUTATION_CLASS, CONF_MASTER_COMPUTATION_CLASS_DEFAULT);
 
@@ -157,12 +174,6 @@ public class Configuration<O extends Embedding> {
         outputPath = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT);
 
         defaultAggregatorSplits = getInteger(CONF_DEFAULT_AGGREGATOR_SPLITS, CONF_DEFAULT_AGGREGATOR_SPLITS_DEFAULT);
-    }
-
-    public void initialize() {
-        if (initialized) {
-            return;
-        }
 
         Computation<?> computation = createComputation();
         computation.initAggregations();
@@ -174,10 +185,12 @@ public class Configuration<O extends Embedding> {
 
         optimizationSet.applyStartup();
 
-        // Load graph immediately (try to make it so that everyone loads the graph at the same time)
-        // This prevents imbalances if aggregators use the main graph (which means that master
-        // node would load first on superstep -1) then all the others would load on (superstep 0).
-        mainGraph = createGraph();
+        if (mainGraph == null) {
+            // Load graph immediately (try to make it so that everyone loads the graph at the same time)
+            // This prevents imbalances if aggregators use the main graph (which means that master
+            // node would load first on superstep -1) then all the others would load on (superstep 0).
+            mainGraph = createGraph();
+        }
 
         optimizationSet.applyAfterGraphLoad();
         initialized = true;
@@ -369,6 +382,10 @@ public class Configuration<O extends Embedding> {
 
     public MasterComputation createMasterComputation() {
         return ReflectionUtils.newInstance(masterComputationClass);
+    }
+
+    public boolean isGraphEdgeLabelled() {
+        return isGraphEdgeLabelled;
     }
 }
 

@@ -6,19 +6,13 @@ import io.arabesque.graph.Vertex;
 import io.arabesque.utils.IntArrayList;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntMap;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
-public class OrderedNeighboursMainGraphDecorator<
-        VD extends Writable,
-        QV extends Vertex<VD>,
-        EL extends WritableComparable,
-        QE extends Edge<EL>> implements OrderedNeighboursMainGraph<VD, QV, EL, QE> {
-    protected MainGraph<VD, QV, EL, QE> underlyingMainGraph;
+public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMainGraph {
+    protected MainGraph underlyingMainGraph;
 
     protected IntArrayList[] orderedNeighbours;
 
-    public OrderedNeighboursMainGraphDecorator(MainGraph<VD, QV, EL, QE> underlyingMainGraph) {
+    public OrderedNeighboursMainGraphDecorator(MainGraph underlyingMainGraph) {
         this.underlyingMainGraph = underlyingMainGraph;
 
         int numVertices = underlyingMainGraph.getNumberVertices();
@@ -46,17 +40,17 @@ public class OrderedNeighboursMainGraphDecorator<
     }
 
     @Override
-    public MainGraph<VD, QV, EL, QE> addVertex(QV vertex) {
+    public MainGraph addVertex(Vertex vertex) {
         return underlyingMainGraph.addVertex(vertex);
     }
 
     @Override
-    public QV[] getVertices() {
+    public Vertex[] getVertices() {
         return underlyingMainGraph.getVertices();
     }
 
     @Override
-    public QV getVertex(int vertexId) {
+    public Vertex getVertex(int vertexId) {
         return underlyingMainGraph.getVertex(vertexId);
     }
 
@@ -66,12 +60,12 @@ public class OrderedNeighboursMainGraphDecorator<
     }
 
     @Override
-    public QE[] getEdges() {
+    public Edge[] getEdges() {
         return underlyingMainGraph.getEdges();
     }
 
     @Override
-    public QE getEdge(int edgeId) {
+    public Edge getEdge(int edgeId) {
         return underlyingMainGraph.getEdge(edgeId);
     }
 
@@ -86,7 +80,7 @@ public class OrderedNeighboursMainGraphDecorator<
     }
 
     @Override
-    public MainGraph<VD, QV, EL, QE> addEdge(QE edge) {
+    public MainGraph addEdge(Edge edge) {
         return underlyingMainGraph.addEdge(edge);
     }
 

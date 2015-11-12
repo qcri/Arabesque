@@ -1,40 +1,30 @@
 package io.arabesque.graph;
 
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-public abstract class Edge<
-        EL extends WritableComparable>
-        implements Writable {
+public class Edge implements Writable {
     public static final int DEFAULT_EDGE_ID = -1;
 
     private int edgeId;
     private int sourceVertexId;
     private int destinationVertexId;
-    private EL edgeLabel;
 
     public Edge() {
-        this(DEFAULT_EDGE_ID, -1, -1, null);
+        this(DEFAULT_EDGE_ID, -1, -1);
     }
 
-    public Edge(int sourceVertexId, int destinationVertexId, EL edgeValue) {
-        this(DEFAULT_EDGE_ID, sourceVertexId, destinationVertexId, edgeValue);
+    public Edge(int sourceVertexId, int destinationVertexId) {
+        this(DEFAULT_EDGE_ID, sourceVertexId, destinationVertexId);
     }
 
-    public Edge(int edgeId, int sourceVertexId, int destinationVertexId, EL edgeValue) {
+    public Edge(int edgeId, int sourceVertexId, int destinationVertexId) {
         this.edgeId = edgeId;
         this.sourceVertexId = sourceVertexId;
         this.destinationVertexId = destinationVertexId;
-
-        if (edgeValue != null) {
-            this.edgeLabel = edgeValue;
-        } else {
-            this.edgeLabel = createEdgeLabel();
-        }
     }
 
     public int getEdgeId() {
@@ -53,17 +43,11 @@ public abstract class Edge<
         return destinationVertexId;
     }
 
-    public EL getEdgeLabel() {
-        return edgeLabel;
-    }
-
     @Override
     public void write(DataOutput dataOutput) throws IOException {
         dataOutput.writeInt(this.edgeId);
         dataOutput.writeInt(this.sourceVertexId);
         dataOutput.writeInt(this.destinationVertexId);
-        dataOutput.writeBoolean(true);
-        edgeLabel.write(dataOutput);
     }
 
     @Override
@@ -71,12 +55,6 @@ public abstract class Edge<
         this.edgeId = dataInput.readInt();
         this.sourceVertexId = dataInput.readInt();
         this.destinationVertexId = dataInput.readInt();
-        edgeLabel.readFields(dataInput);
-    }
-
-    @Override
-    public int hashCode() {
-        return edgeId;
     }
 
     @Override
@@ -87,11 +65,17 @@ public abstract class Edge<
         Edge edge = (Edge) o;
 
         if (edgeId != edge.edgeId) return false;
-        if (destinationVertexId != edge.destinationVertexId) return false;
         if (sourceVertexId != edge.sourceVertexId) return false;
-        if (!edgeLabel.equals(edge.edgeLabel)) return false;
+        return destinationVertexId == edge.destinationVertexId;
 
-        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = edgeId;
+        result = 31 * result + sourceVertexId;
+        result = 31 * result + destinationVertexId;
+        return result;
     }
 
     @Override
@@ -100,21 +84,14 @@ public abstract class Edge<
                 "edgeId=" + edgeId +
                 "sourceVertexId=" + sourceVertexId +
                 ", destinationVertexId=" + destinationVertexId +
-                ", edgeLabel=" + edgeLabel +
                 '}';
     }
 
     public boolean hasVertex(int vertexId) {
-        if (sourceVertexId == vertexId || destinationVertexId == vertexId) {
-            return true;
-        }
-
-        return false;
+        return sourceVertexId == vertexId || destinationVertexId == vertexId;
     }
 
-    protected abstract EL createEdgeLabel();
-
-    public boolean neighborWith(Edge<EL> edge2) {
+    public boolean neighborWith(Edge edge2) {
         int src2 = edge2.getSourceId();
         int dst2 = edge2.getDestinationId();
 

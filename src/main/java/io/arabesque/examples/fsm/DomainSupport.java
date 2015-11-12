@@ -3,9 +3,11 @@ package io.arabesque.examples.fsm;
 import io.arabesque.aggregation.PatternAggregationAwareValue;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.pattern.Pattern;
+import io.arabesque.pattern.VertexPositionEquivalences;
 import io.arabesque.utils.ClearSetConsumer;
 import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
+import net.openhft.koloboke.collect.map.IntIntMap;
+import net.openhft.koloboke.collect.set.IntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 import org.apache.hadoop.io.Writable;
@@ -324,14 +326,15 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
 
         // Taking into account automorphisms of the quick pattern, merge
         // equivalent positions
-        HashIntSet domainEquivalences[] = quickPattern.getAutoVertexSet();
+        VertexPositionEquivalences vertexPositionEquivalences = quickPattern.getVertexPositionEquivalences();
 
-        if (domainEquivalences.length != numberOfDomains) {
+        if (vertexPositionEquivalences.getNumVertices() != numberOfDomains) {
             throw new RuntimeException("Mismatch between # number domains and size of autovertexset");
         }
 
         for (int i = 0; i < numberOfDomains; ++i) {
-            IntCursor cursor = domainEquivalences[i].cursor();
+            IntSet equivalencesToDomainI = vertexPositionEquivalences.getEquivalences(i);
+            IntCursor cursor = equivalencesToDomainI.cursor();
             HashIntSet currentDomainSet = getDomainSet(i);
 
             while (cursor.moveNext()) {
@@ -346,7 +349,7 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
         }
 
         // Rearrange to match canonical pattern structure
-        HashIntIntMap canonicalLabeling = canonicalPattern.getCanonicalLabeling();
+        IntIntMap canonicalLabeling = canonicalPattern.getCanonicalLabeling();
 
         HashIntSet[] oldDomainSets = Arrays.copyOf(domainSets, numberOfDomains);
         HashIntSet oldDomainsReachedSupport = HashIntSets.newMutableSet(domainsReachedSupport);
