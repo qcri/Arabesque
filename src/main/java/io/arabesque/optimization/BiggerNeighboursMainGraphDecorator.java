@@ -1,7 +1,7 @@
 package io.arabesque.optimization;
 
 import io.arabesque.graph.MainGraph;
-import io.arabesque.utils.IntArrayList;
+import io.arabesque.utils.collection.IntArrayList;
 
 public class BiggerNeighboursMainGraphDecorator extends OrderedNeighboursMainGraphDecorator {
 

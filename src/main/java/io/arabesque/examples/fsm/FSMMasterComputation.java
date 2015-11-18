@@ -2,7 +2,6 @@ package io.arabesque.examples.fsm;
 
 import io.arabesque.aggregation.AggregationStorage;
 import io.arabesque.computation.MasterComputation;
-import io.arabesque.conf.Configuration;
 import io.arabesque.pattern.Pattern;
 
 public class FSMMasterComputation extends MasterComputation {

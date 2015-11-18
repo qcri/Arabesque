@@ -1,7 +1,7 @@
 package io.arabesque.graph;
 
+import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.map.IntIntMap;
 
 public interface MainGraph {
     void reset();
@@ -22,7 +22,7 @@ public interface MainGraph {
 
     int getNumberEdges();
 
-    int getEdgeId(int v1, int v2);
+    ReclaimableIntCollection getEdgeIds(int v1, int v2);
 
     MainGraph addEdge(Edge edge);
 
@@ -31,7 +31,7 @@ public interface MainGraph {
     @Deprecated
     boolean isNeighborEdge(int src1, int dest1, int edge2);
 
-    IntIntMap getVertexNeighbourhood(int vertexId);
+    VertexNeighbourhood getVertexNeighbourhood(int vertexId);
 
     IntCollection getVertexNeighbours(int vertexId);
 }

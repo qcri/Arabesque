@@ -1,5 +1,6 @@
 package io.arabesque.pattern;
 
+import io.arabesque.pattern.pool.PatternEdgeArrayListPool;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.WritableObjArrayList;
 
@@ -20,6 +21,11 @@ public class PatternEdgeArrayList extends WritableObjArrayList<PatternEdge> impl
     @Override
     protected PatternEdge createObject() {
         return PatternEdgePool.instance().createObject();
+    }
+
+    @Override
+    public void reclaim() {
+        PatternEdgeArrayListPool.instance().reclaimObject(this);
     }
 
     public int compareTo(PatternEdgeArrayList other) {

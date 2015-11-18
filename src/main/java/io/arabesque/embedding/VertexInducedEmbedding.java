@@ -2,11 +2,13 @@ package io.arabesque.embedding;
 
 import io.arabesque.graph.Vertex;
 import io.arabesque.utils.ElementCounterConsumer;
+import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import net.openhft.koloboke.function.IntConsumer;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -22,6 +24,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
 
     int edgesSize;
     private ElementCounterConsumer elementCounterConsumer;
+    private UpdateEdgesConsumer updateEdgesConsumer;
 
     public VertexInducedEmbedding() {
         super();
@@ -33,6 +36,7 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         numAdded = new int[INC_ARRAY_SIZE];
         incrementalVertexCount = new HashIntIntMap[INC_ARRAY_SIZE];
         elementCounterConsumer = new ElementCounterConsumer();
+        updateEdgesConsumer = new UpdateEdgesConsumer();
     }
 
     @Override
@@ -304,15 +308,17 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         //We exclude itself (the last one added).
         for (int i = 0; i < numWords - 1; ++i) {
             int dstVertexId = words[i];
-            int edgeId = g.getEdgeId(srcVertexId, dstVertexId);
+            ReclaimableIntCollection edgeIds = g.getEdgeIds(srcVertexId, dstVertexId);
 
-            if (edgeId != -1) {
-                if (edgesSize >= edges.length) {
-                    edges = Arrays.copyOf(edges, edgesSize + INC_ARRAY_SIZE);
-                    System.out.println("Increasing edges size!!!");
+            if (edgeIds != null) {
+                if (edgesSize + edgeIds.size() >= edges.length) {
+                    edges = Arrays.copyOf(edges, edgesSize + edgeIds.size() + INC_ARRAY_SIZE);
                 }
-                edges[edgesSize++] = edgeId;
-                ++addedEdges;
+
+                updateEdgesConsumer.reset();
+                edgeIds.forEach(updateEdgesConsumer);
+                addedEdges += updateEdgesConsumer.getNumAdded();
+                edgeIds.reclaim();
             }
         }
         if (numAdded.length < numWords) {
@@ -347,14 +353,16 @@ public class VertexInducedEmbedding extends BasicEmbedding {
             for (int j = 0; j < i; ++j) {
                 int srcVertexId = words[j];
 
-                int edgeId = g.getEdgeId(srcVertexId, dstVertexId);
+                ReclaimableIntCollection edgeIds = g.getEdgeIds(srcVertexId, dstVertexId);
 
-                if (edgeId != -1) {
-                    if (edgesSize >= edges.length) {
-                        edges = Arrays.copyOf(edges, edgesSize + INC_ARRAY_SIZE);
+                if (edgeIds != null) {
+                    if (edgesSize + edgeIds.size() >= edges.length) {
+                        edges = Arrays.copyOf(edges, edgesSize + edgeIds.size() + INC_ARRAY_SIZE);
                     }
 
-                    edges[edgesSize++] = edgeId;
+                    updateEdgesConsumer.reset();
+                    edgeIds.forEach(updateEdgesConsumer);
+                    edgeIds.reclaim();
                 }
             }
         }
@@ -365,10 +373,11 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         //We exclude itself (the last one added).
         for (int i = 0; i < numWords - 1; ++i) {
             int dstVertexId = words[i];
-            int edgeId = g.getEdgeId(lastWord, dstVertexId);
+            ReclaimableIntCollection edgeIds = g.getEdgeIds(lastWord, dstVertexId);
 
-            if (edgeId != -1) {
-                ++addedEdges;
+            if (edgeIds != null) {
+                addedEdges += edgeIds.size();
+                edgeIds.reclaim();
             }
         }
 
@@ -380,5 +389,23 @@ public class VertexInducedEmbedding extends BasicEmbedding {
 
     public int[] getEdges() {
         return edges;
+    }
+
+    private class UpdateEdgesConsumer implements IntConsumer {
+        private int numAdded;
+
+        public void reset() {
+            numAdded = 0;
+        }
+
+        public int getNumAdded() {
+            return numAdded;
+        }
+
+        @Override
+        public void accept(int i) {
+            edges[edgesSize++] = i;
+            ++numAdded;
+        }
     }
 }

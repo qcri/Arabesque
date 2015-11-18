@@ -14,7 +14,7 @@ import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.JBlissPattern;
 import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
-import io.arabesque.utils.IntArrayList;
+import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.ObjCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;

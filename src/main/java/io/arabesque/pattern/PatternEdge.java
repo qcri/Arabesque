@@ -4,6 +4,7 @@ import io.arabesque.conf.Configuration;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
+import io.arabesque.pattern.pool.PatternEdgePool;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
@@ -30,6 +31,10 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         this.srcLabel = srcLabel;
         this.destPos = destPos;
         this.destLabel = destLabel;
+    }
+
+    public void reclaim() {
+        PatternEdgePool.instance().reclaimObject(this);
     }
 
     public void setFromOther(PatternEdge edge) {

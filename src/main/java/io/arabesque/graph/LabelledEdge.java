@@ -12,7 +12,7 @@ public class LabelledEdge extends Edge {
     }
 
     public LabelledEdge(int sourceVertexId, int destinationVertexId, int edgeLabel) {
-        super(sourceVertexId, destinationVertexId, edgeLabel);
+        super(sourceVertexId, destinationVertexId);
 
         this.edgeLabel = edgeLabel;
     }

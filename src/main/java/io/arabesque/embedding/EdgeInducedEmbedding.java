@@ -1,10 +1,10 @@
 package io.arabesque.embedding;
 
 import io.arabesque.graph.Edge;
+import io.arabesque.graph.VertexNeighbourhood;
 import io.arabesque.utils.DumpSetOrdered;
-import io.arabesque.utils.SetIntValueConsumer;
+import io.arabesque.utils.collection.IntCollectionAddConsumer;
 import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 
@@ -19,7 +19,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
     private DumpSetOrdered vertices;
     private int[] numAdded;
 
-    private SetIntValueConsumer mySetConsumer;
+    private IntCollectionAddConsumer mySetConsumer;
 
     public EdgeInducedEmbedding() {
         super();
@@ -27,7 +27,7 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         numAdded = new int[INC_ARRAY_SIZE];
         extensionEdgeIds = HashIntSets.newMutableSet();
         incrementalEdgesAdded = new HashIntSet[INC_ARRAY_SIZE];
-        mySetConsumer = new SetIntValueConsumer();
+        mySetConsumer = new IntCollectionAddConsumer();
     }
 
     public IntCollection getExtensibleWordIds() {
@@ -95,12 +95,12 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
 
         previousWordsPos = numVertices;
 
-        mySetConsumer.setSet(extensionEdgeIds);
+        mySetConsumer.setCollection(extensionEdgeIds);
 
         for (int i = common; i < numVertices; i++) {
             final int vertexId = vertA[i];
-            final IntIntMap neighbourhood = g.getVertexNeighbourhood(vertexId);
-            neighbourhood.forEach(mySetConsumer);
+            final VertexNeighbourhood neighbourhood = g.getVertexNeighbourhood(vertexId);
+            neighbourhood.getNeighbourEdges().forEach(mySetConsumer);
 
             // We ignore the last one since it always changes!!!
             if (i < numVertices - 1) {
@@ -133,12 +133,12 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         extensionEdgeIds.clear();
 
         previousWordsPos = numC;
-        mySetConsumer.setSet(extensionEdgeIds);
+        mySetConsumer.setCollection(extensionEdgeIds);
         for (int i = 0; i < numC; i++) {
             final int vertexId = vertA[i];
 
-            final IntIntMap neighbourhood = g.getVertexNeighbourhood(vertexId);
-            neighbourhood.forEach(mySetConsumer);
+            final VertexNeighbourhood neighbourhood = g.getVertexNeighbourhood(vertexId);
+            neighbourhood.getNeighbourEdges().forEach(mySetConsumer);
 
             if (numC > 2) {
                 //Prepare for incremental.

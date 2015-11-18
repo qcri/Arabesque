@@ -7,6 +7,9 @@ import io.arabesque.pattern.JBlissPattern;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.VICPattern;
 import io.arabesque.pattern.VertexPositionEquivalences;
+import io.arabesque.utils.collection.IntArrayList;
+import net.openhft.koloboke.collect.IntCollection;
+import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
@@ -52,9 +55,12 @@ public class TestPatternAutoSets {
 
             System.out.println("Found edge " + srcId + ", " + dstId);
 
-            int edgeId = mainGraph.getEdgeId(srcId, dstId);
+            IntCollection edgeIdsToAdd = mainGraph.getEdgeIds(srcId, dstId);
+            IntCursor edgeIdsToAddCursor = edgeIdsToAdd.cursor();
 
-            edgeIds.add(edgeId);
+            while (edgeIdsToAddCursor.moveNext()) {
+                edgeIds.add(edgeIdsToAddCursor.elem());
+            }
         }
 
         JBlissPattern jblissPattern = new JBlissPattern();

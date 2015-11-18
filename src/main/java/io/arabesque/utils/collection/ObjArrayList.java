@@ -1,7 +1,6 @@
-package io.arabesque.utils;
+package io.arabesque.utils.collection;
 
 import net.openhft.koloboke.collect.Equivalence;
-import net.openhft.koloboke.collect.ObjCollection;
 import net.openhft.koloboke.collect.ObjCursor;
 import net.openhft.koloboke.collect.ObjIterator;
 import net.openhft.koloboke.function.Consumer;
@@ -11,10 +10,7 @@ import org.apache.commons.collections.ComparatorUtils;
 import javax.annotation.Nonnull;
 import java.util.*;
 
-/**
- * Created by Alex on 28-Oct-15.
- */
-public class ObjArrayList<O> implements ObjCollection<O>, List<O> {
+public class ObjArrayList<O> implements ReclaimableObjCollection<O>, List<O> {
     private ArrayList<O> backingArray;
 
     public ObjArrayList() {
@@ -51,6 +47,11 @@ public class ObjArrayList<O> implements ObjCollection<O>, List<O> {
         }
 
         return true;
+    }
+
+    @Override
+    public void reclaim() {
+        // Do nothing by default since we don't have a pool of generic objects.
     }
 
     public class ObjArrayListCursor implements ObjCursor<O> {

@@ -5,13 +5,16 @@ import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgeArrayListPool;
 import io.arabesque.pattern.pool.PatternEdgePool;
-import io.arabesque.utils.IntArrayList;
-import io.arabesque.utils.ObjArrayList;
+import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.ObjArrayList;
+import io.arabesque.utils.collection.ReclaimableIntCollection;
 import io.arabesque.utils.pool.IntArrayListPool;
+import io.arabesque.utils.pool.IntSetPool;
 import io.arabesque.utils.pool.Pool;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
+import net.openhft.koloboke.collect.set.IntSet;
 import org.apache.log4j.Logger;
 
 public class VICPattern extends BasicPattern {
@@ -21,7 +24,7 @@ public class VICPattern extends BasicPattern {
     // Index = underlying vertex position, Value = vertex label
     private IntArrayList underlyingPosToLabel;
     // Index = underlying vertex position, Value = list of neighbour ids of that vertex
-    private ObjArrayList<IntArrayList> underlyingAdjacencyList;
+    private ObjArrayList<IntSet> underlyingAdjacencyList;
     // }}
 
     // Temporary pattern stuff (the one we construct to find the canonical relabelling) {{
@@ -86,19 +89,19 @@ public class VICPattern extends BasicPattern {
             underlyingPosToLabel.ensureCapacity(numVertices);
         }
 
-        IntArrayListPool intArrayListPool = IntArrayListPool.instance();
+        IntSetPool intSetPool = IntSetPool.instance();
 
         if (underlyingAdjacencyList == null) {
             underlyingAdjacencyList = new ObjArrayList<>(numVertices);
         }
         else {
-            intArrayListPool.reclaimObjects(underlyingAdjacencyList);
+            intSetPool.reclaimObjects(underlyingAdjacencyList);
             underlyingAdjacencyList.clear();
             underlyingAdjacencyList.ensureCapacity(numVertices);
         }
 
         for (int i = 0; i < numVertices; ++i) {
-            underlyingAdjacencyList.add(intArrayListPool.createObject());
+            underlyingAdjacencyList.add(intSetPool.createObject());
         }
     }
 
@@ -123,6 +126,7 @@ public class VICPattern extends BasicPattern {
             int srcPos = edge.getSrcPos();
             int dstPos = edge.getDestPos();
 
+            // TODO: Handle this differently with directed edges
             underlyingAdjacencyList.get(srcPos).add(dstPos);
             underlyingAdjacencyList.get(dstPos).add(srcPos);
         }
@@ -258,7 +262,7 @@ public class VICPattern extends BasicPattern {
             int newTmpVertexLabel = underlyingPosToLabel.get(underlyingVertexPosToAdd);
 
             // And find its neighbours
-            IntArrayList neighbourUnderlyingPositions = underlyingAdjacencyList.get(underlyingVertexPosToAdd);
+            IntSet neighbourUnderlyingPositions = underlyingAdjacencyList.get(underlyingVertexPosToAdd);
             IntCursor neighbourUnderlyingPositionsCursor = neighbourUnderlyingPositions.cursor();
 
             PatternEdgeArrayList edgesToAdd = createPatternEdgeArrayList();
@@ -274,10 +278,8 @@ public class VICPattern extends BasicPattern {
                     continue;
                 }
 
-                // Add edge connecting existing tmp vertex to new tmp vertex
-                PatternEdge newEdge = createCandidatePatternEdge(neighbourUnderlyingPos, neighbourTmpPos, underlyingVertexPosToAdd, newTmpVertexPos);
-
-                edgesToAdd.add(newEdge);
+                // Add edge(s) connecting existing tmp vertex to new tmp vertex
+                addCandidatePatternEdges(edgesToAdd, neighbourUnderlyingPos, neighbourTmpPos, underlyingVertexPosToAdd, newTmpVertexPos);
             }
 
             // If adding this new vertex position is valid (it is connected to previous vertex positions or is the first one)
@@ -373,17 +375,17 @@ public class VICPattern extends BasicPattern {
                 }
                 // If not prosiming, discard these edges
                 else {
-                    PatternEdgeArrayListPool.instance().reclaimObject(edgesToAdd);
+                    edgesToAdd.reclaim();
                 }
             }
 
             removeLastTmpVertex();
         }
 
-        IntArrayListPool.instance().reclaimObject(underlyingVertexPosThatExtendTmp);
+        underlyingVertexPosThatExtendTmp.reclaim();
     }
 
-    private PatternEdge createCandidatePatternEdge(int neighbourUnderlyingPos, int neighbourTmpPos, int underlyingVertexPosToAdd, int newTmpVertexPos) {
+    private void addCandidatePatternEdges(PatternEdgeArrayList edgesToAdd, int neighbourUnderlyingPos, int neighbourTmpPos, int underlyingVertexPosToAdd, int newTmpVertexPos) {
         MainGraph mainGraph = getMainGraph();
 
         IntArrayList vertices = getVertices();
@@ -391,10 +393,17 @@ public class VICPattern extends BasicPattern {
         int neighbourVertexId = vertices.get(neighbourUnderlyingPos);
         int newVertexId = vertices.get(underlyingVertexPosToAdd);
 
-        int edgeId = mainGraph.getEdgeId(neighbourVertexId, newVertexId);
-        Edge edge = mainGraph.getEdge(edgeId);
+        ReclaimableIntCollection edgeIds = mainGraph.getEdgeIds(neighbourVertexId, newVertexId);
 
-        return createPatternEdge(edge, neighbourTmpPos, newTmpVertexPos, neighbourVertexId);
+        IntCursor edgeIdsCursor = edgeIds.cursor();
+
+        while (edgeIdsCursor.moveNext()) {
+            Edge edge = mainGraph.getEdge(edgeIdsCursor.elem());
+
+            edgesToAdd.add(createPatternEdge(edge, neighbourTmpPos, newTmpVertexPos, neighbourVertexId));
+        }
+
+        edgeIds.reclaim();
     }
 
     private void copyTmpToMin() {
@@ -428,7 +437,7 @@ public class VICPattern extends BasicPattern {
     }
 
     private void removeLastTmpEdges() {
-        PatternEdgeArrayListPool.instance().reclaimObject(tmpEdges.remove(tmpEdges.size() - 1));
+        tmpEdges.remove(tmpEdges.size() - 1).reclaim();
     }
 
     private int addTmpVertex(int underlyingPos) {

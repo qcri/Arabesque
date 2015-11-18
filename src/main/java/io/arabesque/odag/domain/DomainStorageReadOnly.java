@@ -6,10 +6,16 @@ import io.arabesque.embedding.EdgeInducedEmbedding;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.embedding.VertexInducedEmbedding;
 import io.arabesque.graph.Edge;
+import io.arabesque.graph.LabelledEdge;
 import io.arabesque.graph.MainGraph;
+import io.arabesque.pattern.LabelledPatternEdge;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
+import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.IntCollectionAddConsumer;
+import io.arabesque.utils.collection.ReclaimableIntCollection;
+import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 
@@ -67,6 +73,9 @@ public class DomainStorageReadOnly extends DomainStorage {
 
         private long targetEnumId;
 
+        private EdgesConsumer edgesConsumer;
+        private IntArrayList edgeIds;
+
         public Reader(Pattern pattern, Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
             this.pattern = pattern;
             this.computation = computation;
@@ -86,6 +95,11 @@ public class DomainStorageReadOnly extends DomainStorage {
             partitionId = computation.getPartitionId();
 
             targetEnumId = -1;
+
+            edgeIds = new IntArrayList();
+
+            edgesConsumer = new EdgesConsumer(Configuration.get().isGraphEdgeLabelled());
+            edgesConsumer.setCollection(edgeIds);
         }
 
         @Override
@@ -163,24 +177,73 @@ public class DomainStorageReadOnly extends DomainStorage {
                 // Otherwise, if same number of vertices, check if the edge connecting the
                 // vertices mapped from the pattern is the same that we are trying to add.
                 // If not, quit, expansion not valid.
-                int edgeId = mainGraph.getEdgeId(
+                IntCollection edgeIds = getEdgeIds(
                         embeddingVertices[equivalentPatternEdgeSrcIndex],
-                        embeddingVertices[equivalentPatternEdgeDestIndex]);
+                        embeddingVertices[equivalentPatternEdgeDestIndex],
+                        equivalentPatternEdge);
 
-                if (wordId != edgeId) {
+                // NOTE: IntSet would theoretically allow faster contains but, in practice,
+                // we assume not a lot of edges between 2 vertices exist with the same label
+                // so array should be quicker.
+                if (!edgeIds.contains(wordId)) {
                     return false;
                 }
 
-                if (!computation.filter(reusableEdgeEmbedding, edgeId)) {
+                if (!computation.filter(reusableEdgeEmbedding, wordId)) {
                     return false;
                 }
 
-                reusableEdgeEmbedding.addWord(edgeId);
+                reusableEdgeEmbedding.addWord(wordId);
             } else {
                 throw new RuntimeException("Incompatible embedding class: " + reusableEmbedding.getClass());
             }
 
             return true;
+        }
+
+        private class EdgesConsumer extends IntCollectionAddConsumer {
+            private boolean hasLabel;
+            private int targetLabel;
+
+            public EdgesConsumer(boolean hasLabel) {
+                this.hasLabel = hasLabel;
+            }
+
+            public void setPatternEdge(PatternEdge patternEdge) {
+                if (hasLabel) {
+                    this.targetLabel = ((LabelledPatternEdge) patternEdge).getLabel();
+                }
+            }
+
+            @Override
+            public void accept(int edgeId) {
+                if (hasLabel) {
+                    LabelledEdge labelledEdge = (LabelledEdge) mainGraph.getEdge(edgeId);
+
+                    if (labelledEdge.getEdgeLabel() != targetLabel) {
+                        return;
+                    }
+                }
+
+                super.accept(edgeId);
+            }
+        }
+
+        private IntCollection getEdgeIds(int srcId, int dstId, PatternEdge patternEdge) {
+            edgeIds.clear();
+            edgesConsumer.setPatternEdge(patternEdge);
+
+            ReclaimableIntCollection edges = mainGraph.getEdgeIds(srcId, dstId);
+
+            edges.forEach(edgesConsumer);
+
+            edges.reclaim();
+
+            if (edgeIds.size() == 0) {
+                throw new RuntimeException("Unknown edge between " + srcId + " and " + dstId);
+            }
+
+            return edgeIds;
         }
 
         private boolean testCompleteEmbedding() {

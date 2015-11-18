@@ -6,7 +6,7 @@ import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgePool;
-import io.arabesque.utils.IntArrayList;
+import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 public abstract class BasicPattern extends Pattern {
     private static final Logger LOG = Logger.getLogger(BasicPattern.class);
@@ -101,10 +102,17 @@ public abstract class BasicPattern extends Pattern {
 
     @Override
     public void setEmbedding(Embedding embedding) {
-        if (canDoIncremental(embedding)) {
-            setEmbeddingIncremental(embedding);
-        } else {
-            setEmbeddingFromScratch(embedding);
+        try {
+            if (canDoIncremental(embedding)) {
+                setEmbeddingIncremental(embedding);
+            } else {
+                setEmbeddingFromScratch(embedding);
+            }
+        } catch (RuntimeException e) {
+            LOG.error("Embedding: " + embedding);
+            LOG.error("Embedding.edges=" + Arrays.toString(embedding.getEdges()));
+            LOG.error("Embedding.numEdges=" + embedding.getNumEdges());
+            throw e;
         }
     }
 

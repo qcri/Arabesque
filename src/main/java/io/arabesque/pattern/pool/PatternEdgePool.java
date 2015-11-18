@@ -37,7 +37,7 @@ public class PatternEdgePool extends Pool<PatternEdge> {
     }
 
     /*
-     * Delayed creation of IntArrayListPool. instance will only be instantiated when we call
+     * Delayed creation of PatternEdgePool. instance will only be instantiated when we call
      * the static method instance().
      *
      * This initialization is also guaranteed to be thread-safe.

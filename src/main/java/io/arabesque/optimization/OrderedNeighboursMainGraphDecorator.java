@@ -3,9 +3,10 @@ package io.arabesque.optimization;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
-import io.arabesque.utils.IntArrayList;
+import io.arabesque.graph.VertexNeighbourhood;
+import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.map.IntIntMap;
 
 public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMainGraph {
     protected MainGraph underlyingMainGraph;
@@ -75,8 +76,8 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     }
 
     @Override
-    public int getEdgeId(int v1, int v2) {
-        return underlyingMainGraph.getEdgeId(v1, v2);
+    public ReclaimableIntCollection getEdgeIds(int v1, int v2) {
+        return underlyingMainGraph.getEdgeIds(v1, v2);
     }
 
     @Override
@@ -95,7 +96,7 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     }
 
     @Override
-    public IntIntMap getVertexNeighbourhood(int vertexId) {
+    public VertexNeighbourhood getVertexNeighbourhood(int vertexId) {
         return underlyingMainGraph.getVertexNeighbourhood(vertexId);
     }
 

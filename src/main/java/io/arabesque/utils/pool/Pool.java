@@ -1,9 +1,9 @@
 package io.arabesque.utils.pool;
 
 import io.arabesque.utils.Factory;
-import io.arabesque.utils.ObjArrayList;
-
-import java.util.Collection;
+import io.arabesque.utils.collection.ObjArrayList;
+import io.arabesque.utils.collection.ReclaimableObjCollection;
+import net.openhft.koloboke.function.Consumer;
 
 public class Pool<O> {
     private final static int MAX_SIZE_DEFAULT = 1000;
@@ -11,6 +11,7 @@ public class Pool<O> {
     private int maxSize;
     private Factory<O> objectFactory;
     private final PoolStorage poolStorage;
+    private final ObjReclaimerStorage reclaimerStorage;
 
     public Pool(Factory<O> objectFactory) {
         this(objectFactory, MAX_SIZE_DEFAULT);
@@ -20,6 +21,7 @@ public class Pool<O> {
         this.objectFactory = objectFactory;
         this.maxSize = maxSize;
         poolStorage = new PoolStorage();
+        reclaimerStorage = new ObjReclaimerStorage();
     }
 
     public O createObject() {
@@ -34,22 +36,25 @@ public class Pool<O> {
     }
 
     public void reclaimObject(O object) {
-        ObjArrayList<O> pool = poolStorage.get();
-
-        reclaimObject(pool, object);
+        reclaimerStorage.get().accept(object);
     }
 
-    public void reclaimObjects(Collection<O> objects) {
-        ObjArrayList<O> pool = poolStorage.get();
+    public void reclaimObjects(ReclaimableObjCollection<O> objects) {
+        objects.forEach(reclaimerStorage.get());
+    }
 
-        for (O object : objects) {
-            reclaimObject(pool, object);
+    private class ObjReclaimer implements Consumer<O> {
+        private ObjArrayList<O> pool;
+
+        public ObjReclaimer() {
+            pool = poolStorage.get();
         }
-    }
 
-    private void reclaimObject(ObjArrayList<O> pool, O object) {
-        if (pool.size() < maxSize) {
-            pool.add(object);
+        @Override
+        public void accept(O o) {
+            if (pool.size() < maxSize) {
+                pool.add(o);
+            }
         }
     }
 
@@ -57,6 +62,13 @@ public class Pool<O> {
         @Override
         protected ObjArrayList<O> initialValue() {
             return new ObjArrayList<>(maxSize);
+        }
+    }
+
+    private class ObjReclaimerStorage extends ThreadLocal<ObjReclaimer> {
+        @Override
+        protected ObjReclaimer initialValue() {
+            return new ObjReclaimer();
         }
     }
 }

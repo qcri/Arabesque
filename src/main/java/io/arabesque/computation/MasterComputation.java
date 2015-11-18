@@ -1,8 +1,6 @@
 package io.arabesque.computation;
 
 import io.arabesque.aggregation.AggregationStorage;
-import io.arabesque.aggregation.AggregationStorageWrapper;
-import io.arabesque.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 
 public class MasterComputation {

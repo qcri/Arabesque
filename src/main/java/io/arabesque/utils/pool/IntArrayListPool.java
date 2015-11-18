@@ -1,7 +1,7 @@
 package io.arabesque.utils.pool;
 
 import io.arabesque.utils.Factory;
-import io.arabesque.utils.IntArrayList;
+import io.arabesque.utils.collection.IntArrayList;
 
 public class IntArrayListPool extends CollectionPool<IntArrayList> {
     private static final Factory<IntArrayList> factory = new Factory<IntArrayList>() {

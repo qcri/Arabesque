@@ -97,6 +97,8 @@ public class YamlConfiguration {
                     // Input
                     .put("input_graph_path", new GiraphStringConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_PATH))
                     .put("input_graph_local", new GiraphBooleanConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_LOCAL))
+                    .put("input_graph_edgelabelled", new GiraphBooleanConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_EDGE_LABELLED))
+                    .put("input_graph_multigraph", new GiraphBooleanConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_MULTIGRAPH))
 
                     // Output
                     .put("output_active", new GiraphBooleanConfigurationAssignment(io.arabesque.conf.Configuration.CONF_OUTPUT_ACTIVE))

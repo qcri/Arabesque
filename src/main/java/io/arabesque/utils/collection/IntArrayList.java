@@ -1,6 +1,6 @@
-package io.arabesque.utils;
+package io.arabesque.utils.collection;
 
-import net.openhft.koloboke.collect.IntCollection;
+import io.arabesque.utils.pool.IntArrayListPool;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.IntIterator;
 import net.openhft.koloboke.function.IntConsumer;
@@ -14,12 +14,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
+import java.util.NoSuchElementException;
 
-public class IntArrayList implements IntCollection, Writable {
+public class IntArrayList implements ReclaimableIntCollection, Writable {
     private static final int INITIAL_SIZE = 16;
 
     private int[] backingArray;
     private int numElements;
+    private boolean preventReclaim = false;
 
     public IntArrayList() {
         this(16);
@@ -30,8 +32,13 @@ public class IntArrayList implements IntCollection, Writable {
         this.numElements = 0;
     }
 
+    public IntArrayList(boolean preventReclaim) {
+        this();
+        this.preventReclaim = preventReclaim;
+    }
+
     public IntArrayList(Collection<Integer> collection) {
-        this.ensureCapacity(collection.size());
+        this(collection.size());
         addAll(collection);
     }
 
@@ -227,6 +234,15 @@ public class IntArrayList implements IntCollection, Writable {
         }
     }
 
+    @Override
+    public void reclaim() {
+        if (preventReclaim) {
+            return;
+        }
+
+        IntArrayListPool.instance().reclaimObject(this);
+    }
+
     private class IntArrayListCursor implements IntCursor {
         private int index;
 
@@ -280,6 +296,10 @@ public class IntArrayList implements IntCollection, Writable {
 
         @Override
         public int nextInt() {
+            if (index >= numElements - 1) {
+                throw new NoSuchElementException();
+            }
+
             return backingArray[++index];
         }
 

@@ -1,13 +1,8 @@
 package io.arabesque.graph;
 
 import io.arabesque.conf.Configuration;
-import io.arabesque.utils.IntArrayList;
+import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.map.IntIntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.log4j.Logger;
@@ -19,7 +14,6 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.StringTokenizer;
 
 public class BasicMainGraph implements MainGraph {
@@ -33,16 +27,10 @@ public class BasicMainGraph implements MainGraph {
     private int numVertices;
     private int numEdges;
 
-    private HashIntIntMapFactory intIntMapFactory = HashIntIntMaps.getDefaultFactory().withDefaultValue(-1);
+    private VertexNeighbourhood[] vertexNeighbourhoods;
 
-    private HashIntIntMap[] vertexPairToEdge;
-
-    private IntArrayList[] vertexNeighbourhoodIndex;
-
-    private static final IntArrayList EMPTY_INT_ARRAY_LIST = new IntArrayList(0);
-    private static final IntIntMap EMPTY_INT_INT_MAP = HashIntIntMaps.newImmutableMap(new HashMap<Integer, Integer>());
-
-    private boolean edgeLabelled;
+    private boolean isEdgeLabelled;
+    private boolean isMultiGraph;
 
     private void init() {
         long start = 0;
@@ -55,15 +43,14 @@ public class BasicMainGraph implements MainGraph {
         vertexIndexF = null;
         edgeIndexF = null;
 
-        vertexPairToEdge = null;
-
-        vertexNeighbourhoodIndex = null;
+        vertexNeighbourhoods = null;
 
         reset();
 
         Configuration conf = Configuration.get();
 
-        edgeLabelled = conf.isGraphEdgeLabelled();
+        isEdgeLabelled = conf.isGraphEdgeLabelled();
+        isMultiGraph = conf.isMultiGraph();
 
         if (LOG.isInfoEnabled()) {
             LOG.info("Done in " + (System.currentTimeMillis() - start));
@@ -97,29 +84,6 @@ public class BasicMainGraph implements MainGraph {
         }
     }
 
-    private void constructSortedVertexNeighbourhoodIndex() {
-        vertexNeighbourhoodIndex = new IntArrayList[numVertices];
-
-        for (int i = 0; i < numVertices; ++i) {
-            HashIntIntMap vertexConnections = vertexPairToEdge[i];
-
-            if (vertexConnections == null) {
-                vertexNeighbourhoodIndex[i] = EMPTY_INT_ARRAY_LIST;
-                continue;
-            }
-
-            IntArrayList vertexNeighbourhoodEntry = new IntArrayList(vertexConnections.size());
-            vertexNeighbourhoodIndex[i] = vertexNeighbourhoodEntry;
-
-            IntIntCursor vertexConnectionsCursor = vertexConnections.cursor();
-            while (vertexConnectionsCursor.moveNext()) {
-                vertexNeighbourhoodEntry.add(vertexConnectionsCursor.key());
-            }
-
-            vertexNeighbourhoodEntry.sort();
-        }
-    }
-
     private void prepareStructures(int numVertices, int numEdges) {
         ensureCanStoreNewVertices(numVertices);
         ensureCanStoreNewEdges(numEdges);
@@ -146,10 +110,10 @@ public class BasicMainGraph implements MainGraph {
             vertexIndexF = Arrays.copyOf(vertexIndexF, getSizeWithPaddingWithoutOverflow(targetSize, vertexIndexF.length));
         }
 
-        if (vertexPairToEdge == null) {
-            vertexPairToEdge = new HashIntIntMap[Math.max(targetSize, INITIAL_ARRAY_SIZE)];
-        } else if (vertexPairToEdge.length < targetSize) {
-            vertexPairToEdge = Arrays.copyOf(vertexPairToEdge, getSizeWithPaddingWithoutOverflow(targetSize, vertexPairToEdge.length));
+        if (vertexNeighbourhoods == null) {
+            vertexNeighbourhoods = new VertexNeighbourhood[Math.max(targetSize, INITIAL_ARRAY_SIZE)];
+        } else if (vertexNeighbourhoods.length < targetSize) {
+            vertexNeighbourhoods = Arrays.copyOf(vertexNeighbourhoods, getSizeWithPaddingWithoutOverflow(targetSize, vertexNeighbourhoods.length));
         }
     }
 
@@ -158,14 +122,22 @@ public class BasicMainGraph implements MainGraph {
             return currentSize;
         }
 
-        int sizeWithPadding = targetSize + ((targetSize - currentSize) << 1);
+        int sizeWithPadding = currentSize;
 
-        // If we saw an overflow, return simple targetSize
-        if (sizeWithPadding < targetSize) {
-            return targetSize;
-        }
-        else {
-            return sizeWithPadding;
+        while (true) {
+            int previousSizeWithPadding = sizeWithPadding;
+
+            // Multiply by 2
+            sizeWithPadding <<= 1;
+
+            // If we saw an overflow, return simple targetSize
+            if (previousSizeWithPadding > sizeWithPadding) {
+                return targetSize;
+            }
+
+            if (sizeWithPadding >= targetSize) {
+                return sizeWithPadding;
+            }
         }
     }
 
@@ -202,13 +174,9 @@ public class BasicMainGraph implements MainGraph {
 
     @Override
     public boolean isNeighborVertex(int v1, int v2) {
-        HashIntIntMap v1Connections = vertexPairToEdge[v1];
+        VertexNeighbourhood v1Neighbourhood = vertexNeighbourhoods[v1];
 
-        if (v1Connections != null) {
-            return v1Connections.containsKey(v2);
-        } else {
-            return false;
-        }
+        return v1Neighbourhood != null && v1Neighbourhood.isNeighbourVertex(v2);
     }
 
     /**
@@ -254,9 +222,11 @@ public class BasicMainGraph implements MainGraph {
     }
 
     @Override
-    public int getEdgeId(int v1, int v2) {
+    public ReclaimableIntCollection getEdgeIds(int v1, int v2) {
         int minv;
         int maxv;
+
+        // TODO: Change this for directed edges
         if (v1 < v2) {
             minv = v1;
             maxv = v2;
@@ -265,13 +235,9 @@ public class BasicMainGraph implements MainGraph {
             maxv = v1;
         }
 
-        HashIntIntMap minConnections = vertexPairToEdge[minv];
+        VertexNeighbourhood vertexNeighbourhood = this.vertexNeighbourhoods[minv];
 
-        if (minConnections == null) {
-            return -1;
-        }
-
-        return minConnections.getOrDefault(maxv, -1);
+        return vertexNeighbourhood.getEdgesWithNeighbourVertex(maxv);
     }
 
     @Override
@@ -279,6 +245,7 @@ public class BasicMainGraph implements MainGraph {
         // Assuming input graph contains all edges but we treat it as undirected
         // TODO: What if input only contains one of the edges? Should we enforce
         // this via a sanity check?
+        // TODO: Handle this when directed graphs
         if (edge.getSourceId() > edge.getDestinationId()) {
             return this;
         }
@@ -294,34 +261,34 @@ public class BasicMainGraph implements MainGraph {
         edgeIndexF[numEdges++] = edge;
 
         try {
-            HashIntIntMap srcConnections = vertexPairToEdge[edge.getSourceId()];
+            VertexNeighbourhood vertexNeighbourhood = vertexNeighbourhoods[edge.getSourceId()];
 
-            if (srcConnections == null) {
-                srcConnections = intIntMapFactory.newMutableMap();
-                vertexPairToEdge[edge.getSourceId()] = srcConnections;
+            if (vertexNeighbourhood == null) {
+                vertexNeighbourhood = createVertexNeighbourhood();
+                vertexNeighbourhoods[edge.getSourceId()] = vertexNeighbourhood;
             }
 
-            srcConnections.put(edge.getDestinationId(), edge.getEdgeId());
+            vertexNeighbourhood.addEdge(edge.getDestinationId(), edge.getEdgeId());
         } catch (ArrayIndexOutOfBoundsException e) {
-            LOG.error("Tried to access index " + edge.getSourceId() + " of array with size " + vertexPairToEdge.length);
+            LOG.error("Tried to access index " + edge.getSourceId() + " of array with size " + vertexNeighbourhoods.length);
             LOG.error("vertexIndexF.length=" + vertexIndexF.length);
-            LOG.error("vertexPairToEdge.length=" + vertexPairToEdge.length);
+            LOG.error("vertexNeighbourhoods.length=" + vertexNeighbourhoods.length);
             throw e;
         }
 
         try {
-            HashIntIntMap dstConnections = vertexPairToEdge[edge.getDestinationId()];
+            VertexNeighbourhood vertexNeighbourhood = vertexNeighbourhoods[edge.getDestinationId()];
 
-            if (dstConnections == null) {
-                dstConnections = intIntMapFactory.newMutableMap();
-                vertexPairToEdge[edge.getDestinationId()] = dstConnections;
+            if (vertexNeighbourhood == null) {
+                vertexNeighbourhood = createVertexNeighbourhood();
+                vertexNeighbourhoods[edge.getDestinationId()] = vertexNeighbourhood;
             }
 
-            dstConnections.put(edge.getSourceId(), edge.getEdgeId());
+            vertexNeighbourhood.addEdge(edge.getSourceId(), edge.getEdgeId());
         } catch (ArrayIndexOutOfBoundsException e) {
-            LOG.error("Tried to access index " + edge.getDestinationId() + " of array with size " + vertexPairToEdge.length);
+            LOG.error("Tried to access index " + edge.getDestinationId() + " of array with size " + vertexNeighbourhoods.length);
             LOG.error("vertexIndexF.length=" + vertexIndexF.length);
-            LOG.error("vertexPairToEdge.length=" + vertexPairToEdge.length);
+            LOG.error("vertexNeighbourhoods.length=" + vertexNeighbourhoods.length);
             throw e;
         }
 
@@ -392,7 +359,7 @@ public class BasicMainGraph implements MainGraph {
 
         Edge edge;
 
-        if (!edgeLabelled) {
+        if (!isEdgeLabelled) {
             edge = createEdge(vertexId, neighborId);
         }
         else {
@@ -451,20 +418,29 @@ public class BasicMainGraph implements MainGraph {
         return new LabelledEdge(srcId, destId, label);
     }
 
+    private VertexNeighbourhood createVertexNeighbourhood() {
+        if (!isMultiGraph) {
+            return new BasicVertexNeighbourhood();
+        }
+        else {
+            return new MultiVertexNeighbourhood();
+        }
+    }
+
     @Override
-    public IntIntMap getVertexNeighbourhood(int vertexId) {
-        return vertexPairToEdge[vertexId];
+    public VertexNeighbourhood getVertexNeighbourhood(int vertexId) {
+        return vertexNeighbourhoods[vertexId];
     }
 
     @Override
     public IntCollection getVertexNeighbours(int vertexId) {
-        IntIntMap neighbourhoodMap = getVertexNeighbourhood(vertexId);
+        VertexNeighbourhood vertexNeighbourhood = getVertexNeighbourhood(vertexId);
 
-        if (neighbourhoodMap == null) {
+        if (vertexNeighbourhood == null) {
             return null;
         }
 
-        return neighbourhoodMap.keySet();
+        return vertexNeighbourhood.getNeighbourVertices();
     }
 
 }
