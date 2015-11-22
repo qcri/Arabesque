@@ -301,10 +301,10 @@ public class Configuration<O extends Embedding> {
             Constructor<? extends MainGraph> constructor;
 
             if (useLocalGraph) {
-                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, Boolean.class, Boolean.class);
+                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, boolean.class, boolean.class);
                 return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
             } else {
-                constructor = mainGraphClass.getConstructor(Path.class, Boolean.class, Boolean.class);
+                constructor = mainGraphClass.getConstructor(Path.class, boolean.class, boolean.class);
                 return constructor.newInstance(new Path(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
             }
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
