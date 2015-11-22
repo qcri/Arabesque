@@ -8,6 +8,8 @@ import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
 
 public class VertexPositionEquivalences {
     private IntSet[] equivalences;
@@ -15,11 +17,20 @@ public class VertexPositionEquivalences {
 
     public VertexPositionEquivalences() {
         this.equivalences = null;
+        this.numVertices = -1;
     }
 
     public VertexPositionEquivalences(VertexPositionEquivalences other) {
         setNumVertices(other.numVertices);
         addAll(other);
+    }
+
+    public VertexPositionEquivalences(Map<Integer, Set<Integer>> mapRepresentation) {
+        setNumVertices(mapRepresentation.size());
+
+        for (Map.Entry<Integer, Set<Integer>> entry : mapRepresentation.entrySet()) {
+            equivalences[entry.getKey()] = HashIntSets.newMutableSet(entry.getValue());
+        }
     }
 
     public void setNumVertices(int numVertices) {
@@ -169,5 +180,9 @@ public class VertexPositionEquivalences {
                 newEquivalencesForNewPos.add(newEquivalentPosition);
             }
         }
+    }
+
+    public boolean isEmpty() {
+        return numVertices == 0;
     }
 }

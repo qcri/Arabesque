@@ -104,4 +104,14 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     public IntCollection getVertexNeighbours(int vertexId) {
         return orderedNeighbours[vertexId];
     }
+
+    @Override
+    public boolean isEdgeLabelled() {
+        return underlyingMainGraph.isEdgeLabelled();
+    }
+
+    @Override
+    public boolean isMultiGraph() {
+        return underlyingMainGraph.isMultiGraph();
+    }
 }

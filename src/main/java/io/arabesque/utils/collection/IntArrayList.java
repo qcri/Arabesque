@@ -1,6 +1,7 @@
 package io.arabesque.utils.collection;
 
 import io.arabesque.utils.pool.IntArrayListPool;
+import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.IntIterator;
 import net.openhft.koloboke.function.IntConsumer;
@@ -43,8 +44,12 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
     }
 
     public IntArrayList(IntArrayList intArrayList) {
-        numElements = intArrayList.numElements;
-        backingArray = Arrays.copyOf(intArrayList.backingArray, numElements);
+        this(intArrayList.backingArray, intArrayList.numElements);
+    }
+
+    public IntArrayList(int[] intArray, int numElements) {
+        this.numElements = numElements;
+        backingArray = Arrays.copyOf(intArray, numElements);
     }
 
     public int getSize() {
@@ -145,10 +150,8 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
             ts = Arrays.copyOf(ts, numElements);
         }
 
-        Class<? extends T> classT = (Class<? extends T>) ts[0].getClass();
-
         for (int i = 0; i < numElements; ++i) {
-            ts[i] = classT.cast(backingArray[i]);
+            ts[i] = (T) Integer.valueOf(backingArray[i]);
         }
 
         if (ts.length > numElements) {
@@ -565,12 +568,57 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
 
         IntArrayList integers = (IntArrayList) o;
 
-        if (numElements != integers.numElements) return false;
+        return equals(integers);
+    }
+
+    public boolean equals(IntArrayList intArrayList) {
+        if (this == intArrayList) return true;
+        if (intArrayList == null) return false;
+
+        if (numElements != intArrayList.numElements) return false;
 
         for (int i = 0; i < numElements; ++i) {
-            if (backingArray[i] != integers.backingArray[i]) {
+            if (backingArray[i] != intArrayList.backingArray[i]) {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    public boolean equalsCollection(Collection<Integer> intCollection) {
+        if (this == intCollection) return true;
+        if (intCollection == null) return false;
+
+        if (numElements != intCollection.size()) return false;
+
+        int i = 0;
+        for (Integer e : intCollection) {
+            if (backingArray[i] != e) {
+                return false;
+            }
+
+            ++i;
+        }
+
+        return true;
+    }
+
+    public boolean equalsIntCollection(IntCollection intCollection) {
+        if (this == intCollection) return true;
+        if (intCollection == null) return false;
+
+        if (numElements != intCollection.size()) return false;
+
+        IntCursor intCursor = intCollection.cursor();
+
+        int i = 0;
+        while (intCursor.moveNext()) {
+            if (backingArray[i] != intCursor.elem()) {
+                return false;
+            }
+
+            ++i;
         }
 
         return true;

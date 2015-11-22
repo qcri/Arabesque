@@ -1,11 +1,12 @@
 package io.arabesque.pattern.pool;
 
 import io.arabesque.pattern.PatternEdgeArrayList;
+import io.arabesque.utils.BasicFactory;
 import io.arabesque.utils.Factory;
 import io.arabesque.utils.pool.CollectionPool;
 
 public class PatternEdgeArrayListPool extends CollectionPool<PatternEdgeArrayList> {
-    private static final Factory<PatternEdgeArrayList> factory = new Factory<PatternEdgeArrayList>() {
+    private static final Factory<PatternEdgeArrayList> factory = new BasicFactory<PatternEdgeArrayList>() {
         @Override
         public PatternEdgeArrayList createObject() {
             return new PatternEdgeArrayList();
@@ -27,11 +28,11 @@ public class PatternEdgeArrayListPool extends CollectionPool<PatternEdgeArrayLis
     }
 
     /*
-         * Delayed creation of IntArrayListPool. instance will only be instantiated when we call
-         * the static method instance().
-         *
-         * This initialization is also guaranteed to be thread-safe.
-         */
+     * Delayed creation of IntArrayListPool. instance will only be instantiated when we call
+     * the static method instance().
+     *
+     * This initialization is also guaranteed to be thread-safe.
+     */
     private static class PatternEdgeArrayListPoolHolder {
         static final PatternEdgeArrayListPool INSTANCE = new PatternEdgeArrayListPool();
     }

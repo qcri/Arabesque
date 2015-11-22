@@ -102,16 +102,40 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.0</version>
+				<version>3.3</version>
 				<configuration>
 					<source>1.7</source>
 					<target>1.7</target>
 				</configuration>
 			</plugin>
 			<plugin>
+				<groupId>org.codehaus.gmavenplus</groupId>
+				<artifactId>gmavenplus-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>addTestSources</goal>
+							<goal>testCompile</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19</version>
+				<configuration>
+					<!--<trimStackTrace>false</trimStackTrace>-->
+					<includes>
+						<include>**/*Spec.*</include>
+					</includes>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>2.2</version>
+				<version>2.4.2</version>
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -170,12 +194,6 @@
 			<version>${giraph.version}</version>
 			<scope>${giraph.scope}</scope>
 		</dependency>
-		<!-- <dependency>
-			<groupId>org.apache.giraph</groupId>
-			<artifactId>giraph-examples</artifactId>
-			<version>${giraph.version}</version>
-			<scope>${giraph.scope}</scope>
-		</dependency> -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-collections4</artifactId>
@@ -202,16 +220,13 @@
 			<artifactId>snakeyaml</artifactId>
 			<version>1.14</version>
 		</dependency>
-		<!-- <dependency>
-			<groupId>org.apache.lucene</groupId>
-			<artifactId>lucene-core</artifactId>
-			<version>3.6.2</version>
-		</dependency> -->
-		<!-- <dependency>
-			<groupId>com.goldmansachs</groupId>
-			<artifactId>gs-collections</artifactId>
-			<version>5.0.0</version>
-		</dependency> -->
+		<!-- Testing dependencies -->
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-core</artifactId>
+			<version>1.0-groovy-2.4</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 </project>

@@ -21,7 +21,7 @@ public class TestConfiguration<O extends Embedding> extends Configuration<O> {
     @Override
     public MainGraph createGraph() {
         try {
-            return new BasicMainGraph(Paths.get(getMainGraphPath()));
+            return new BasicMainGraph(Paths.get(getMainGraphPath()), false, false);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

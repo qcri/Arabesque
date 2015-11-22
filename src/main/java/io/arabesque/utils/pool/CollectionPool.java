@@ -13,9 +13,16 @@ public class CollectionPool<O extends Collection> extends Pool<O> {
         super(objectFactory, maxSize);
     }
 
+    private class ObjCollectionReclaimer extends ObjReclaimer {
+        @Override
+        public void accept(O o) {
+            o.clear();
+            super.accept(o);
+        }
+    }
+
     @Override
-    public void reclaimObject(O object) {
-        object.clear();
-        super.reclaimObject(object);
+    protected ObjReclaimer createObjReclaimer() {
+        return new ObjCollectionReclaimer();
     }
 }

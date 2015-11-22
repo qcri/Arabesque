@@ -39,8 +39,8 @@ public class LabelledPatternEdge extends PatternEdge {
     }
 
     @Override
-    public void setFromEdge(Edge edge, int srcPos, int dstPos) {
-        super.setFromEdge(edge, srcPos, dstPos);
+    public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
+        super.setFromEdge(edge, srcPos, dstPos, srcId);
 
         if (edge instanceof LabelledEdge) {
             label = ((LabelledEdge) edge).getEdgeLabel();

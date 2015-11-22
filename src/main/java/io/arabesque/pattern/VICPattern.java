@@ -1,5 +1,6 @@
 package io.arabesque.pattern;
 
+import io.arabesque.conf.Configuration;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
@@ -15,6 +16,7 @@ import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.IntSet;
+import net.openhft.koloboke.function.IntConsumer;
 import org.apache.log4j.Logger;
 
 public class VICPattern extends BasicPattern {
@@ -59,8 +61,9 @@ public class VICPattern extends BasicPattern {
     private VertexPositionEquivalences vertexPositionEquivalences;
     // }}
 
-    private boolean dirtyAdjacencyList;
     private boolean dirtyMinimumStuff;
+
+    private AddCandidatePatternEdgeConsumer addCandidatePatternEdgeConsumer;
 
     public VICPattern() {
         super();
@@ -71,10 +74,15 @@ public class VICPattern extends BasicPattern {
     }
 
     @Override
+    protected void init() {
+        super.init();
+        addCandidatePatternEdgeConsumer = new AddCandidatePatternEdgeConsumer();
+    }
+
+    @Override
     protected void setDirty() {
         super.setDirty();
 
-        dirtyAdjacencyList = true;
         dirtyMinimumStuff = true;
     }
 
@@ -106,10 +114,6 @@ public class VICPattern extends BasicPattern {
     }
 
     private void buildAdjacencyList() {
-        if (!dirtyAdjacencyList) {
-            return;
-        }
-
         resetAdjacencyList();
 
         IntCursor vertexIdCursor = getVertices().cursor();
@@ -249,7 +253,8 @@ public class VICPattern extends BasicPattern {
      *
      * @param tmpPreviouslyEqualToMin True if up until now this tmpPattern is equal to the current minimum
      */
-    private void _findCanonicalLabelling(boolean tmpPreviouslyEqualToMin) {
+    protected boolean _findCanonicalLabelling(boolean tmpPreviouslyEqualToMin) {
+        boolean foundNewMinimum = false;
         IntArrayList underlyingVertexPosThatExtendTmp = getUnderlyingVertexPosThatExtendTmp();
         IntCursor underlyingVertexPosThatExtendTmpCursor = underlyingVertexPosThatExtendTmp.cursor();
 
@@ -338,6 +343,7 @@ public class VICPattern extends BasicPattern {
                         // Then this tmp becomes the new min (unless it already is)
                         if (!equalToMinTmpPattern || !foundMinimum) {
                             copyTmpToMin();
+                            foundNewMinimum = true;
                             // Since we found a new minimum, clear previous vertex equivalences
                             vertexPositionEquivalences.clear();
                         }
@@ -368,7 +374,15 @@ public class VICPattern extends BasicPattern {
                     }
                     // If it's promising and we still haven't reached the target size, continue!
                     else {
-                        _findCanonicalLabelling(equalToMinTmpPattern);
+                        boolean foundNewMinimumInChild = _findCanonicalLabelling(equalToMinTmpPattern);
+
+                        // If we found a new minimum in a child, then whatever was there
+                        // in the previous level is now equal to the minimum (even if it wasn't before)
+                        // We also have to tell our parent that we found a minimum so that he can do the same
+                        if (foundNewMinimumInChild) {
+                            tmpPreviouslyEqualToMin = true;
+                            foundNewMinimum = true;
+                        }
                     }
 
                     removeLastTmpEdges();
@@ -383,6 +397,7 @@ public class VICPattern extends BasicPattern {
         }
 
         underlyingVertexPosThatExtendTmp.reclaim();
+        return foundNewMinimum;
     }
 
     private void addCandidatePatternEdges(PatternEdgeArrayList edgesToAdd, int neighbourUnderlyingPos, int neighbourTmpPos, int underlyingVertexPosToAdd, int newTmpVertexPos) {
@@ -395,14 +410,12 @@ public class VICPattern extends BasicPattern {
 
         ReclaimableIntCollection edgeIds = mainGraph.getEdgeIds(neighbourVertexId, newVertexId);
 
-        IntCursor edgeIdsCursor = edgeIds.cursor();
+        addCandidatePatternEdgeConsumer.setCandidateEdgesList(edgesToAdd);
+        addCandidatePatternEdgeConsumer.setNeighbourTmpPos(neighbourTmpPos);
+        addCandidatePatternEdgeConsumer.setNewTmpVertexPos(newTmpVertexPos);
+        addCandidatePatternEdgeConsumer.setNeighbourVertexId(neighbourVertexId);
 
-        while (edgeIdsCursor.moveNext()) {
-            Edge edge = mainGraph.getEdge(edgeIdsCursor.elem());
-
-            edgesToAdd.add(createPatternEdge(edge, neighbourTmpPos, newTmpVertexPos, neighbourVertexId));
-        }
-
+        edgeIds.forEach(addCandidatePatternEdgeConsumer);
         edgeIds.reclaim();
     }
 
@@ -466,4 +479,38 @@ public class VICPattern extends BasicPattern {
 
         return underlyingVertexPosThatExtendTmp;
     }
+
+    private class AddCandidatePatternEdgeConsumer implements IntConsumer {
+        private MainGraph mainGraph;
+        private PatternEdgeArrayList candidateEdgesList;
+        private int neighbourTmpPos, newTmpVertexPos, neighbourVertexId;
+
+        public AddCandidatePatternEdgeConsumer() {
+            mainGraph = Configuration.get().getMainGraph();
+        }
+
+        public void setCandidateEdgesList(PatternEdgeArrayList candidateEdges) {
+            this.candidateEdgesList = candidateEdges;
+        }
+
+        public void setNeighbourTmpPos(int neighbourTmpPos) {
+            this.neighbourTmpPos = neighbourTmpPos;
+        }
+
+        public void setNewTmpVertexPos(int newTmpVertexPos) {
+            this.newTmpVertexPos = newTmpVertexPos;
+        }
+
+        public void setNeighbourVertexId(int neighbourVertexId) {
+            this.neighbourVertexId = neighbourVertexId;
+        }
+
+        @Override
+        public void accept(int edgeId) {
+            Edge edge = mainGraph.getEdge(edgeId);
+
+            candidateEdgesList.add(createPatternEdge(edge, neighbourTmpPos, newTmpVertexPos, neighbourVertexId));
+        }
+    }
+
 }

@@ -7,7 +7,6 @@ import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
@@ -20,7 +19,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
-public abstract class BasicPattern extends Pattern {
+public abstract class BasicPattern implements Pattern {
     private static final Logger LOG = Logger.getLogger(BasicPattern.class);
 
     protected HashIntIntMapFactory positionMapFactory = HashIntIntMaps.getDefaultFactory().withDefaultValue(-1);
@@ -256,7 +255,7 @@ public abstract class BasicPattern extends Pattern {
      * @return
      */
     private boolean canDoIncremental(Embedding embedding) {
-        if (previousWords.size() != embedding.getNumWords()) {
+        if (embedding.getNumWords() == 0 || previousWords.size() != embedding.getNumWords()) {
             return false;
         }
 
@@ -489,7 +488,7 @@ public abstract class BasicPattern extends Pattern {
     protected PatternEdge createPatternEdge(Edge edge, int srcPos, int dstPos, int srcId) {
         PatternEdge patternEdge = PatternEdgePool.instance().createObject();
 
-        patternEdge.setFromEdge(edge, srcPos, dstPos);
+        patternEdge.setFromEdge(edge, srcPos, dstPos, srcId);
 
         return patternEdge;
     }
@@ -536,14 +535,6 @@ public abstract class BasicPattern extends Pattern {
     @Override
     public int hashCode() {
         return edges.hashCode();
-    }
-
-    protected int getVertexPositionAtId(int pos) {
-        return vertexPositions.get(pos);
-    }
-
-    protected IntCollection getVertexPositions() {
-        return vertexPositions.values();
     }
 
     public MainGraph getMainGraph() {

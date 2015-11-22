@@ -15,6 +15,8 @@ import io.arabesque.optimization.OptimizationSet;
 import io.arabesque.optimization.OptimizationSetDescriptor;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.VICPattern;
+import io.arabesque.utils.pool.Pool;
+import io.arabesque.utils.pool.PoolRegistry;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.fs.Path;
@@ -119,7 +121,7 @@ public class Configuration<O extends Embedding> {
     private MainGraph mainGraph;
     private boolean isGraphEdgeLabelled;
     private boolean initialized = false;
-    private boolean multiGraph;
+    private boolean isGraphMulti;
 
     public static <C extends Configuration> C get() {
         if (instance == null) {
@@ -137,6 +139,13 @@ public class Configuration<O extends Embedding> {
 
     public static void set(Configuration configuration) {
         instance = configuration;
+
+        // Whenever we set configuration, reset all known pools
+        // Since they might have initialized things based on a previous configuration
+        // NOTE: This is essential for the unit tests
+        for (Pool pool : PoolRegistry.instance().getPools()) {
+            pool.reset();
+        }
     }
 
     public Configuration(ImmutableClassesGiraphConfiguration giraphConfiguration) {
@@ -161,16 +170,13 @@ public class Configuration<O extends Embedding> {
         forceGC = getBoolean(CONF_FORCE_GC, CONF_FORCE_GC_DEFAULT);
         mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
         isGraphEdgeLabelled = getBoolean(CONF_MAINGRAPH_EDGE_LABELLED, CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT);
-        multiGraph = getBoolean(CONF_MAINGRAPH_MULTIGRAPH, CONF_MAINGRAPH_MULTIGRAPH_DEFAULT);
+        isGraphMulti = getBoolean(CONF_MAINGRAPH_MULTIGRAPH, CONF_MAINGRAPH_MULTIGRAPH_DEFAULT);
         optimizationSetDescriptorClass = (Class<? extends OptimizationSetDescriptor>) getClass(CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS, CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT);
+        patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
 
-        if (isGraphEdgeLabelled) {
+        // TODO: Make this more flexible
+        if (isGraphEdgeLabelled || isGraphMulti) {
             patternClass = VICPattern.class;
-        } else {
-            if (multiGraph) {
-                throw new RuntimeException("Cannot have a multigraph without labels on edges");
-            }
-            patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
         }
 
         computationClass = (Class<? extends Computation>) getClass(CONF_COMPUTATION_CLASS, CONF_COMPUTATION_CLASS_DEFAULT);
@@ -295,11 +301,11 @@ public class Configuration<O extends Embedding> {
             Constructor<? extends MainGraph> constructor;
 
             if (useLocalGraph) {
-                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class);
-                return constructor.newInstance(Paths.get(getMainGraphPath()));
+                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, Boolean.class, Boolean.class);
+                return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
             } else {
-                constructor = mainGraphClass.getConstructor(Path.class);
-                return constructor.newInstance(new Path(getMainGraphPath()));
+                constructor = mainGraphClass.getConstructor(Path.class, Boolean.class, Boolean.class);
+                return constructor.newInstance(new Path(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
             }
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new RuntimeException("Could not load main graph", e);
@@ -395,8 +401,8 @@ public class Configuration<O extends Embedding> {
         return isGraphEdgeLabelled;
     }
 
-    public boolean isMultiGraph() {
-        return multiGraph;
+    public boolean isGraphMulti() {
+        return isGraphMulti;
     }
 }
 

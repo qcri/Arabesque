@@ -160,6 +160,13 @@ public class Graph<V extends Comparable> {
 					throw new UnsupportedOperationException("Library not compiled for Linux " + systemBits + " bits");
 				}
 			}
+			else if (SystemUtils.IS_OS_WINDOWS) {
+				if (systemBits == 64) {
+					NativeUtils.loadLibraryFromJar("/libjbliss-win.dll");
+				} else {
+					throw new UnsupportedOperationException("Library not compiled for Windows " + systemBits + " bits");
+				}
+			}
 			else {
 				throw new UnsupportedOperationException("Library not compiled for " + SystemUtils.OS_NAME);
 			}

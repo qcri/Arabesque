@@ -10,7 +10,7 @@ public class Pool<O> {
 
     private int maxSize;
     private Factory<O> objectFactory;
-    private final PoolStorage poolStorage;
+    private PoolStorage poolStorage;
     private final ObjReclaimerStorage reclaimerStorage;
 
     public Pool(Factory<O> objectFactory) {
@@ -20,8 +20,16 @@ public class Pool<O> {
     public Pool(Factory<O> objectFactory, int maxSize) {
         this.objectFactory = objectFactory;
         this.maxSize = maxSize;
-        poolStorage = new PoolStorage();
         reclaimerStorage = new ObjReclaimerStorage();
+
+        reset();
+
+        PoolRegistry.instance().register(this.getClass().getSimpleName(), this);
+    }
+
+    public void reset() {
+        objectFactory.reset();
+        poolStorage = new PoolStorage();
     }
 
     public O createObject() {
@@ -43,7 +51,11 @@ public class Pool<O> {
         objects.forEach(reclaimerStorage.get());
     }
 
-    private class ObjReclaimer implements Consumer<O> {
+    protected ObjReclaimer createObjReclaimer() {
+        return new ObjReclaimer();
+    }
+
+    protected class ObjReclaimer implements Consumer<O> {
         private ObjArrayList<O> pool;
 
         public ObjReclaimer() {
@@ -68,7 +80,7 @@ public class Pool<O> {
     private class ObjReclaimerStorage extends ThreadLocal<ObjReclaimer> {
         @Override
         protected ObjReclaimer initialValue() {
-            return new ObjReclaimer();
+            return createObjReclaimer();
         }
     }
 }

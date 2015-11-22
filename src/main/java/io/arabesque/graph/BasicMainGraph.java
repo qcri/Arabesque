@@ -1,6 +1,5 @@
 package io.arabesque.graph;
 
-import io.arabesque.conf.Configuration;
 import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
 import org.apache.commons.io.input.BOMInputStream;
@@ -31,8 +30,10 @@ public class BasicMainGraph implements MainGraph {
 
     private boolean isEdgeLabelled;
     private boolean isMultiGraph;
+    private String name;
 
-    private void init() {
+    private void init(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
+        this.name = name;
         long start = 0;
 
         if (LOG.isInfoEnabled()) {
@@ -47,10 +48,8 @@ public class BasicMainGraph implements MainGraph {
 
         reset();
 
-        Configuration conf = Configuration.get();
-
-        isEdgeLabelled = conf.isGraphEdgeLabelled();
-        isMultiGraph = conf.isMultiGraph();
+        this.isEdgeLabelled = isEdgeLabelled;
+        this.isMultiGraph = isMultiGraph;
 
         if (LOG.isInfoEnabled()) {
             LOG.info("Done in " + (System.currentTimeMillis() - start));
@@ -58,8 +57,6 @@ public class BasicMainGraph implements MainGraph {
     }
 
     private void init(Object path) throws IOException {
-        init();
-
         long start = 0;
 
         if (LOG.isInfoEnabled()) {
@@ -158,17 +155,23 @@ public class BasicMainGraph implements MainGraph {
         ensureCanStoreNewEdges(1);
     }
 
-    public BasicMainGraph() {
-        init();
+    public BasicMainGraph(String name) {
+        this(name, false, false);
     }
 
-    public BasicMainGraph(Path filePath)
+    public BasicMainGraph(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
+        init(name, isEdgeLabelled, isMultiGraph);
+    }
+
+    public BasicMainGraph(Path filePath, boolean isEdgeLabelled, boolean isMultiGraph)
             throws IOException {
+        this(filePath.getFileName().toString(), isEdgeLabelled, isMultiGraph);
         init(filePath);
     }
 
-    public BasicMainGraph(org.apache.hadoop.fs.Path hdfsPath)
+    public BasicMainGraph(org.apache.hadoop.fs.Path hdfsPath, boolean isEdgeLabelled, boolean isMultiGraph)
             throws IOException {
+        this(hdfsPath.getName(), isEdgeLabelled, isMultiGraph);
         init(hdfsPath);
     }
 
@@ -339,10 +342,14 @@ public class BasicMainGraph implements MainGraph {
                     }
                 }
 
-                int vertexId = parseVertex(tokenizer);
+                Vertex vertex = parseVertex(tokenizer);
+                addVertex(vertex);
+
+                int vertexId = vertex.getVertexId();
 
                 while (tokenizer.hasMoreTokens()) {
-                    parseEdge(tokenizer, vertexId);
+                    Edge edge = parseEdge(tokenizer, vertexId);
+                    addEdge(edge);
                 }
 
                 line = reader.readLine();
@@ -354,36 +361,31 @@ public class BasicMainGraph implements MainGraph {
         }
     }
 
-    protected void parseEdge(StringTokenizer tokenizer, int vertexId) {
+    protected Edge parseEdge(StringTokenizer tokenizer, int vertexId) {
         int neighborId = Integer.parseInt(tokenizer.nextToken());
 
-        Edge edge;
-
-        if (!isEdgeLabelled) {
-            edge = createEdge(vertexId, neighborId);
+        if (isEdgeLabelled) {
+            int edgeLabel = Integer.parseInt(tokenizer.nextToken());
+            return createEdge(vertexId, neighborId, edgeLabel);
         }
         else {
-            int edgeLabel = Integer.parseInt(tokenizer.nextToken());
-
-            edge = createEdge(vertexId, neighborId, edgeLabel);
+            return createEdge(vertexId, neighborId);
         }
-
-        addEdge(edge);
     }
 
-    protected int parseVertex(StringTokenizer tokenizer) {
+    protected Vertex parseVertex(StringTokenizer tokenizer) {
         int vertexId = Integer.parseInt(tokenizer.nextToken());
         int vertexLabel = Integer.parseInt(tokenizer.nextToken());
 
-        Vertex vertex = createVertex(vertexId, vertexLabel);
-
-        addVertex(vertex);
-
-        return vertexId;
+        return createVertex(vertexId, vertexLabel);
     }
 
     @Override
     public String toString() {
+        return getName();
+    }
+
+    public String toDetailedString() {
         return "Vertices: " + Arrays.toString(vertexIndexF) + "\n Edges: " + Arrays.toString(edgeIndexF);
     }
 
@@ -443,4 +445,17 @@ public class BasicMainGraph implements MainGraph {
         return vertexNeighbourhood.getNeighbourVertices();
     }
 
+    @Override
+    public boolean isEdgeLabelled() {
+        return isEdgeLabelled;
+    }
+
+    @Override
+    public boolean isMultiGraph() {
+        return isMultiGraph;
+    }
+
+    public String getName() {
+        return name;
+    }
 }

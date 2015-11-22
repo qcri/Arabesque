@@ -1,6 +1,6 @@
 package io.arabesque.utils.pool;
 
-import io.arabesque.conf.Configuration;
+import io.arabesque.utils.BasicFactory;
 import io.arabesque.utils.Factory;
 import io.arabesque.utils.collection.IntSingleton;
 
@@ -21,11 +21,7 @@ public class IntSingletonPool extends Pool<IntSingleton> {
         return singleton;
     }
 
-    private static class IntSingletonFactory implements Factory<IntSingleton> {
-        public IntSingletonFactory() {
-            Configuration conf = Configuration.get();
-        }
-
+    private static class IntSingletonFactory extends BasicFactory<IntSingleton> {
         @Override
         public IntSingleton createObject() {
             return new IntSingleton();

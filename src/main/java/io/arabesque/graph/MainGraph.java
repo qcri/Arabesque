@@ -34,4 +34,8 @@ public interface MainGraph {
     VertexNeighbourhood getVertexNeighbourhood(int vertexId);
 
     IntCollection getVertexNeighbours(int vertexId);
+
+    boolean isEdgeLabelled();
+
+    boolean isMultiGraph();
 }

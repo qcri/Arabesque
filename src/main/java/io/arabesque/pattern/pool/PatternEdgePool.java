@@ -3,6 +3,7 @@ package io.arabesque.pattern.pool;
 import io.arabesque.conf.Configuration;
 import io.arabesque.pattern.LabelledPatternEdge;
 import io.arabesque.pattern.PatternEdge;
+import io.arabesque.utils.BasicFactory;
 import io.arabesque.utils.Factory;
 import io.arabesque.utils.pool.Pool;
 
@@ -16,14 +17,8 @@ public class PatternEdgePool extends Pool<PatternEdge> {
         super(factory);
     }
 
-    private static class PatternEdgeFactory implements Factory<PatternEdge> {
+    private static class PatternEdgeFactory extends BasicFactory<PatternEdge> {
         private boolean areEdgesLabelled;
-
-        public PatternEdgeFactory() {
-            Configuration conf = Configuration.get();
-
-            areEdgesLabelled = conf.isGraphEdgeLabelled();
-        }
 
         @Override
         public PatternEdge createObject() {
@@ -33,6 +28,12 @@ public class PatternEdgePool extends Pool<PatternEdge> {
             else {
                 return new LabelledPatternEdge();
             }
+        }
+
+        @Override
+        public void reset() {
+            Configuration conf = Configuration.get();
+            areEdgesLabelled = conf.isGraphEdgeLabelled();
         }
     }
 

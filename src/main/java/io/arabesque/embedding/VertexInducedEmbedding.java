@@ -76,11 +76,19 @@ public class VertexInducedEmbedding extends BasicEmbedding {
      */
     @Override
     public int getNumVerticesAddedWithExpansion() {
+        if (numWords == 0) {
+            return 0;
+        }
+
         return 1;
     }
 
     @Override
     public int getNumEdgesAddedWithExpansion() {
+        if (numWords == 0) {
+            return 0;
+        }
+
         return numAdded[numWords - 1];
     }
 

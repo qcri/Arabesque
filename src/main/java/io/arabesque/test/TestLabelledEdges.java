@@ -20,7 +20,7 @@ public class TestLabelledEdges {
         test("Straight line", new TestConstructor() {
             @Override
             public MainGraph constructMainGraph() {
-                MainGraph mainGraph = new BasicMainGraph();
+                MainGraph mainGraph = new BasicMainGraph("test");
 
                 mainGraph.addVertex(new Vertex(0, 1));
                 mainGraph.addVertex(new Vertex(1, 1));
@@ -49,7 +49,7 @@ public class TestLabelledEdges {
         test("Star", new TestConstructor() {
             @Override
             public MainGraph constructMainGraph() {
-                MainGraph mainGraph = new BasicMainGraph();
+                MainGraph mainGraph = new BasicMainGraph("test");
 
                 mainGraph.addVertex(new Vertex(0, 1));
                 mainGraph.addVertex(new Vertex(1, 1));

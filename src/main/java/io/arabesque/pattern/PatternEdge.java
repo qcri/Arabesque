@@ -46,6 +46,10 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
     }
 
     public void setFromEdge(Edge edge, int srcPos, int dstPos) {
+        setFromEdge(edge, srcPos, dstPos, edge.getSourceId());
+    }
+
+    public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
         MainGraph mainGraph = Configuration.get().getMainGraph();
 
         int srcVertexId = edge.getSourceId();
@@ -54,18 +58,15 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         Vertex srcVertex = mainGraph.getVertex(srcVertexId);
         Vertex dstVertex = mainGraph.getVertex(dstVertexId);
 
-        setSrcPos(srcPos);
-        setDestPos(dstPos);
         setSrcLabel(srcVertex.getVertexLabel());
         setDestLabel(dstVertex.getVertexLabel());
-    }
 
-    public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
-        setFromEdge(edge, srcPos, dstPos);
-
-        if (edge.getSourceId() != srcId) {
+        if (srcId != srcVertexId) {
             invert();
         }
+
+        setSrcPos(srcPos);
+        setDestPos(dstPos);
     }
 
     public void invert() {
