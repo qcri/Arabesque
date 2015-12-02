@@ -17,7 +17,6 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 
 public abstract class BasicPattern implements Pattern {
     private static final Logger LOG = Logger.getLogger(BasicPattern.class);
@@ -109,8 +108,6 @@ public abstract class BasicPattern implements Pattern {
             }
         } catch (RuntimeException e) {
             LOG.error("Embedding: " + embedding);
-            LOG.error("Embedding.edges=" + Arrays.toString(embedding.getEdges()));
-            LOG.error("Embedding.numEdges=" + embedding.getNumEdges());
             throw e;
         }
     }
@@ -133,18 +130,18 @@ public abstract class BasicPattern implements Pattern {
         ensureCanStoreNewVertices(numVerticesInEmbedding);
         ensureCanStoreNewEdges(numEdgesInEmbedding);
 
-        int[] embeddingVertices = embedding.getVertices();
+        IntArrayList embeddingVertices = embedding.getVertices();
 
         for (int i = 0; i < numVerticesInEmbedding; ++i) {
-            addVertex(embeddingVertices[i]);
+            addVertex(embeddingVertices.getUnchecked(i));
         }
 
         numVerticesAddedFromPrevious = embedding.getNumVerticesAddedWithExpansion();
 
-        int[] embeddingEdges = embedding.getEdges();
+        IntArrayList embeddingEdges = embedding.getEdges();
 
         for (int i = 0; i < numEdgesInEmbedding; ++i) {
-            addEdge(embeddingEdges[i]);
+            addEdge(embeddingEdges.getUnchecked(i));
         }
 
         numAddedEdgesFromPrevious = embedding.getNumEdgesAddedWithExpansion();
@@ -159,10 +156,10 @@ public abstract class BasicPattern implements Pattern {
 
         previousWords.ensureCapacity(embeddingNumWords);
 
-        int[] words = embedding.getWords();
+        IntArrayList words = embedding.getWords();
 
         for (int i = 0; i < embeddingNumWords; i++) {
-            previousWords.add(words[i]);
+            previousWords.add(words.getUnchecked(i));
         }
     }
 
@@ -198,7 +195,7 @@ public abstract class BasicPattern implements Pattern {
     }
 
     /**
-     * Only the last word has changed, so skipped processing for the previous words.
+     * Only the last word has changed, so skipped processing for the previous vertices.
      *
      * @param embedding
      */
@@ -211,16 +208,16 @@ public abstract class BasicPattern implements Pattern {
         ensureCanStoreNewVertices(numVerticesAddedFromPrevious);
         ensureCanStoreNewEdges(numAddedEdgesFromPrevious);
 
-        int[] embeddingVertices = embedding.getVertices();
+        IntArrayList embeddingVertices = embedding.getVertices();
         int numVerticesInEmbedding = embedding.getNumVertices();
         for (int i = (numVerticesInEmbedding - numVerticesAddedFromPrevious); i < numVerticesInEmbedding; ++i) {
-            addVertex(embeddingVertices[i]);
+            addVertex(embeddingVertices.getUnchecked(i));
         }
 
-        int[] embeddingEdges = embedding.getEdges();
+        IntArrayList embeddingEdges = embedding.getEdges();
         int numEdgesInEmbedding = embedding.getNumEdges();
         for (int i = (numEdgesInEmbedding - numAddedEdgesFromPrevious); i < numEdgesInEmbedding; ++i) {
-            addEdge(embeddingEdges[i]);
+            addEdge(embeddingEdges.getUnchecked(i));
         }
 
         updateUsedEmbeddingIncremental(embedding);
@@ -232,7 +229,7 @@ public abstract class BasicPattern implements Pattern {
      * @param embedding
      */
     private void updateUsedEmbeddingIncremental(Embedding embedding) {
-        previousWords.set(previousWords.size() - 1, embedding.getWords()[previousWords.size() - 1]);
+        previousWords.setUnchecked(previousWords.size() - 1, embedding.getWords().getUnchecked(previousWords.size() - 1));
     }
 
     private void ensureCanStoreNewEdges(int numAddedEdgesFromPrevious) {
@@ -261,9 +258,9 @@ public abstract class BasicPattern implements Pattern {
 
         // Maximum we want 1 change (which we know by default that it exists in the last position).
         // so we check
-        final int[] words = embedding.getWords();
+        final IntArrayList words = embedding.getWords();
         for (int i = previousWords.size() - 2; i >= 0; i--) {
-            if (words[i] != previousWords.getUnchecked(i)) {
+            if (words.getUnchecked(i) != previousWords.getUnchecked(i)) {
                 return false;
             }
         }
@@ -420,8 +417,8 @@ public abstract class BasicPattern implements Pattern {
                 continue;
             }
 
-            int vertexId = oldVertices.get(i);
-            vertices.set(newPos, vertexId);
+            int vertexId = oldVertices.getUnchecked(i);
+            vertices.setUnchecked(newPos, vertexId);
 
             vertexPositions.put(vertexId, newPos);
         }
@@ -477,7 +474,7 @@ public abstract class BasicPattern implements Pattern {
         vertices.readFields(dataInput);
 
         for (int i = 0; i < vertices.size(); ++i) {
-            vertexPositions.put(vertices.get(i), i);
+            vertexPositions.put(vertices.getUnchecked(i), i);
         }
     }
 
@@ -512,7 +509,7 @@ public abstract class BasicPattern implements Pattern {
             return StringUtils.join(edges, ", ");
         }
         else if (getNumberOfVertices() == 1) {
-            Vertex vertex = mainGraph.getVertex(vertices.get(0));
+            Vertex vertex = mainGraph.getVertex(vertices.getUnchecked(0));
 
             return "0(" + vertex.getVertexLabel() + ")";
         }

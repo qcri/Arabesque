@@ -264,7 +264,7 @@ public class VICPattern extends BasicPattern {
 
             // Add it...
             int newTmpVertexPos = addTmpVertex(underlyingVertexPosToAdd);
-            int newTmpVertexLabel = underlyingPosToLabel.get(underlyingVertexPosToAdd);
+            int newTmpVertexLabel = underlyingPosToLabel.getUnchecked(underlyingVertexPosToAdd);
 
             // And find its neighbours
             IntSet neighbourUnderlyingPositions = underlyingAdjacencyList.get(underlyingVertexPosToAdd);
@@ -313,7 +313,7 @@ public class VICPattern extends BasicPattern {
                     // Else, if this is the first vertex, check if the labels match
                     else {
                         int minFirstUnderlyingVertexPos = minInverseLabelling.get(newTmpVertexPos);
-                        int minFirstUnderylingVertexLabel = underlyingPosToLabel.get(minFirstUnderlyingVertexPos);
+                        int minFirstUnderylingVertexLabel = underlyingPosToLabel.getUnchecked(minFirstUnderlyingVertexPos);
 
                         comparisonResult = Integer.compare(newTmpVertexLabel, minFirstUnderylingVertexLabel);
                     }
@@ -405,8 +405,8 @@ public class VICPattern extends BasicPattern {
 
         IntArrayList vertices = getVertices();
 
-        int neighbourVertexId = vertices.get(neighbourUnderlyingPos);
-        int newVertexId = vertices.get(underlyingVertexPosToAdd);
+        int neighbourVertexId = vertices.getUnchecked(neighbourUnderlyingPos);
+        int newVertexId = vertices.getUnchecked(underlyingVertexPosToAdd);
 
         ReclaimableIntCollection edgeIds = mainGraph.getEdgeIds(neighbourVertexId, newVertexId);
 

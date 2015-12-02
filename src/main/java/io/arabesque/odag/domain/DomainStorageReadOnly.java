@@ -122,10 +122,10 @@ public class DomainStorageReadOnly extends DomainStorage {
                 VertexInducedEmbedding reusableVertexEmbedding = (VertexInducedEmbedding) reusableEmbedding;
 
                 int numVertices = reusableVertexEmbedding.getNumVertices();
-                int[] vertices = reusableVertexEmbedding.getVertices();
+                IntArrayList vertices = reusableVertexEmbedding.getVertices();
 
                 for (int i = 0; i < numVertices; ++i) {
-                    int vertexId = vertices[i];
+                    int vertexId = vertices.getUnchecked(i);
 
                     // Trying to add existing vertex
                     if (wordId == vertexId) {
@@ -163,7 +163,7 @@ public class DomainStorageReadOnly extends DomainStorage {
                 int equivalentPatternEdgeDestIndex = equivalentPatternEdge.getDestPos();
 
                 reusableEdgeEmbedding.addWord(wordId);
-                int[] embeddingVertices = reusableEdgeEmbedding.getVertices();
+                IntArrayList embeddingVertices = reusableEdgeEmbedding.getVertices();
                 int numEmbeddingVertices = reusableEdgeEmbedding.getNumVertices();
                 reusableEdgeEmbedding.removeLastWord();
 
@@ -178,8 +178,8 @@ public class DomainStorageReadOnly extends DomainStorage {
                 // vertices mapped from the pattern is the same that we are trying to add.
                 // If not, quit, expansion not valid.
                 IntCollection edgeIds = getEdgeIds(
-                        embeddingVertices[equivalentPatternEdgeSrcIndex],
-                        embeddingVertices[equivalentPatternEdgeDestIndex],
+                        embeddingVertices.getUnchecked(equivalentPatternEdgeSrcIndex),
+                        embeddingVertices.getUnchecked(equivalentPatternEdgeDestIndex),
                         equivalentPatternEdge);
 
                 // NOTE: IntSet would theoretically allow faster contains but, in practice,
@@ -235,12 +235,10 @@ public class DomainStorageReadOnly extends DomainStorage {
 
             ReclaimableIntCollection edges = mainGraph.getEdgeIds(srcId, dstId);
 
-            edges.forEach(edgesConsumer);
+            if (edges != null) {
+                edges.forEach(edgesConsumer);
 
-            edges.reclaim();
-
-            if (edgeIds.size() == 0) {
-                throw new RuntimeException("Unknown edge between " + srcId + " and " + dstId);
+                edges.reclaim();
             }
 
             return edgeIds;
@@ -264,15 +262,15 @@ public class DomainStorageReadOnly extends DomainStorage {
                 }
 
                 PatternEdgeArrayList edgesPattern = pattern.getEdges();
-                int[] edgesEmbedding = reusableVertexEmbedding.getEdges();
-                int[] verticesEmbedding = reusableVertexEmbedding.getVertices();
+                IntArrayList edgesEmbedding = reusableVertexEmbedding.getEdges();
+                IntArrayList verticesEmbedding = reusableVertexEmbedding.getVertices();
 
                 for (int i = 0; i < numEdgesPattern; ++i) {
                     PatternEdge edgePattern = edgesPattern.get(i);
-                    Edge edgeEmbedding = mainGraph.getEdge(edgesEmbedding[i]);
+                    Edge edgeEmbedding = mainGraph.getEdge(edgesEmbedding.getUnchecked(i));
 
-                    if (!edgeEmbedding.hasVertex(verticesEmbedding[edgePattern.getSrcPos()]) ||
-                            !edgeEmbedding.hasVertex(verticesEmbedding[edgePattern.getDestPos()])) {
+                    if (!edgeEmbedding.hasVertex(verticesEmbedding.getUnchecked(edgePattern.getSrcPos())) ||
+                            !edgeEmbedding.hasVertex(verticesEmbedding.getUnchecked(edgePattern.getDestPos()))) {
                         return false;
                     }
                 }

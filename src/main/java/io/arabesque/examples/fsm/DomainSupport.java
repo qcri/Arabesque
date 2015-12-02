@@ -5,6 +5,7 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.VertexPositionEquivalences;
 import io.arabesque.utils.ClearSetConsumer;
+import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.IntSet;
@@ -49,7 +50,7 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
 
         clear();
 
-        int vertexMap[] = embedding.getVertices();
+        IntArrayList vertexMap = embedding.getVertices();
 
         for (int i = 0; i < numberOfDomains; i++) {
             if (hasDomainReachedSupport(i)) {
@@ -58,7 +59,7 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
 
             HashIntSet domain = getDomainSet(i);
 
-            domain.add(vertexMap[i]);
+            domain.add(vertexMap.getUnchecked(i));
 
             if (domain.size() >= support) {
                 insertDomainsAsFrequent(i);

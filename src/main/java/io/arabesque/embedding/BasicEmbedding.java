@@ -3,146 +3,255 @@ package io.arabesque.embedding;
 import io.arabesque.conf.Configuration;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.pattern.Pattern;
+import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.ObjArrayList;
+import io.arabesque.utils.pool.IntArrayListPool;
+import net.openhft.koloboke.collect.IntCollection;
+import net.openhft.koloboke.collect.set.hash.HashIntSet;
+import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import net.openhft.koloboke.function.IntConsumer;
+import net.openhft.koloboke.function.IntPredicate;
 
-import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Objects;
 
 public abstract class BasicEmbedding implements Embedding {
+    // Basic structure {{
+    protected IntArrayList vertices;
+    protected IntArrayList edges;
 
-    int words[];
+    // Extension helper structures {{
+    protected HashIntSet extensionWordIds;
+    protected boolean dirtyExtensionWordIds;
+    protected ObjArrayList<IntArrayList> extensionWordIdsPerPos;
+    protected IntArrayList previousExtensionCalculationVertices;
 
-    protected MainGraph g;
-    protected int numWords;
+    private IntConsumer extensionWordIdsAdder = new IntConsumer() {
+        @Override
+        public void accept(int i) {
+            extensionWordIds.add(i);
+        }
+    };
 
+    private IntPredicate existsInExtensionWordIds = new IntPredicate() {
+        @Override
+        public boolean test(int i) {
+            return extensionWordIds.contains(i);
+        }
+    };
+    // }}
+
+    // Pattern {{
+    /**
+     * Pattern associated with this embedding.
+     *
+     * Whether the current value actually represents the current embedding
+     * depends on the value of the {@link #dirtyPattern} variable.
+     */
     private Pattern pattern;
+    /**
+     * Whether the variable referred to in {@link #pattern} is up to date
+     * with the structure of the embedding.
+     */
     private boolean dirtyPattern;
+    // }}
 
-    // Incremental to return extensibleIds...
-    int[] previousVertices;
-    int previousWordsPos = -1;
+    // Incremental Stuff {{
+    // }}
 
-    int total = 0;
-    int incremental = 0;
-
-    static final int INC_ARRAY_SIZE = 15;
-
-    public BasicEmbedding(int size) {
-        g = Configuration.get().getMainGraph();
-        words = new int[size];
-        numWords = 0;
-        dirtyPattern = true;
-    }
+    // Helpers {{
+    protected MainGraph mainGraph;
+    // }}
 
     public BasicEmbedding() {
-        this(INC_ARRAY_SIZE);
-        previousVertices = new int[INC_ARRAY_SIZE];
+        init();
     }
 
-    public BasicEmbedding(BasicEmbedding other) {
-        words = Arrays.copyOf(other.words, other.numWords);
-        numWords = other.numWords;
-        g = Configuration.get().getMainGraph();
-        pattern = other.pattern.copy();
-        previousVertices = new int[INC_ARRAY_SIZE];
+    protected void init() {
+        vertices = new IntArrayList();
+        edges = new IntArrayList();
+
+        mainGraph = Configuration.get().getMainGraph();
+
+        extensionWordIds = HashIntSets.newMutableSet();
+        previousExtensionCalculationVertices = new IntArrayList();
+
+        extensionWordIdsPerPos = new ObjArrayList<>();
+
+        reset();
     }
 
     public void reset() {
-        this.numWords = 0;
+        vertices.clear();
+        edges.clear();
+        IntArrayListPool.instance().reclaimObjects(extensionWordIdsPerPos);
+        extensionWordIdsPerPos.clear();
+        previousExtensionCalculationVertices.clear();
+        setDirty();
+    }
+
+    protected void setDirty() {
         dirtyPattern = true;
+        dirtyExtensionWordIds = true;
     }
 
     @Override
-    public int[] getWords() {
-        return words;
+    public IntArrayList getVertices() {
+        return vertices;
     }
 
     @Override
-    public int getNumWords() {
-        return numWords;
+    public int getNumVertices() {
+        return vertices.size();
+    }
+
+    @Override
+    public IntArrayList getEdges() {
+        return edges;
+    }
+
+    @Override
+    public int getNumEdges() {
+        return edges.size();
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeInt(numWords);
-        int i = 0;
-        while (i < numWords) {
-            out.writeInt(words[i]);
-            i++;
+        getWords().write(out);
+    }
+
+    @Override
+    public IntCollection getExtensibleWordIds() {
+        // If we have to recompute the extensionVertexIds set
+        if (dirtyExtensionWordIds) {
+            // Do so starting from the first vertex that differs from those we were considering
+            // last time we did a recomputation
+            updateExtensibleWordIds(getVertices().findLargestCommonPrefixEnd(previousExtensionCalculationVertices));
+            previousExtensionCalculationVertices.clear();
+            previousExtensionCalculationVertices.addAll(getVertices());
+        }
+
+        return extensionWordIds;
+    }
+
+    protected void updateExtensibleWordIds(int commonPrefixWithPreviousEnd) {
+        IntArrayList vertices = getVertices();
+        int numVertices = getNumVertices();
+
+        extensionWordIds.clear();
+
+        // Add all extension words already calculated, corresponding to vertex positions
+        // that we know we have in common with the last embedding structure where we
+        // udpated the extensible words ids
+        for (int i = 0; i < commonPrefixWithPreviousEnd; ++i) {
+            extensionWordIds.addAll(extensionWordIdsPerPos.get(i));
+        }
+
+        IntArrayListPool intArrayListPool = IntArrayListPool.instance();
+
+        // For all the remaining positions that differ, reclaim their IntArrayLists
+        // since we'll update them just after this
+        for (int i = extensionWordIdsPerPos.size() - 1; i >= commonPrefixWithPreviousEnd; --i) {
+            intArrayListPool.reclaimObject(extensionWordIdsPerPos.remove(i));
+        }
+
+        // For all the vertex positions that differ from a previous calculation...
+        for (int i = commonPrefixWithPreviousEnd; i < numVertices; ++i) {
+            final int vId = vertices.getUnchecked(i);
+
+            // Get their word neighbours
+            final IntCollection neighbourhood = getValidNeighboursForExpansion(vId);
+
+            // If they exist
+            if (neighbourhood != null) {
+                // Create a local copy
+                IntArrayList neighbourhoodCopy = IntArrayListPool.instance().createObject();
+                neighbourhoodCopy.addAll(neighbourhood);
+                // Remove all words that were already in our set of extensions
+                neighbourhoodCopy.removeIf(existsInExtensionWordIds);
+                // For each one of those that survived, add it to the extension word set
+                neighbourhoodCopy.forEach(extensionWordIdsAdder);
+                // Save all words added at this position for future incremental computations
+                extensionWordIdsPerPos.add(neighbourhoodCopy);
+            }
+        }
+
+        IntArrayList words = getWords();
+        int numWords = getNumWords();
+
+        // Clean the words that are already in the embedding
+        for (int i = 0; i < numWords; ++i) {
+            int wId = words.getUnchecked(i);
+            extensionWordIds.removeInt(wId);
         }
     }
 
     @Override
-    public void readFields(DataInput in) throws IOException {
-        reset();
-        numWords = in.readInt();
+    public boolean isCanonicalEmbeddingWithWord(int wordId) {
+        IntArrayList words = getWords();
+        int numWords = words.size();
 
-        if (words.length < numWords) {
-            words = Arrays.copyOf(words, numWords);
+        if (numWords == 0) return true;
+        if (wordId < words.getUnchecked(0)) return false;
+
+        int i;
+
+        // find the first neighbor
+        for (i = 0; i < numWords; ++i) {
+            if (areWordsNeighbours(wordId, words.getUnchecked(i))) {
+                break;
+            }
         }
 
-        int i = 0;
-        while (i < numWords) {
-            words[i] = in.readInt();
-            i++;
+        // if we didn't find any neighbour
+        if (i == numWords) {
+            // not canonical because it's disconnected
+            return false;
         }
+
+        // If we found the first neighbour, all following words should have lower
+        // ids than the one we are trying to add
+        i++;
+        for (; i < numWords; ++i) {
+            // If one of those ids is higher or equal, not canonical
+            if (words.getUnchecked(i) >= wordId) {
+                return false;
+            }
+        }
+
+        return true;
     }
+
+    protected abstract boolean areWordsNeighbours(int wordId1, int wordId2);
+
+    protected abstract IntCollection getValidNeighboursForExpansion(int vId);
 
     @Override
     public void addWord(int word) {
-        numWords++;
-        if (words.length < numWords) {
-            words = Arrays.copyOf(words, words.length + INC_ARRAY_SIZE);
-        }
-        words[numWords - 1] = word;
-        dirtyPattern = true;
+        setDirty();
     }
 
     @Override
     public void removeLastWord() {
-        numWords = Math.max(0, numWords - 1);
-        dirtyPattern = true;
-    }
-
-
-    /**
-     * We check the number of differences between the old and the new embedding to decide
-     * whether we do it incrementally or from scratch. We return the position of the common.
-     *
-     * @return
-     */
-    int canDoIncremental(final int[] keys,
-            final int numKeys) {
-        if (previousWordsPos < 0) {
-            return 0;
-        }
-        int pos = 0;
-        while (pos < numKeys) {
-            if (keys[pos] != previousVertices[pos]) {
-                return pos;
-            }
-            ++pos;
-        }
-        return pos;
+        setDirty();
     }
 
     @Override
     public String toString() {
         return "Embedding{" +
-                "words=" + Arrays.toString(words) +
-                ", numWords=" + numWords +
+                "vertices=" + vertices + ", " +
+                "edges=" + edges +
                 "} " + super.toString();
     }
 
     @Override
     public Pattern getPattern() {
-        if (pattern == null) {
-            pattern = Configuration.get().createPattern();
-            dirtyPattern = true;
-        }
-
         if (dirtyPattern) {
+            if (pattern == null) {
+                pattern = Configuration.get().createPattern();
+            }
+
             pattern.setEmbedding(this);
             dirtyPattern = false;
         }
@@ -150,4 +259,17 @@ public abstract class BasicEmbedding implements Embedding {
         return pattern;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BasicEmbedding that = (BasicEmbedding) o;
+        return Objects.equals(vertices, that.vertices) &&
+                Objects.equals(edges, that.edges);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(vertices, edges);
+    }
 }

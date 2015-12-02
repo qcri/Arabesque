@@ -123,7 +123,8 @@ public class ObjArrayList<O> implements ReclaimableObjCollection<O>, List<O> {
 
     @Override
     public boolean shrink() {
-        throw new UnsupportedOperationException();
+        backingArray.trimToSize();
+        return true;
     }
 
     @Override

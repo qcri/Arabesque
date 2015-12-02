@@ -23,6 +23,7 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
     private int[] backingArray;
     private int numElements;
     private boolean preventReclaim = false;
+    private IntConsumer intAdder;
 
     public IntArrayList() {
         this(16);
@@ -86,7 +87,7 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
             backingArray = new int[minimumSize];
         }
         else if (minimumSize > backingArray.length) {
-            int targetLength = backingArray.length;
+            int targetLength = Math.max(backingArray.length, 1);
 
             while (targetLength < minimumSize) {
                 targetLength = targetLength << 1;
@@ -397,11 +398,36 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
 
     @Override
     public boolean addAll(Collection<? extends Integer> c) {
+        if (c == null || c.size() == 0) {
+            return false;
+        }
+
         ensureCanAddNElements(c.size());
 
         for (int o : c) {
             add(o);
         }
+
+        return true;
+    }
+
+    public boolean addAll(IntCollection c) {
+        if (c == null || c.size() == 0) {
+            return false;
+        }
+
+        ensureCanAddNElements(c.size());
+
+        if (intAdder == null) {
+            intAdder = new IntConsumer() {
+                @Override
+                public void accept(int i) {
+                    add(i);
+                }
+            };
+        }
+
+        c.forEach(intAdder);
 
         return true;
     }
@@ -419,12 +445,12 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
     private boolean removeBasedOnCollection(Collection<?> c, boolean ifPresent) {
         boolean removedAtLeastOne = false;
 
-        for (int i = 0; i < numElements; ++i) {
+        for (int i = numElements - 1; i >= 0; --i) {
             int e = backingArray[i];
 
             boolean collectionContainsE = c.contains(e);
 
-            if (!(ifPresent ^ collectionContainsE)) {
+            if (ifPresent == collectionContainsE) {
                 remove(i);
                 removedAtLeastOne = true;
             }
@@ -633,5 +659,60 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
         }
 
         return result;
+    }
+
+    public int pop() {
+        return remove(numElements - 1);
+    }
+
+    public void removeLast() {
+        removeLast(1);
+    }
+
+    public void removeLast(int n) {
+        int stoppingIndex = Math.max(0, numElements - n);
+
+        for (int i = numElements - 1; i >= stoppingIndex; --i) {
+            remove(i);
+        }
+    }
+
+    public int getLast() {
+        int index = numElements - 1;
+
+        if (index >= 0) {
+            return backingArray[index];
+        }
+        else {
+            throw new ArrayIndexOutOfBoundsException(index);
+        }
+    }
+
+    public int getLastOrDefault(int def) {
+        int index = numElements - 1;
+
+        if (index >= 0) {
+            return backingArray[index];
+        }
+        else {
+            return def;
+        }
+    }
+
+    public int findLargestCommonPrefixEnd(IntArrayList other) {
+        if (other == null) {
+            return 0;
+        }
+
+        int pos;
+        int minPos = Math.min(size(), other.size());
+
+        for (pos = 0; pos < minPos; ++pos) {
+            if (getUnchecked(pos) != other.getUnchecked(pos)) {
+                return pos;
+            }
+        }
+
+        return pos;
     }
 }

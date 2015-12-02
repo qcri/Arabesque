@@ -4,6 +4,7 @@ import io.arabesque.computation.Computation;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.WriterSetConsumer;
+import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.IntCursor;
 import org.weakref.jmx.com.google.common.primitives.Ints;
 
@@ -66,28 +67,28 @@ public class DomainStorage extends Storage<DomainStorage> {
     @Override
     public void addEmbedding(Embedding embedding) {
         int numWords = embedding.getNumWords();
-        int[] words = embedding.getWords();
+        IntArrayList words = embedding.getWords();
 
         if (domainEntries.size() != numWords) {
             throw new RuntimeException("Tried to add an embedding with wrong number " +
-                    "of expected words (" + domainEntries.size() + ") " + embedding);
+                    "of expected vertices (" + domainEntries.size() + ") " + embedding);
         }
 
         for (int i = 0; i < numWords; ++i) {
-            DomainEntry domainEntryForCurrentWord = domainEntries.get(i).get(words[i]);
+            DomainEntry domainEntryForCurrentWord = domainEntries.get(i).get(words.getUnchecked(i));
 
             if (domainEntryForCurrentWord == null) {
                 domainEntryForCurrentWord = new DomainEntrySet();
-                domainEntries.get(i).put(words[i], domainEntryForCurrentWord);
+                domainEntries.get(i).put(words.getUnchecked(i), domainEntryForCurrentWord);
             }
         }
 
         for (int i = numWords - 1; i > 0; --i) {
-            DomainEntry domainEntryForPreviousWord = domainEntries.get(i - 1).get(words[i - 1]);
+            DomainEntry domainEntryForPreviousWord = domainEntries.get(i - 1).get(words.getUnchecked(i - 1));
 
             assert domainEntryForPreviousWord != null;
 
-            domainEntryForPreviousWord.insertConnectionToWord(words[i]);
+            domainEntryForPreviousWord.insertConnectionToWord(words.getUnchecked(i));
         }
 
         countsDirty = true;

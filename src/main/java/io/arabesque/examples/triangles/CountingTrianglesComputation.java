@@ -4,6 +4,7 @@ import io.arabesque.aggregation.reductions.LongSumReduction;
 import io.arabesque.computation.VertexInducedComputation;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.VertexInducedEmbedding;
+import io.arabesque.utils.collection.IntArrayList;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -40,10 +41,10 @@ public class CountingTrianglesComputation extends VertexInducedComputation<Verte
     @Override
     public void process(VertexInducedEmbedding embedding) {
         if (embedding.getNumVertices() == 3) {
-            int[] vertices = embedding.getVertices();
+            IntArrayList vertices = embedding.getVertices();
 
             for (int i = 0; i < 3; ++i) {
-                reusableIdWritable.set(vertices[i]);
+                reusableIdWritable.set(vertices.getUnchecked(i));
                 map(AGG_OUTPUT, reusableIdWritable, unitLongWritable);
             }
         }

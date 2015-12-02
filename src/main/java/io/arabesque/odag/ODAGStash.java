@@ -42,8 +42,6 @@ public class ODAGStash implements Writable {
         } catch (Exception e) {
             LOG.error("Error adding embedding to odag stash", e);
             LOG.error("Embedding: " + embedding);
-            LOG.error("Embedding.getVertices(): " + Arrays.toString(embedding.getVertices()));
-            LOG.error("Embedding.getNumVertices(): " + embedding.getNumVertices());
             LOG.error("Pattern: " + reusablePattern);
             throw new RuntimeException(e);
         }
