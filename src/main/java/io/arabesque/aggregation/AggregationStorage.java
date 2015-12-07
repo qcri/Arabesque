@@ -115,7 +115,7 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
         if (myValue == null) {
             keyValueMap.put(copyWritable(key), copyWritable(value));
         } else {
-            keyValueMap.put(key, reductionFunction.reduce(myValue, value));
+            reductionFunction.reduce(myValue, value);
         }
     }
 

@@ -299,9 +299,11 @@ public class WorkerContext extends org.apache.giraph.worker.WorkerContext {
     }
 
     public synchronized void resetLocalCoordination() {
-        if (localCoordinationObject != null) {
+        barrier = null;
+        localCoordinationObject = null;
+        /*if (localCoordinationObject != null) {
             localCoordinationObject.reset();
-        }
+        }*/
     }
 
     public LocalCoordinationObject accessLocalCoordinationObject() {

@@ -1,5 +1,6 @@
 package io.arabesque.pattern;
 
+import io.arabesque.utils.collection.IntCollectionAddConsumer;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
@@ -14,6 +15,7 @@ import java.util.Set;
 public class VertexPositionEquivalences {
     private IntSet[] equivalences;
     private int numVertices;
+    private IntCollectionAddConsumer intAddConsumer = new IntCollectionAddConsumer();
 
     public VertexPositionEquivalences() {
         this.equivalences = null;
@@ -55,7 +57,8 @@ public class VertexPositionEquivalences {
         setNumVertices(vertexPositionEquivalences.numVertices);
 
         for (int i = 0; i < numVertices; ++i) {
-            equivalences[i].addAll(vertexPositionEquivalences.equivalences[i]);
+            intAddConsumer.setCollection(equivalences[i]);
+            vertexPositionEquivalences.equivalences[i].forEach(intAddConsumer);
         }
     }
 
@@ -86,7 +89,8 @@ public class VertexPositionEquivalences {
                         continue;
                     }
 
-                    equivalences[equivalentPosition].addAll(currentVertexEquivalences);
+                    intAddConsumer.setCollection(equivalences[equivalentPosition]);
+                    currentVertexEquivalences.forEach(intAddConsumer);
                 }
             }
         }

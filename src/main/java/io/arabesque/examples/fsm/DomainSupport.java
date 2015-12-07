@@ -5,7 +5,10 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.VertexPositionEquivalences;
 import io.arabesque.utils.ClearSetConsumer;
+import io.arabesque.utils.IntWriterConsumer;
 import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.IntCollectionAddConsumer;
+import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.IntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.set.IntSet;
@@ -32,11 +35,16 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
     private boolean enoughSupport;
     private int support;
     private int numberOfDomains;
+    private IntWriterConsumer intWriterConsumer;
+    private IntCollectionAddConsumer intAdderConsumer;
+    private boolean setFromEmbedding;
+    private Embedding embedding;
 
     public DomainSupport() {
         this.numberOfDomains = 0;
         this.domainsReachedSupport = HashIntSets.newMutableSet();
         this.enoughSupport = false;
+        this.setFromEmbedding = false;
     }
 
     public DomainSupport(int support) {
@@ -45,26 +53,8 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
     }
 
     public void setFromEmbedding(Embedding embedding) {
-        numberOfDomains = embedding.getNumVertices();
-        ensureCanStoreNDomains(numberOfDomains);
-
-        clear();
-
-        IntArrayList vertexMap = embedding.getVertices();
-
-        for (int i = 0; i < numberOfDomains; i++) {
-            if (hasDomainReachedSupport(i)) {
-                continue;
-            }
-
-            HashIntSet domain = getDomainSet(i);
-
-            domain.add(vertexMap.getUnchecked(i));
-
-            if (domain.size() >= support) {
-                insertDomainsAsFrequent(i);
-            }
-        }
+        setFromEmbedding = true;
+        this.embedding = embedding;
     }
 
     public int getSupport() {
@@ -93,8 +83,6 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
     }
 
     private HashIntSet getDomainSet(int i) {
-        if (i >= numberOfDomains || i >= domainSets.length) return null;
-
         HashIntSet domainSet = domainSets[i];
 
         if (domainSet == null) {
@@ -113,8 +101,17 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
     }
 
     public void clear() {
+        clearDomains();
+
+        setFromEmbedding = false;
+        embedding = null;
+    }
+
+    private void clearDomains() {
         if (domainSets != null) {
-            for (HashIntSet domain : domainSets) {
+            for (int i = 0; i < domainSets.length; ++i) {
+                IntSet domain = domainSets[i];
+
                 if (domain != null) {
                     domain.clear();
                 }
@@ -130,8 +127,38 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
         return enoughSupport;
     }
 
+    private void convertFromEmbeddingToNormal() {
+        numberOfDomains = embedding.getNumVertices();
+        ensureCanStoreNDomains(numberOfDomains);
+
+        clearDomains();
+
+        IntArrayList vertexMap = embedding.getVertices();
+
+        for (int i = 0; i < numberOfDomains; i++) {
+            if (hasDomainReachedSupport(i)) {
+                continue;
+            }
+
+            HashIntSet domain = getDomainSet(i);
+
+            domain.add(vertexMap.getUnchecked(i));
+
+            if (domain.size() >= support) {
+                insertDomainsAsFrequent(i);
+            }
+        }
+
+        setFromEmbedding = false;
+        embedding = null;
+    }
+
     @Override
     public void write(DataOutput dataOutput) throws IOException {
+        if (setFromEmbedding) {
+            convertFromEmbeddingToNormal();
+        }
+
         dataOutput.writeInt(support);
         dataOutput.writeInt(numberOfDomains);
 
@@ -140,10 +167,14 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
         } else {
             dataOutput.writeBoolean(false);
 
-            dataOutput.writeInt(domainsReachedSupport.size());
-            for (int domain : domainsReachedSupport) {
-                dataOutput.writeInt(domain);
+            if (intWriterConsumer == null) {
+                intWriterConsumer = new IntWriterConsumer();
             }
+
+            intWriterConsumer.setDataOutput(dataOutput);
+
+            dataOutput.writeInt(domainsReachedSupport.size());
+            domainsReachedSupport.forEach(intWriterConsumer);
 
             for (int i = 0; i < numberOfDomains; ++i) {
                 if (domainsReachedSupport.contains(i)) {
@@ -151,9 +182,7 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
                 }
 
                 dataOutput.writeInt(domainSets[i].size());
-                for (int id : domainSets[i]) {
-                    dataOutput.writeInt(id);
-                }
+                domainSets[i].forEach(intWriterConsumer);
             }
         }
     }
@@ -258,7 +287,7 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
         }
     }
 
-    public void aggregate(HashIntSet otherDomain, int i) {
+    private void aggregate(HashIntSet otherDomain, int i) {
         if (otherDomain == null) {
             return;
         }
@@ -273,10 +302,44 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
             return;
         }
 
-        domain.addAll(otherDomain);
+        addAll(domain, otherDomain);
 
         if (domain.size() >= support) {
             insertDomainsAsFrequent(i);
+        }
+    }
+
+    private void addAll(IntCollection destination, IntCollection source) {
+        if (intAdderConsumer == null) {
+            intAdderConsumer = new IntCollectionAddConsumer();
+        }
+
+        intAdderConsumer.setCollection(destination);
+
+        source.forEach(intAdderConsumer);
+    }
+
+    private void embeddingAggregate(Embedding embedding) {
+        int numVertices = embedding.getNumVertices();
+
+        if (numVertices != numberOfDomains) {
+            throw new RuntimeException("Expected " + numberOfDomains + " vertices, got " + numVertices);
+        }
+
+        IntArrayList vertices = embedding.getVertices();
+
+        for (int i = 0; i < numVertices; ++i) {
+            if (hasDomainReachedSupport(i)) {
+                continue;
+            }
+
+            HashIntSet domain = getDomainSet(i);
+
+            domain.add(vertices.getUnchecked(i));
+
+            if (domain.size() >= support) {
+                insertDomainsAsFrequent(i);
+            }
         }
     }
 
@@ -286,6 +349,12 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
 
         // If we already have support, do nothing
         if (this.enoughSupport) {
+            return;
+        }
+
+        // If other simply references an embedding, do special quick aggregate
+        if (other.setFromEmbedding) {
+            embeddingAggregate(other.embedding);
             return;
         }
 
@@ -300,7 +369,7 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
             throw new RuntimeException("Incompatible aggregation of DomainSupports: # of domains differs");
         }
 
-        this.domainsReachedSupport.addAll(other.domainsReachedSupport);
+        addAll(domainsReachedSupport, other.domainsReachedSupport);
 
         if (domainsReachedSupport.size() == numberOfDomains) {
             this.clear();

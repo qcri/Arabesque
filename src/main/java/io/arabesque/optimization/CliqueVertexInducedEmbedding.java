@@ -13,7 +13,8 @@ public class CliqueVertexInducedEmbedding extends VertexInducedEmbedding {
             IntCollection lastVertexNeighbours = mainGraph.getVertexNeighbours(getVertices().getLast());
 
             if (lastVertexNeighbours != null) {
-                extensionWordIds.addAll(lastVertexNeighbours);
+                intAddConsumer.setCollection(extensionWordIds);
+                lastVertexNeighbours.forEach(intAddConsumer);
             }
 
             int numVertices = getNumVertices();
@@ -33,6 +34,6 @@ public class CliqueVertexInducedEmbedding extends VertexInducedEmbedding {
     public boolean isCanonicalEmbeddingWithWord(int wordId) {
         if (this.getNumVertices() == 0) return true;
 
-        return wordId > getVertices().getUnchecked(getNumVertices() - 1);
+        return wordId > getVertices().getLast();
     }
 }

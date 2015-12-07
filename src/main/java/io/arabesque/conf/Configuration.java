@@ -404,5 +404,9 @@ public class Configuration<O extends Embedding> {
     public boolean isGraphMulti() {
         return isGraphMulti;
     }
+
+    public Class<? extends Computation> getComputationClass() {
+        return computationClass;
+    }
 }
 

@@ -1,9 +1,12 @@
 package io.arabesque.computation.comm;
 
 import io.arabesque.cache.LZ4ObjectCache;
+import io.arabesque.computation.BasicComputation;
+import io.arabesque.computation.Computation;
 import io.arabesque.computation.MasterExecutionEngine;
 import io.arabesque.computation.WorkerContext;
 import io.arabesque.embedding.Embedding;
+import io.arabesque.pattern.Pattern;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -24,6 +27,9 @@ public class CacheCommunicationStrategy<O extends Embedding> extends Communicati
     LZ4ObjectCache currentObjectCache;
     private long totalSizeEmbeddingsProcessed;
     private int numberOfPartitions;
+
+    private boolean patternAggFilterDefined;
+    private Computation computation;
 
     @Override
     public void initialize(int phase) {
@@ -106,6 +112,13 @@ public class CacheCommunicationStrategy<O extends Embedding> extends Communicati
         super.startComputation(vertex, messages);
 
         messageIterator = messages.iterator();
+
+        computation = getExecutionEngine().getComputation();
+        try {
+            patternAggFilterDefined = computation.getClass().getMethod("aggregationFilter", Pattern.class).getDeclaringClass() != BasicComputation.class;
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -122,15 +135,19 @@ public class CacheCommunicationStrategy<O extends Embedding> extends Communicati
             }
         }
 
-        if (currentObjectCache.hasNext()) {
-            return (O) currentObjectCache.next();
-        } else {
-            totalSizeEmbeddingsProcessed += currentObjectCache.getByteArrayOutputCache().getPos();
+        while (currentObjectCache.hasNext()) {
+            O embedding = (O) currentObjectCache.next();
 
-            currentObjectCache = null;
-
-            return getNextInboundEmbedding();
+            if (!patternAggFilterDefined || computation.aggregationFilter(embedding.getPattern())) {
+                return embedding;
+            }
         }
+
+        totalSizeEmbeddingsProcessed += currentObjectCache.getByteArrayOutputCache().getPos();
+
+        currentObjectCache = null;
+
+        return getNextInboundEmbedding();
     }
 
     @Override

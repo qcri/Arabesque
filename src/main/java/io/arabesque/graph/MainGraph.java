@@ -2,6 +2,7 @@ package io.arabesque.graph;
 
 import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
+import net.openhft.koloboke.function.IntConsumer;
 
 public interface MainGraph {
     void reset();
@@ -38,4 +39,6 @@ public interface MainGraph {
     boolean isEdgeLabelled();
 
     boolean isMultiGraph();
+
+    void forEachEdgeId(int v1, int v2, IntConsumer intConsumer);
 }

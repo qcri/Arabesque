@@ -5,6 +5,7 @@ import io.arabesque.utils.pool.IntSingletonPool;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
+import net.openhft.koloboke.function.IntConsumer;
 
 public class BasicVertexNeighbourhood implements VertexNeighbourhood {
     // Key = neighbour vertex id, Value = edge id that connects owner of neighbourhood with Key
@@ -37,6 +38,15 @@ public class BasicVertexNeighbourhood implements VertexNeighbourhood {
         }
         else {
             return null;
+        }
+    }
+
+    @Override
+    public void forEachEdgeId(int nId, IntConsumer intConsumer) {
+        int edgeId = neighbourhoodMap.get(nId);
+
+        if (edgeId >= 0) {
+            intConsumer.accept(edgeId);
         }
     }
 

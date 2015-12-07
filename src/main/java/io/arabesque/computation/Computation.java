@@ -2,6 +2,7 @@ package io.arabesque.computation;
 
 import io.arabesque.aggregation.AggregationStorage;
 import io.arabesque.embedding.Embedding;
+import io.arabesque.pattern.Pattern;
 import net.openhft.koloboke.collect.IntCollection;
 import org.apache.hadoop.io.Writable;
 
@@ -20,6 +21,7 @@ public interface Computation<E extends Embedding> {
     void process(E embedding);
 
     boolean aggregationFilter(E Embedding);
+    boolean aggregationFilter(Pattern pattern);
 
     void aggregationProcess(E embedding);
 

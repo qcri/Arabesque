@@ -4,6 +4,7 @@ import io.arabesque.conf.Configuration;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.IntCollectionAddConsumer;
 import io.arabesque.utils.collection.ObjArrayList;
 import io.arabesque.utils.pool.IntArrayListPool;
 import net.openhft.koloboke.collect.IntCollection;
@@ -40,6 +41,8 @@ public abstract class BasicEmbedding implements Embedding {
             return extensionWordIds.contains(i);
         }
     };
+
+    protected IntCollectionAddConsumer intAddConsumer = new IntCollectionAddConsumer();
     // }}
 
     // Pattern {{
@@ -125,55 +128,23 @@ public abstract class BasicEmbedding implements Embedding {
     public IntCollection getExtensibleWordIds() {
         // If we have to recompute the extensionVertexIds set
         if (dirtyExtensionWordIds) {
-            // Do so starting from the first vertex that differs from those we were considering
-            // last time we did a recomputation
-            updateExtensibleWordIds(getVertices().findLargestCommonPrefixEnd(previousExtensionCalculationVertices));
-            previousExtensionCalculationVertices.clear();
-            previousExtensionCalculationVertices.addAll(getVertices());
+            updateExtensibleWordIdsSimple();
         }
 
         return extensionWordIds;
     }
 
-    protected void updateExtensibleWordIds(int commonPrefixWithPreviousEnd) {
+    protected void updateExtensibleWordIdsSimple() {
         IntArrayList vertices = getVertices();
         int numVertices = getNumVertices();
 
         extensionWordIds.clear();
 
-        // Add all extension words already calculated, corresponding to vertex positions
-        // that we know we have in common with the last embedding structure where we
-        // udpated the extensible words ids
-        for (int i = 0; i < commonPrefixWithPreviousEnd; ++i) {
-            extensionWordIds.addAll(extensionWordIdsPerPos.get(i));
-        }
+        for (int i = 0; i < numVertices; ++i) {
+            IntCollection neighbourhood = getValidNeighboursForExpansion(vertices.getUnchecked(i));
 
-        IntArrayListPool intArrayListPool = IntArrayListPool.instance();
-
-        // For all the remaining positions that differ, reclaim their IntArrayLists
-        // since we'll update them just after this
-        for (int i = extensionWordIdsPerPos.size() - 1; i >= commonPrefixWithPreviousEnd; --i) {
-            intArrayListPool.reclaimObject(extensionWordIdsPerPos.remove(i));
-        }
-
-        // For all the vertex positions that differ from a previous calculation...
-        for (int i = commonPrefixWithPreviousEnd; i < numVertices; ++i) {
-            final int vId = vertices.getUnchecked(i);
-
-            // Get their word neighbours
-            final IntCollection neighbourhood = getValidNeighboursForExpansion(vId);
-
-            // If they exist
             if (neighbourhood != null) {
-                // Create a local copy
-                IntArrayList neighbourhoodCopy = IntArrayListPool.instance().createObject();
-                neighbourhoodCopy.addAll(neighbourhood);
-                // Remove all words that were already in our set of extensions
-                neighbourhoodCopy.removeIf(existsInExtensionWordIds);
-                // For each one of those that survived, add it to the extension word set
-                neighbourhoodCopy.forEach(extensionWordIdsAdder);
-                // Save all words added at this position for future incremental computations
-                extensionWordIdsPerPos.add(neighbourhoodCopy);
+                neighbourhood.forEach(extensionWordIdsAdder);
             }
         }
 

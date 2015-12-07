@@ -7,6 +7,7 @@ import io.arabesque.graph.VertexNeighbourhood;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
+import net.openhft.koloboke.function.IntConsumer;
 
 public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMainGraph {
     protected MainGraph underlyingMainGraph;
@@ -113,5 +114,10 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     @Override
     public boolean isMultiGraph() {
         return underlyingMainGraph.isMultiGraph();
+    }
+
+    @Override
+    public void forEachEdgeId(int existingVertexId, int newVertexId, IntConsumer intConsumer) {
+        underlyingMainGraph.forEachEdgeId(existingVertexId, newVertexId, intConsumer);
     }
 }

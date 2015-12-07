@@ -1,5 +1,6 @@
 package io.arabesque.computation.comm;
 
+import io.arabesque.computation.Computation;
 import io.arabesque.computation.MasterExecutionEngine;
 import io.arabesque.computation.WorkerContext;
 import io.arabesque.conf.Configuration;
@@ -42,7 +43,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
     private long totalSizeODAGs;
 
     public ODAGCommunicationStrategy() {
-        coordinationObjectFactory = new ODAGLocalCoordinationObjectFactory();
+        coordinationObjectFactory = new ODAGLocalCoordinationObjectFactory(this);
     }
 
     @Override
@@ -201,8 +202,6 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
 
     @Override
     public void finish() {
-        getWorkerContext().resetLocalCoordination();
-
         flush();
 
         LongWritable longWritable = new LongWritable();
@@ -244,6 +243,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
     }
 
     private static class ODAGLocalCoordinationObject extends WorkerContext.LocalCoordinationObject {
+        private ODAGCommunicationStrategy communicationStrategy;
         private WorkerContext workerContext;
         private int numEzipAggregators;
         private int numPartitionsPerWorker;
@@ -256,8 +256,9 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
         private MergingTask[] reusableMergingTasks;
         private ArrayList<Future> futures;
 
-        public ODAGLocalCoordinationObject(WorkerContext workerContext, int numEzipAggregators) {
+        public ODAGLocalCoordinationObject(WorkerContext workerContext, ODAGCommunicationStrategy communicationStrategy, int numEzipAggregators) {
             this.workerContext = workerContext;
+            this.communicationStrategy = communicationStrategy;
             this.numEzipAggregators = numEzipAggregators;
             numPartitionsPerWorker = workerContext.getNumberPartitionsPerWorker();
             mergingPool = Executors.newFixedThreadPool(numPartitionsPerWorker);
@@ -292,12 +293,20 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
             if (receivedParts == null) {
                 receivedParts = new LinkedHashMap<>();
 
+                Computation computation = communicationStrategy.getExecutionEngine().getComputation();
+
                 for (Writable message : workerContext.getAndClearBroadcastedMessages()) {
                     if (message instanceof ODAGPartLZ4Wrapper) {
                         ODAGPartLZ4Wrapper receivedPart = (ODAGPartLZ4Wrapper) message;
 
+                        Pattern partPattern = receivedPart.getPattern();
+
+                        if (!computation.aggregationFilter(partPattern)) {
+                            continue;
+                        }
+
                         ArrayList<ODAGPartLZ4Wrapper> existingPartsForPattern
-                                = receivedParts.get(receivedPart.getPattern());
+                                = receivedParts.get(partPattern);
 
                         if (existingPartsForPattern == null) {
                             existingPartsForPattern = new ArrayList<>(numEzipAggregators);
@@ -397,9 +406,15 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
 
     private class ODAGLocalCoordinationObjectFactory
             extends WorkerContext.LocalCoordinationObjectFactory {
+        private ODAGCommunicationStrategy communicationStrategy;
+
+        public ODAGLocalCoordinationObjectFactory(ODAGCommunicationStrategy communicationStrategy) {
+            this.communicationStrategy = communicationStrategy;
+        }
+
         @Override
         public WorkerContext.LocalCoordinationObject create() {
-            return new ODAGLocalCoordinationObject(getWorkerContext(), numberEzipAggregators);
+            return new ODAGLocalCoordinationObject(getWorkerContext(), communicationStrategy, numberEzipAggregators);
         }
     }
 

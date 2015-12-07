@@ -1,7 +1,6 @@
 package io.arabesque.embedding;
 
 import io.arabesque.utils.collection.IntArrayList;
-import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.function.IntConsumer;
 
@@ -126,14 +125,9 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         for (int i = 0; i < positionAdded; ++i) {
             int existingVertexId = vertices.getUnchecked(i);
 
-            ReclaimableIntCollection edgeIds = mainGraph.getEdgeIds(existingVertexId, newVertexId);
-
-            if (edgeIds != null) {
-                updateEdgesConsumer.reset();
-                edgeIds.forEach(updateEdgesConsumer);
-                addedEdges += updateEdgesConsumer.getNumAdded();
-                edgeIds.reclaim();
-            }
+            updateEdgesConsumer.reset();
+            mainGraph.forEachEdgeId(existingVertexId, newVertexId, updateEdgesConsumer);
+            addedEdges += updateEdgesConsumer.getNumAdded();
         }
 
         numEdgesAddedWithWord.add(addedEdges);

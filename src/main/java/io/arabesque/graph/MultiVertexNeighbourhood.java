@@ -6,6 +6,7 @@ import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.map.IntObjMap;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
+import net.openhft.koloboke.function.IntConsumer;
 import net.openhft.koloboke.function.IntFunction;
 
 public class MultiVertexNeighbourhood extends BasicVertexNeighbourhood {
@@ -64,6 +65,17 @@ public class MultiVertexNeighbourhood extends BasicVertexNeighbourhood {
         }
 
         return super.getEdgesWithNeighbourVertex(neighbourVertexId);
+    }
+
+    @Override
+    public void forEachEdgeId(int nId, IntConsumer intConsumer) {
+        ReclaimableIntCollection edgeIds = multiEdgeNeighbourhoodMap.get(nId);
+
+        if (edgeIds != null) {
+            edgeIds.forEach(intConsumer);
+        }
+
+        super.forEachEdgeId(nId, intConsumer);
     }
 
     @Override

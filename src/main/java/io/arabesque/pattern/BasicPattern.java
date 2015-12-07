@@ -7,6 +7,7 @@ import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.IntCollectionAddConsumer;
 import net.openhft.koloboke.collect.map.IntIntCursor;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
@@ -43,21 +44,22 @@ public abstract class BasicPattern implements Pattern {
 
     // Others {{
     private final MainGraph mainGraph;
-    private boolean edgesHaveLabels;
+    private PatternEdgePool patternEdgePool;
 
     protected volatile boolean dirtyVertexPositionEquivalences;
     protected volatile boolean dirtyCanonicalLabelling;
+
+    protected IntCollectionAddConsumer intAddConsumer = new IntCollectionAddConsumer();
     // }}
 
     public BasicPattern() {
         mainGraph = Configuration.get().getMainGraph();
+        patternEdgePool = PatternEdgePool.instance();
 
         vertices = new IntArrayList();
         edges = createPatternEdgeArrayList();
         vertexPositions = positionMapFactory.newMutableMap();
         previousWords = new IntArrayList();
-
-        edgesHaveLabels = Configuration.get().isGraphEdgeLabelled();
 
         init();
     }
@@ -65,7 +67,8 @@ public abstract class BasicPattern implements Pattern {
     public BasicPattern(BasicPattern basicPattern) {
         this();
 
-        vertices.addAll(basicPattern.vertices);
+        intAddConsumer.setCollection(vertices);
+        basicPattern.vertices.forEach(intAddConsumer);
 
         edges.ensureCapacity(basicPattern.edges.size());
 
@@ -83,7 +86,7 @@ public abstract class BasicPattern implements Pattern {
     @Override
     public void reset() {
         vertices.clear();
-        PatternEdgePool.instance().reclaimObjects(edges);
+        patternEdgePool.reclaimObjects(edges);
         edges.clear();
         vertexPositions.clear();
 
@@ -172,8 +175,6 @@ public abstract class BasicPattern implements Pattern {
     private void removeLastNEdges(int n) {
         int targetI = edges.size() - n;
 
-        PatternEdgePool patternEdgePool = PatternEdgePool.instance();
-
         for (int i = edges.size() - 1; i >= targetI; --i) {
             patternEdgePool.reclaimObject(edges.remove(i));
         }
@@ -184,7 +185,7 @@ public abstract class BasicPattern implements Pattern {
 
         for (int i = vertices.size() - 1; i >= targetI; --i) {
             try {
-                vertexPositions.remove(vertices.remove(i));
+                vertexPositions.remove(vertices.getUnchecked(i));
             } catch (IllegalArgumentException e) {
                 System.err.println(e.toString());
                 System.err.println("i=" + i);
@@ -192,6 +193,8 @@ public abstract class BasicPattern implements Pattern {
                 throw e;
             }
         }
+
+        vertices.removeLast(n);
     }
 
     /**
@@ -449,14 +452,6 @@ public abstract class BasicPattern implements Pattern {
 
         edges.sort();
 
-        /*if (vertexPositionEquivalences != null && !dirtyVertexPositionEquivalences) {
-            vertexPositionEquivalences.convertBasedOnRelabelling(canonicalLabelling);
-        }
-
-        for (int i = 0; i < canonicalLabelling.size(); ++i) {
-            canonicalLabelling.put(i, i);
-        }*/
-
         return true;
     }
 
@@ -483,7 +478,7 @@ public abstract class BasicPattern implements Pattern {
     }
 
     protected PatternEdge createPatternEdge(Edge edge, int srcPos, int dstPos, int srcId) {
-        PatternEdge patternEdge = PatternEdgePool.instance().createObject();
+        PatternEdge patternEdge = patternEdgePool.createObject();
 
         patternEdge.setFromEdge(edge, srcPos, dstPos, srcId);
 
@@ -491,7 +486,7 @@ public abstract class BasicPattern implements Pattern {
     }
 
     protected PatternEdge createPatternEdge(PatternEdge otherEdge) {
-        PatternEdge patternEdge = PatternEdgePool.instance().createObject();
+        PatternEdge patternEdge = patternEdgePool.createObject();
 
         patternEdge.setFromOther(otherEdge);
 

@@ -5,8 +5,10 @@ import io.arabesque.computation.EdgeInducedComputation;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.EdgeInducedEmbedding;
 import io.arabesque.pattern.Pattern;
+import org.apache.log4j.Logger;
 
 public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding> {
+    private static final Logger LOG = Logger.getLogger(FSMComputation.class);
     public static final String AGG_SUPPORT = "support";
 
     public static final String CONF_SUPPORT = "arabesque.fsm.support";
@@ -47,6 +49,11 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
     }
 
     @Override
+    public boolean filter(EdgeInducedEmbedding newEmbedding) {
+        return newEmbedding.getNumWords() < maxSize;
+    }
+
+    @Override
     public boolean shouldExpand(EdgeInducedEmbedding embedding) {
         return maxSize < 0 || embedding.getNumWords() < maxSize;
     }
@@ -58,11 +65,8 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
     }
 
     @Override
-    public boolean aggregationFilter(EdgeInducedEmbedding embedding) {
-        // Using the DomainSupportEndAggregationFunction, we removed all mappings for
-        // non-frequent patterns. So we simply have to check if the mapping has
-        // the pattern for the corresponding key
-        return previousStepAggregation.containsKey(embedding.getPattern());
+    public boolean aggregationFilter(Pattern pattern) {
+        return previousStepAggregation.containsKey(pattern);
     }
 
     @Override

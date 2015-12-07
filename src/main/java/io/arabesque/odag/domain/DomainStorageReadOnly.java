@@ -14,7 +14,6 @@ import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
-import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
@@ -233,13 +232,7 @@ public class DomainStorageReadOnly extends DomainStorage {
             edgeIds.clear();
             edgesConsumer.setPatternEdge(patternEdge);
 
-            ReclaimableIntCollection edges = mainGraph.getEdgeIds(srcId, dstId);
-
-            if (edges != null) {
-                edges.forEach(edgesConsumer);
-
-                edges.reclaim();
-            }
+            mainGraph.forEachEdgeId(srcId, dstId, edgesConsumer);
 
             return edgeIds;
         }

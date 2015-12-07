@@ -7,8 +7,8 @@ import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgeArrayListPool;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.collection.IntArrayList;
+import io.arabesque.utils.collection.IntIntMapAddConsumer;
 import io.arabesque.utils.collection.ObjArrayList;
-import io.arabesque.utils.collection.ReclaimableIntCollection;
 import io.arabesque.utils.pool.IntArrayListPool;
 import io.arabesque.utils.pool.IntSetPool;
 import io.arabesque.utils.pool.Pool;
@@ -64,6 +64,7 @@ public class VICPattern extends BasicPattern {
     private boolean dirtyMinimumStuff;
 
     private AddCandidatePatternEdgeConsumer addCandidatePatternEdgeConsumer;
+    private IntIntMapAddConsumer intIntAddConsumer = new IntIntMapAddConsumer();
 
     public VICPattern() {
         super();
@@ -233,7 +234,8 @@ public class VICPattern extends BasicPattern {
     @Override
     protected void fillCanonicalLabelling(IntIntMap canonicalLabelling) {
         findCanonicalLabelling();
-        canonicalLabelling.putAll(minLabelling);
+        intIntAddConsumer.setMap(canonicalLabelling);
+        minLabelling.forEach(intIntAddConsumer);
     }
 
     private void findCanonicalLabelling() {
@@ -408,15 +410,12 @@ public class VICPattern extends BasicPattern {
         int neighbourVertexId = vertices.getUnchecked(neighbourUnderlyingPos);
         int newVertexId = vertices.getUnchecked(underlyingVertexPosToAdd);
 
-        ReclaimableIntCollection edgeIds = mainGraph.getEdgeIds(neighbourVertexId, newVertexId);
-
         addCandidatePatternEdgeConsumer.setCandidateEdgesList(edgesToAdd);
         addCandidatePatternEdgeConsumer.setNeighbourTmpPos(neighbourTmpPos);
         addCandidatePatternEdgeConsumer.setNewTmpVertexPos(newTmpVertexPos);
         addCandidatePatternEdgeConsumer.setNeighbourVertexId(neighbourVertexId);
 
-        edgeIds.forEach(addCandidatePatternEdgeConsumer);
-        edgeIds.reclaim();
+        mainGraph.forEachEdgeId(neighbourVertexId, newVertexId, addCandidatePatternEdgeConsumer);
     }
 
     private void copyTmpToMin() {
@@ -437,10 +436,12 @@ public class VICPattern extends BasicPattern {
         }
 
         minLabelling.clear();
-        minLabelling.putAll(tmpLabelling);
+        intIntAddConsumer.setMap(minLabelling);
+        tmpLabelling.forEach(intIntAddConsumer);
 
         minInverseLabelling.clear();
-        minInverseLabelling.putAll(tmpInverseLabelling);
+        intIntAddConsumer.setMap(minInverseLabelling);
+        tmpInverseLabelling.forEach(intIntAddConsumer);
 
         foundMinimum = true;
     }

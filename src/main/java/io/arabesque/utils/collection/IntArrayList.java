@@ -579,12 +579,36 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
         if (backingArray == null) {
             newTargetSize = Math.max(numNewElements, INITIAL_SIZE);
         } else if (backingArray.length < numElements + numNewElements) {
-            newTargetSize = (backingArray.length + numNewElements) << 1;
+            newTargetSize = getSizeWithPaddingWithoutOverflow(numNewElements, numElements + numNewElements);
         } else {
             return;
         }
 
         ensureCapacity(newTargetSize);
+    }
+
+    private int getSizeWithPaddingWithoutOverflow(int targetSize, int currentSize) {
+        if (currentSize > targetSize) {
+            return currentSize;
+        }
+
+        int sizeWithPadding = Math.max(currentSize, 1);
+
+        while (true) {
+            int previousSizeWithPadding = sizeWithPadding;
+
+            // Multiply by 2
+            sizeWithPadding <<= 1;
+
+            // If we saw an overflow, return simple targetSize
+            if (previousSizeWithPadding > sizeWithPadding) {
+                return targetSize;
+            }
+
+            if (sizeWithPadding >= targetSize) {
+                return sizeWithPadding;
+            }
+        }
     }
 
     @Override
@@ -670,11 +694,7 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
     }
 
     public void removeLast(int n) {
-        int stoppingIndex = Math.max(0, numElements - n);
-
-        for (int i = numElements - 1; i >= stoppingIndex; --i) {
-            remove(i);
-        }
+        numElements = Math.max(0, numElements - n);
     }
 
     public int getLast() {

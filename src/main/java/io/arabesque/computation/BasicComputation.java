@@ -4,6 +4,7 @@ import io.arabesque.aggregation.AggregationStorage;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.MainGraph;
+import io.arabesque.pattern.Pattern;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
@@ -14,6 +15,8 @@ import org.apache.log4j.Logger;
 
 public abstract class BasicComputation<E extends Embedding> implements Computation<E> {
     private static final Logger LOG = Logger.getLogger(BasicComputation.class);
+
+    private boolean outputEnabled;
 
     private ExecutionEngine<E> underlyingExecutionEngine;
     private MainGraph mainGraph;
@@ -47,6 +50,8 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         mainGraph = Configuration.get().getMainGraph();
         configuration = Configuration.get();
         numChildrenEvaluated = 0;
+
+        outputEnabled = Configuration.get().isOutputActive();
     }
 
     @Override
@@ -190,6 +195,11 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
     }
 
     @Override
+    public boolean aggregationFilter(Pattern pattern) {
+        return true;
+    }
+
+    @Override
     public void aggregationProcess(E embedding) {
         // Empty by default
     }
@@ -204,7 +214,9 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
     }
 
     public void output(Embedding embedding) {
-        output(embedding.toOutputString());
+        if (outputEnabled) {
+            output(embedding.toOutputString());
+        }
     }
 
     @Override

@@ -2,6 +2,7 @@ package io.arabesque.graph;
 
 import io.arabesque.utils.collection.ReclaimableIntCollection;
 import net.openhft.koloboke.collect.IntCollection;
+import net.openhft.koloboke.function.IntConsumer;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.log4j.Logger;
@@ -119,7 +120,7 @@ public class BasicMainGraph implements MainGraph {
             return currentSize;
         }
 
-        int sizeWithPadding = currentSize;
+        int sizeWithPadding = Math.max(currentSize, 1);
 
         while (true) {
             int previousSizeWithPadding = sizeWithPadding;
@@ -241,6 +242,25 @@ public class BasicMainGraph implements MainGraph {
         VertexNeighbourhood vertexNeighbourhood = this.vertexNeighbourhoods[minv];
 
         return vertexNeighbourhood.getEdgesWithNeighbourVertex(maxv);
+    }
+
+    @Override
+    public void forEachEdgeId(int v1, int v2, IntConsumer intConsumer) {
+        int minv;
+        int maxv;
+
+        // TODO: Change this for directed edges
+        if (v1 < v2) {
+            minv = v1;
+            maxv = v2;
+        } else {
+            minv = v2;
+            maxv = v1;
+        }
+
+        VertexNeighbourhood vertexNeighbourhood = this.vertexNeighbourhoods[minv];
+
+        vertexNeighbourhood.forEachEdgeId(maxv, intConsumer);
     }
 
     @Override
