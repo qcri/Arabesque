@@ -22,7 +22,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 public class DomainStorageReadOnly extends DomainStorage {
 
@@ -35,7 +35,7 @@ public class DomainStorageReadOnly extends DomainStorage {
         for (int i = 0; i < numberOfDomains; ++i) {
             int domainEntryMapSize = dataInput.readInt();
 
-            ConcurrentHashMap<Integer, DomainEntry> domainEntryMap = domainEntries.get(i);
+            Map<Integer, DomainEntry> domainEntryMap = domainEntries.get(i);
 
             for (int j = 0; j < domainEntryMapSize; ++j) {
                 int wordId = dataInput.readInt();
@@ -295,7 +295,7 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                     int currentIndex = domain0EnumerationStep.index;
 
-                    ConcurrentHashMap<Integer, DomainEntry> domain0 = domainEntries.get(0);
+                    Map<Integer, DomainEntry> domain0 = domainEntries.get(0);
 
                     while (++currentIndex < domain0OrderedKeys.length) {
                         int wordId = domain0OrderedKeys[currentIndex];
@@ -342,7 +342,7 @@ public class DomainStorageReadOnly extends DomainStorage {
                 } else {
                     DomainNot0EnumerationStep domainNot0EnumerationStep = (DomainNot0EnumerationStep) lastEnumerationStep;
 
-                    ConcurrentHashMap<Integer, DomainEntry> possibilitiesLastDomain = domainEntries.get(domainOfLastEnumerationStep);
+                    Map<Integer, DomainEntry> possibilitiesLastDomain = domainEntries.get(domainOfLastEnumerationStep);
 
                     int[] pointers = domainNot0EnumerationStep.domain;
 

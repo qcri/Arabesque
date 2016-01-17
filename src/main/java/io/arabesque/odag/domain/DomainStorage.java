@@ -19,7 +19,7 @@ import java.util.concurrent.Future;
 
 public class DomainStorage extends Storage<DomainStorage> {
     protected boolean countsDirty;
-    protected ArrayList<ConcurrentHashMap<Integer, DomainEntry>> domainEntries;
+    protected ArrayList<Map<Integer, DomainEntry>> domainEntries;
     protected int[] domain0OrderedKeys;
     protected int numberOfDomains;
     protected WriterSetConsumer writerSetConsumer;
@@ -113,8 +113,8 @@ public class DomainStorage extends Storage<DomainStorage> {
         }
 
         for (int i = 0; i < numberOfDomains; ++i) {
-            ConcurrentHashMap<Integer, DomainEntry> thisDomainMap = domainEntries.get(i);
-            ConcurrentHashMap<Integer, DomainEntry> otherDomainMap = otherDomainStorage.domainEntries.get(i);
+            Map<Integer, DomainEntry> thisDomainMap = domainEntries.get(i);
+            Map<Integer, DomainEntry> otherDomainMap = otherDomainStorage.domainEntries.get(i);
 
             for (Map.Entry<Integer, DomainEntry> otherDomainMapEntry : otherDomainMap.entrySet()) {
                 Integer otherVertexId = otherDomainMapEntry.getKey();
@@ -155,7 +155,7 @@ public class DomainStorage extends Storage<DomainStorage> {
     @Override
     public void clear() {
         if (domainEntries != null) {
-            for (ConcurrentHashMap<Integer, DomainEntry> domainMap : domainEntries) {
+            for (Map<Integer, DomainEntry> domainMap : domainEntries) {
                 domainMap.clear();
             }
         }
@@ -197,8 +197,8 @@ public class DomainStorage extends Storage<DomainStorage> {
 
         @Override
         public void run() {
-            ConcurrentHashMap<Integer, DomainEntry> currentEntryMap = domainEntries.get(domain);
-            ConcurrentHashMap<Integer, DomainEntry> followingEntryMap = domainEntries.get(domain + 1);
+            Map<Integer, DomainEntry> currentEntryMap = domainEntries.get(domain);
+            Map<Integer, DomainEntry> followingEntryMap = domainEntries.get(domain + 1);
 
             for (Map.Entry<Integer, DomainEntry> entry : currentEntryMap.entrySet()) {
                 int wordId = entry.getKey();
@@ -253,7 +253,7 @@ public class DomainStorage extends Storage<DomainStorage> {
     public void write(DataOutput dataOutput) throws IOException {
         dataOutput.writeInt(numberOfDomains);
 
-        for (ConcurrentHashMap<Integer, DomainEntry> domainEntryMap : domainEntries) {
+        for (Map<Integer, DomainEntry> domainEntryMap : domainEntries) {
             dataOutput.writeInt(domainEntryMap.size());
             for (Map.Entry<Integer, DomainEntry> entry : domainEntryMap.entrySet()) {
                 Integer wordId = entry.getKey();
@@ -272,7 +272,7 @@ public class DomainStorage extends Storage<DomainStorage> {
             outputs[i].writeInt(numberOfDomains);
         }
 
-        for (ConcurrentHashMap<Integer, DomainEntry> domainEntryMap : domainEntries) {
+        for (Map<Integer, DomainEntry> domainEntryMap : domainEntries) {
             Arrays.fill(numEntriesOfPartsInDomain, 0);
 
             for (Integer wordId : domainEntryMap.keySet()) {
@@ -317,7 +317,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         setNumberOfDomains(dataInput.readInt());
         for (int i = 0; i < numberOfDomains; ++i) {
             int domainEntryMapSize = dataInput.readInt();
-            ConcurrentHashMap<Integer, DomainEntry> domainEntryMap = domainEntries.get(i);
+            Map<Integer, DomainEntry> domainEntryMap = domainEntries.get(i);
 
             for (int j = 0; j < domainEntryMapSize; ++j) {
                 int wordId = dataInput.readInt();
@@ -344,7 +344,7 @@ public class DomainStorage extends Storage<DomainStorage> {
 
         stats.numDomains = domainEntries.size();
 
-        for (ConcurrentHashMap<Integer, DomainEntry> domainMap : domainEntries) {
+        for (Map<Integer, DomainEntry> domainMap : domainEntries) {
             int domainSize = domainMap.size();
 
             if (domainSize > stats.maxDomainSize) {

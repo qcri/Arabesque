@@ -5,7 +5,7 @@ import net.openhft.koloboke.collect.IntCursor;
 
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 public interface DomainEntry {
     boolean insertConnectionToWord(int word);
@@ -26,5 +26,5 @@ public interface DomainEntry {
 
     int getWastedPointers();
 
-    void incrementCounterFrom(ConcurrentHashMap<Integer, DomainEntry> followingEntryMap);
+    void incrementCounterFrom(Map<Integer, DomainEntry> followingEntryMap);
 }

@@ -7,7 +7,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 public class DomainEntryReadOnly extends DomainEntrySet {
     @Override
@@ -78,7 +78,7 @@ public class DomainEntryReadOnly extends DomainEntrySet {
     }
 
     @Override
-    public void incrementCounterFrom(ConcurrentHashMap<Integer, DomainEntry> followingEntryMap) {
+    public void incrementCounterFrom(Map<Integer, DomainEntry> followingEntryMap) {
         for (int i = 0; i < pointers.length; i++) {
             DomainEntry domainEntryOfPointer = followingEntryMap.get(pointers[i]);
             assert domainEntryOfPointer != null;

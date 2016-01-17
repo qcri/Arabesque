@@ -9,7 +9,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 public class DomainEntrySet implements DomainEntry {
     private HashIntSet pointers;
@@ -116,7 +116,7 @@ public class DomainEntrySet implements DomainEntry {
     }
 
     @Override
-    public void incrementCounterFrom(ConcurrentHashMap<Integer, DomainEntry> followingEntryMap) {
+    public void incrementCounterFrom(Map<Integer, DomainEntry> followingEntryMap) {
         IntCursor pointersCursor = getPointersCursor();
         while (pointersCursor.moveNext()) {
             DomainEntry domainEntryOfPointer = followingEntryMap.get(pointersCursor.elem());
