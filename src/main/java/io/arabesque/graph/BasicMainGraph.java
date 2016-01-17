@@ -368,7 +368,7 @@ public class BasicMainGraph implements MainGraph {
                     throw new RuntimeException("Input graph isn't sorted by vertex id, or vertex id not sequential\n " +
                                                "Expecting:"+(prev_vertex_id+1) + " Found:"+vertex.getVertexId());
                 }
-                
+                prev_vertex_id = vertex.getVertexId();
                 addVertex(vertex);
 
                 int vertexId = vertex.getVertexId();
