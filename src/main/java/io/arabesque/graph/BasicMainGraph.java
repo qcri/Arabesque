@@ -332,6 +332,7 @@ public class BasicMainGraph implements MainGraph {
     }
 
     protected void readFromInputStream(InputStream is) {
+        int prev_vertex_id=-1;
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(is)));
 
@@ -363,6 +364,11 @@ public class BasicMainGraph implements MainGraph {
                 }
 
                 Vertex vertex = parseVertex(tokenizer);
+                if (prev_vertex_id+1 != vertex.getVertexId()){
+                    throw new RuntimeException("Input graph isn't sorted by vertex id, or vertex id not sequential\n " +
+                                               "Expecting:"+(prev_vertex_id+1) + " Found:"+vertex.getVertexId());
+                }
+                
                 addVertex(vertex);
 
                 int vertexId = vertex.getVertexId();
