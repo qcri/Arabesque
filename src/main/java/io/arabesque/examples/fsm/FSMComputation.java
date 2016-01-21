@@ -15,7 +15,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
     public static final int CONF_SUPPORT_DEFAULT = 4;
 
     public static final String CONF_MAXSIZE = "arabesque.fsm.maxsize";
-    public static final int CONF_MAXSIZE_DEFAULT = -1;
+    public static final int CONF_MAXSIZE_DEFAULT = Integer.MAX_VALUE;
 
     private DomainSupport reusableDomainSupport;
 
@@ -47,15 +47,10 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
         conf.registerAggregation(AGG_SUPPORT, conf.getPatternClass(), DomainSupport.class, false,
                 new DomainSupportReducer(), new DomainSupportEndAggregationFunction());
     }
-
-    @Override
-    public boolean filter(EdgeInducedEmbedding newEmbedding) {
-        return newEmbedding.getNumWords() < maxSize;
-    }
-
+    
     @Override
     public boolean shouldExpand(EdgeInducedEmbedding embedding) {
-        return maxSize < 0 || embedding.getNumWords() < maxSize;
+        return embedding.getNumWords() < maxSize;
     }
 
     @Override
