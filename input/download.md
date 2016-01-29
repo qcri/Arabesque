@@ -16,7 +16,7 @@ clique finding, motif counting, frequent subgraph mining and triangle counting.
 This jar is ideal if you simply want to test the example applications or manually setup
 your own project.
 
-[Download the latest JAR](http://maven.alexjf.net/io/arabesque/arabesque/1.0-BETA/arabesque-1.0-BETA-jar-with-dependencies.jar)
+[Download the latest JAR](arabesque-1.0.1-BETA-jar-with-dependencies.jar)
 
 To run any of the example applications, refer to [our user guide](user_guide.html#how-to-run-an-arabesque-job).
 
