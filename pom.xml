@@ -5,7 +5,7 @@
 
 	<groupId>io.arabesque</groupId>
 	<artifactId>arabesque</artifactId>
-	<version>1.0-BETA</version>
+	<version>1.0.1-BETA</version>
 	<name>Arabesque</name>
 	<description>A system for distributed graph mining</description>
 	<url>http://arabesque.io</url>

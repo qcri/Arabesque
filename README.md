@@ -2,7 +2,7 @@
 
 [http://arabesque.io](http://arabesque.io)
 
-*Current Version:* 1.0-BETA
+*Current Version:* 1.0.1-BETA
 
 Arabesque is a distributed graph mining system that enables quick and easy
 development of graph mining algorithms, while providing a scalable and efficient
@@ -22,12 +22,28 @@ Arabesque is open-source with the Apache 2.0 license.
 * [A functioning installation of Hadoop2 with MapReduce (local or in a cluster)](http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/)
 
 ## Preparing your input
-Arabesque currently takes as input graphs with the following format:
+Arabesque currently takes as input graphs with the following formats:
 
+* **Graphs label on vertex(default)**
 ```
 # <num vertices> <num edges>
 <vertex id> <vertex label> [<neighbour id1> <neighbour id2> ... <neighbour id n>]
 <vertex id> <vertex label> [<neighbour id1> <neighbour id2> ... <neighbour id n>]
+...
+```
+
+* **Graphs label on edges**
+To enable processing label on edges, in the yaml file, add the following lines
+```
+arabesque.graph.edge_labelled: true
+arabesque.graph.multigraph: true   # Set this to true if multiple edges
+                                     # exist between two vertices.
+```
+Input format
+```
+# <num vertices> <num edges>
+<vertex id> <vertex label> [<neighbour id1> <edge label> <neighbour id2> <edge label>... ]
+<vertex id> <vertex label> [<neighbour id1> <edge label> <neighbour id2> <edge label>... ]
 ...
 ```
 
