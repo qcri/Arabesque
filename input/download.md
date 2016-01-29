@@ -4,7 +4,7 @@ project: Arabesque
 
 # Github repo
 
-The source code can be downloaded from [Github](http://github/qcri/arabesque.io)
+The source code can be downloaded from [Github](https://github.com/Qatar-Computing-Research-Institute/Arabesque)
 
 Arabesque is licensed under Apache 2.0.
 

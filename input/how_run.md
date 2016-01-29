@@ -54,12 +54,28 @@ folder in the repository](https://github.com/Qatar-Computing-Research-Institute/
   Heavy aggregations handling thousands of different keys might benefit from being split into several parts to speedup execution and network communication. However, splitting simple aggregations will add unnecessary overhead.
 
 ## Requirements for Input Graph
-Arabesque currently takes as input graphs with the following format:
+Arabesque currently takes as input graphs with the following formats:
 
+* **Graphs label on vertex(default)**
 ```
 # <num vertices> <num edges>
 <vertex id> <vertex label> [<neighbour id1> <neighbour id2> ... <neighbour id n>]
 <vertex id> <vertex label> [<neighbour id1> <neighbour id2> ... <neighbour id n>]
+...
+```
+
+* **Graphs label on edges**
+To enable processing label on edges, in the yaml file, add the following lines
+``` 
+arabesque.graph.edge_labelled: true
+arabesque.graph.multigraph: true   # Set this to true if multiple edges 
+                                     # exist between two vertices.
+```
+Input format
+```
+# <num vertices> <num edges>
+<vertex id> <vertex label> [<neighbour id1> <edge label> <neighbour id2> <edge label>... ]
+<vertex id> <vertex label> [<neighbour id1> <edge label> <neighbour id2> <edge label>... ]
 ...
 ```
 
