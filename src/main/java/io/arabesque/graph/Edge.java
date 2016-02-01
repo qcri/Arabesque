@@ -6,7 +6,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-public class Edge implements Writable {
+public class Edge implements Writable, java.io.Serializable {
     public static final int DEFAULT_EDGE_ID = -1;
 
     private int edgeId;

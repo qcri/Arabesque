@@ -18,7 +18,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class MasterExecutionEngine extends MasterCompute {
+public class MasterExecutionEngine extends MasterCompute implements CommonMasterExecutionEngine {
     public static final String AGG_EMBEDDINGS_PROCESSED = "embeddings_processed";
     public static final String AGG_PROCESSED_SIZE_CACHE = "processed_size_cache";
     public static final String AGG_PROCESSED_SIZE_ODAG = "processed_size_odag";

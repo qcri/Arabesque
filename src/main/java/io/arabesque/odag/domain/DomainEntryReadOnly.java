@@ -38,7 +38,18 @@ public class DomainEntryReadOnly extends DomainEntrySet {
     public void write(DataOutput dataOutput,
             WriterSetConsumer writerSetConsumer)
             throws IOException {
-        throw new RuntimeException("It's read only, writing not allowed(?)");
+        //throw new RuntimeException("It's read only, writing not allowed(?)");
+        if (pointers == null) {
+           dataOutput.writeBoolean(false);
+        } else {
+           dataOutput.writeBoolean(true);
+           dataOutput.writeInt(pointers.length);
+           //writerSetConsumer.setOutput(dataOutput);
+           //pointers.forEach(writerSetConsumer);
+           for (int i = 0; i < pointers.length; ++i) {
+              dataOutput.writeInt(pointers[i]);
+           }
+        }
     }
 
     public int getNumPointers() {

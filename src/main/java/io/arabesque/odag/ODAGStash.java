@@ -11,11 +11,15 @@ import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
+import java.io.Externalizable;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 
-public class ODAGStash implements Writable {
+public class ODAGStash implements Writable, Externalizable {
     private static final Logger LOG =
             Logger.getLogger(ODAGStash.class);
 
@@ -25,6 +29,11 @@ public class ODAGStash implements Writable {
     public ODAGStash() {
         compressedEmbeddingsByPattern = new HashMap<>();
         this.reusablePattern = Configuration.get().createPattern();
+    }
+
+    public ODAGStash(Map<Pattern, ODAG> odagsByPattern) {
+       compressedEmbeddingsByPattern = odagsByPattern;
+       this.reusablePattern = Configuration.get().createPattern();
     }
 
     public void addEmbedding(Embedding embedding) {
@@ -91,6 +100,15 @@ public class ODAGStash implements Writable {
         }
     }
 
+    public void finalizeConstruction(ExecutorService pool, int parts) {
+       for (Map.Entry<Pattern, ODAG> entry : compressedEmbeddingsByPattern.entrySet()) {
+          Pattern pattern = entry.getKey();
+          ODAG odag = entry.getValue();
+          odag.setPattern (pattern);
+          odag.finalizeConstruction(pool, parts);
+       }
+    }
+
     @Override
     public void write(DataOutput dataOutput) throws IOException {
         dataOutput.writeInt(compressedEmbeddingsByPattern.size());
@@ -102,6 +120,12 @@ public class ODAGStash implements Writable {
             shrunkEmbeddings.write(dataOutput);
         }
     }
+
+    @Override
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+       write(objOutput);
+    }
+
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
@@ -118,6 +142,11 @@ public class ODAGStash implements Writable {
             shrunkEmbeddings.readFields(dataInput);
             compressedEmbeddingsByPattern.put(pattern, shrunkEmbeddings);
         }
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields (objInput);
     }
 
     public boolean isEmpty() {

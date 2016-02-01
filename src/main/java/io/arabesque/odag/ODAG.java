@@ -1,6 +1,7 @@
 package io.arabesque.odag;
 
 import io.arabesque.computation.Computation;
+import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.domain.DomainStorage;
 import io.arabesque.odag.domain.DomainStorageReadOnly;
@@ -10,26 +11,35 @@ import io.arabesque.pattern.Pattern;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
+import java.io.Externalizable;
 import java.util.concurrent.ExecutorService;
 
-public class ODAG implements Writable {
+public class ODAG implements Writable, Externalizable {
     private Pattern pattern;
     private DomainStorage storage;
 
+    private boolean serializeAsReadOnly;
+
     public ODAG(Pattern pattern, int numberOfDomains) {
         this.pattern = pattern;
-
+        serializeAsReadOnly = false;
         storage = new DomainStorage(numberOfDomains);
     }
 
     public ODAG(boolean readOnly) {
-        if (readOnly) {
-            storage = new DomainStorageReadOnly();
-        } else {
-            storage = new DomainStorage();
-        }
+        storage = createDomainStorage(readOnly);
+    }
+
+    public ODAG() {
+    }
+
+    private DomainStorage createDomainStorage(boolean readOnly) {
+        if (readOnly) return new DomainStorageReadOnly();
+        else return new DomainStorage();
     }
 
     public int getNumberOfDomains() {
@@ -71,6 +81,12 @@ public class ODAG implements Writable {
         storage.write(out);
     }
 
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+       out.writeBoolean(serializeAsReadOnly);
+       write(out);
+    }
+
     public void writeInParts(DataOutput[] outputs, boolean[] hasContent) throws IOException {
         storage.write(outputs, hasContent);
     }
@@ -81,8 +97,23 @@ public class ODAG implements Writable {
         storage.readFields(in);
     }
 
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+       serializeAsReadOnly = in.readBoolean();
+       storage = createDomainStorage(serializeAsReadOnly);
+       readFields(in);
+    }
+
     public void clear() {
         storage.clear();
+    }
+
+    public boolean getSerializeasWriteOnly() {
+       return serializeAsReadOnly;
+    }
+
+    public void setSerializeAsWriteOnly (boolean serializeAsReadOnly) {
+       this.serializeAsReadOnly = serializeAsReadOnly;
     }
 
     public StorageStats getStats() {
@@ -97,4 +128,9 @@ public class ODAG implements Writable {
         return pattern;
     }
 
+    @Override
+    public String toString() {
+       return (pattern != null ? pattern.toString() : "") +
+          storage.toString();
+    }
 }

@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class Configuration<O extends Embedding> {
+public class Configuration<O extends Embedding> implements java.io.Serializable {
     private static final Logger LOG = Logger.getLogger(Configuration.class);
     public static final int KB = 1024;
     public static final int MB = 1024 * KB;
@@ -118,7 +118,7 @@ public class Configuration<O extends Embedding> {
     private int defaultAggregatorSplits;
 
     private Map<String, AggregationStorageMetadata> aggregationsMetadata;
-    private MainGraph mainGraph;
+    private transient MainGraph mainGraph;
     private boolean isGraphEdgeLabelled;
     private boolean initialized = false;
     private boolean isGraphMulti;
@@ -131,7 +131,7 @@ public class Configuration<O extends Embedding> {
         return (C) instance;
     }
 
-    public static void setIfUnset(Configuration configuration) {
+    public synchronized static void setIfUnset(Configuration configuration) {
         if (instance == null) {
             set(configuration);
         }
@@ -151,6 +151,8 @@ public class Configuration<O extends Embedding> {
     public Configuration(ImmutableClassesGiraphConfiguration giraphConfiguration) {
         this.giraphConfiguration = giraphConfiguration;
     }
+
+    public Configuration() {}
 
     public void initialize() {
         if (initialized) {
@@ -254,8 +256,20 @@ public class Configuration<O extends Embedding> {
         return patternClass;
     }
 
+    public void setPatternClass(Class<? extends Pattern> patternClass) {
+       this.patternClass = patternClass;
+    }
+
     public Pattern createPattern() {
         return ReflectionUtils.newInstance(getPatternClass());
+    }
+
+    public Class<? extends MainGraph> getMainGraphClass() {
+       return mainGraphClass;
+    }
+
+    public void setMainGraphClass(Class<? extends MainGraph> graphClass) {
+       mainGraphClass = graphClass;
     }
 
     public boolean isUseCompressedCaches() {
@@ -407,6 +421,10 @@ public class Configuration<O extends Embedding> {
 
     public Class<? extends Computation> getComputationClass() {
         return computationClass;
+    }
+
+    public void setComputationClass(Class<? extends Computation> computationClass) {
+       this.computationClass = computationClass;
     }
 }
 

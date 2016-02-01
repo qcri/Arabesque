@@ -31,6 +31,9 @@
 *.ipr
 *.iws
 
+# Vim editor swap files
+*.swp
+
 ## Plugin-specific files:
 
 # IntelliJ

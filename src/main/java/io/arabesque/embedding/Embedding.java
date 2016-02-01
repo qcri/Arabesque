@@ -33,4 +33,5 @@ public interface Embedding extends WritableObject {
     boolean isCanonicalEmbeddingWithWord(int wordId);
 
     String toOutputString();
+
 }

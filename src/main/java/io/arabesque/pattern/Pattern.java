@@ -5,7 +5,9 @@ import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.map.IntIntMap;
 import org.apache.hadoop.io.Writable;
 
-public interface Pattern extends Writable {
+import java.io.Externalizable;
+
+public interface Pattern extends Writable, Externalizable {
     Pattern copy();
 
     void reset();

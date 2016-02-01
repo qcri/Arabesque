@@ -19,6 +19,7 @@ import java.util.concurrent.Future;
 
 public class DomainStorage extends Storage<DomainStorage> {
     protected boolean countsDirty;
+    protected boolean keysOrdered;
     protected ArrayList<ConcurrentHashMap<Integer, DomainEntry>> domainEntries;
     protected int[] domain0OrderedKeys;
     protected int numberOfDomains;
@@ -27,12 +28,14 @@ public class DomainStorage extends Storage<DomainStorage> {
     public DomainStorage(int numberOfDomains) {
         setNumberOfDomains(numberOfDomains);
         countsDirty = false;
+        keysOrdered = false;
         writerSetConsumer = new WriterSetConsumer();
     }
 
     public DomainStorage() {
         numberOfDomains = -1;
         countsDirty = false;
+        keysOrdered = false;
         writerSetConsumer = new WriterSetConsumer();
     }
 
@@ -43,6 +46,17 @@ public class DomainStorage extends Storage<DomainStorage> {
 
         ensureCanStoreNDomains(numberOfDomains);
         this.numberOfDomains = numberOfDomains;
+    }
+
+    public ArrayList<ConcurrentHashMap<Integer, DomainEntry>> getDomainEntries() {
+       return domainEntries;
+    }
+
+    public int getNumberOfEntries() {
+       int numEntries = 0;
+       for (ConcurrentHashMap<Integer, DomainEntry> domain: domainEntries)
+          numEntries += domain.size();
+       return numEntries;
     }
 
     private void ensureCanStoreNDomains(int nDomains) {
@@ -62,7 +76,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         for (int i = 0; i < delta; ++i) {
             domainEntries.add(new ConcurrentHashMap<Integer, DomainEntry>());
         }
-    }
+    } 
 
     @Override
     public void addEmbedding(Embedding embedding) {
@@ -136,7 +150,8 @@ public class DomainStorage extends Storage<DomainStorage> {
     @Override
     public long getNumberOfEnumerations() {
         if (countsDirty) {
-            throw new RuntimeException("Should have never been the case");
+            //throw new RuntimeException("Should have never been the case");
+            return -1;
         }
 
         long num = 0;
@@ -171,14 +186,17 @@ public class DomainStorage extends Storage<DomainStorage> {
         throw new RuntimeException("Shouldn't be read");
     }
 
-    public void finalizeConstruction(ExecutorService pool, int numParts) {
+    public synchronized void finalizeConstruction(ExecutorService pool, int numParts) {
         recalculateCounts(pool, numParts);
         orderDomain0Keys();
     }
 
     private void orderDomain0Keys() {
+        if (domain0OrderedKeys != null && keysOrdered)
+           return;
         domain0OrderedKeys = Ints.toArray(domainEntries.get(0).keySet());
         Arrays.sort(domain0OrderedKeys);
+        keysOrdered = true;
     }
 
     private class RecalculateTask implements Runnable {

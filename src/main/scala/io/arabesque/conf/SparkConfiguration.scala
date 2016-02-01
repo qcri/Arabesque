@@ -1,22 +1,15 @@
 package io.arabesque.conf
 
-import scala.reflect.ClassTag
-
-import org.apache.hadoop.fs.Path
-
-import io.arabesque.computation.Computation
-import io.arabesque.computation.VertexInducedComputation
-
-import io.arabesque.embedding.Embedding
-import io.arabesque.embedding.VertexInducedEmbedding
-
-import io.arabesque.graph.MainGraph
-import io.arabesque.graph.BasicMainGraph
-
+import io.arabesque.computation.{Computation, VertexInducedComputation}
+import io.arabesque.embedding.{Embedding, VertexInducedEmbedding}
+import io.arabesque.graph.{MainGraph, BasicMainGraph}
 import io.arabesque.pattern.Pattern
 
 import scala.collection.mutable.Map
 
+/**
+ * Configurations are passed along in this mapping
+ */
 class SparkConfiguration[O <: Embedding](confs: Map[String,String]) extends Configuration[O] {
 
   var numPartitions: Int = _
@@ -31,10 +24,7 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,String]) extends Conf
     val embeddClass = "io.arabesque.embedding.VertexInducedEmbedding"
     val compClass = "io.arabesque.examples.motif.MotifComputation"
     val pattClass = "io.arabesque.pattern.JBlissPattern"
-    //val graphFile = "hdfs://localhost:9000/citeseer-single-label.graph"
-    val graphFile = confs.getOrElse("input_graph_path",
-      "/home/viniciusvdias/environments/Arabesque/data/mico-qanat-sortedByDegree.txt")
-
+    val graphFile = confs.get("input_graph_path").get
 
     // common configs
     setMainGraphClass (Class.forName (graphClass).asInstanceOf[Class[MainGraph]])
@@ -52,12 +42,11 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,String]) extends Conf
       } catch {
         case e: RuntimeException =>
           println (".main graph is null, gonna read it.")
-          //setMainGraph(new BasicMainGraph (new Path(graphFile), false, false))
+          //setMainGraph(new BasicMainGraph (new org.apache.hadoop.fs.Path(graphFile), false, false))
           setMainGraph(new BasicMainGraph (java.nio.file.Paths.get(graphFile), false, false))
           Configuration.setIfUnset (this)
       }
     }
-
   }
 
   override def isOutputActive() = false

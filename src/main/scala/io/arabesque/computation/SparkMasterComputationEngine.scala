@@ -2,10 +2,8 @@
 
 package io.arabesque.computation
 
-import org.apache.spark.Logging
-import org.apache.spark.SparkContext
+import org.apache.spark.{Logging, SparkContext, SparkConf}
 import org.apache.spark.SparkContext._
-import org.apache.spark.SparkConf
 import org.apache.spark.SerializableWritable
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.{Accumulator, Accumulable}
@@ -13,15 +11,12 @@ import org.apache.spark.{AccumulatorParam, AccumulableParam}
 
 import org.apache.spark.util.SizeEstimator
 
-import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{Writable, LongWritable, IntWritable}
 
 import io.arabesque.graph.BasicMainGraph
-import io.arabesque.graph._
 
 import io.arabesque.odag.{ODAG, ODAGStash}
-import io.arabesque.embedding.Embedding
-import io.arabesque.embedding.VertexInducedEmbedding
+import io.arabesque.embedding.{Embedding, VertexInducedEmbedding}
 import io.arabesque.pattern.Pattern
 
 import io.arabesque.conf.{Configuration, SparkConfiguration}
@@ -29,25 +24,36 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map
 
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.concurrent.{ExecutorService, Executors}
 import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
                 DataInput, ByteArrayInputStream, DataInputStream, InputStream}
 
+/**
+ * Underlying engine that runs the Arabesque master.
+ * It interacts directly with the RDD interface in Spark by handling the
+ * SparkContext.
+ */
 class SparkMasterExecutionEngine(confs: Map[String,String]) extends
     CommonMasterExecutionEngine with Logging {
 
-  private val conf = new SparkConf().setAppName("Spark Master Execution Engine")
+  private val conf = new SparkConf().setAppName("Arabesque Master Execution Engine")
+
+
+  // TODO would be interesting to make Kryo the default serializer for Spark
+  // however it would require great changes in the way classes are serialized by
+  // default (Serializable vs. Externalizable vs. Writable for Hadoop)
   //conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
   //conf.registerKryoClasses(Array(
   //  classOf[ODAG]
   //  ))
+
   private val sc = new SparkContext(conf)
   sc.setLogLevel ("INFO")
 
   private val sparkConf = new SparkConfiguration(confs)
   sparkConf.initialize()
 
+  // counting of motifs
   private var accums: Map[String,Accumulable[Map[Pattern,Long], (Pattern,Long)]] = Map(
     "motifs" -> sc.accumulable(Map.empty[Pattern,Long], "motifs")(PatternLongAccumParam)
   )
@@ -62,6 +68,9 @@ class SparkMasterExecutionEngine(confs: Map[String,String]) extends
 
   override def getSuperstep(): Long = superstep
 
+  /**
+   * Master's computation takes place here, superstep by superstep
+   */
   def compute() = {
 
     // accumulatores and spark configuration w.r.t. Spark
@@ -86,6 +95,8 @@ class SparkMasterExecutionEngine(confs: Map[String,String]) extends
         execEngine.init()
         execEngine.compute (Iterator (new ODAGStash(globalAggBc.value)))
         execEngine.finalize()
+
+        // TODO three options currently available to communicate ODAGs
         //execEngine.flushInParts
         //execEngine.flush
         execEngine.flushOutputs
@@ -165,16 +176,22 @@ class SparkMasterExecutionEngine(confs: Map[String,String]) extends
   }
 
   override def finalize() = {
+
+    // log the accumulators' results
     accums.foreach {case (name,accum) =>
       accum.value.toSeq.sortBy(_._2).foreach {case (k,v) =>
         logInfo (s"$name: $k -> $v")
       }
     }
     super.finalize()
-    sc.stop()
+    sc.stop() // stop spark context, this is important
   }
 }
 
+/**
+ * Companion object with the main function
+ * TODO an integration with ArabesqueRunner would deprecate this
+ */
 object SparkMasterExecutionEngine {
   def main(args: Array[String]) {
     val confs: Map[String,String] = Map.empty ++ args.map {str =>
@@ -188,6 +205,8 @@ object SparkMasterExecutionEngine {
   }
 }
 
+// ad-hoc accumulators (aka things that are aggregated in the master) for the
+// motif-problem
 abstract class ArabesqueAccumulatorParam[K,V] extends AccumulableParam[Map[K,V], (K,V)] {
   def zero(initialValue: Map[K,V]): Map[K,V] = initialValue
 }

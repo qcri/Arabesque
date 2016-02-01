@@ -20,7 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ExecutionEngine<O extends Embedding>
-        extends BasicComputation<IntWritable, NullWritable, NullWritable, MessageWrapper> {
+        extends BasicComputation<IntWritable, NullWritable, NullWritable, MessageWrapper> 
+        implements CommonExecutionEngine<O> {
     private static final Logger LOG = Logger.getLogger(ExecutionEngine.class);
 
     protected Configuration<O> configuration;
@@ -103,7 +104,8 @@ public class ExecutionEngine<O extends Embedding>
         }
     }
 
-    protected void output(String outputString) {
+    @Override
+    public void output(String outputString) {
         workerContext.output(outputString);
         numberOfEmbeddingsOutput++;
     }
@@ -200,7 +202,7 @@ public class ExecutionEngine<O extends Embedding>
         computation.expand(currentObject);
     }
 
-    protected void processExpansion(O expansion) {
+    public void processExpansion(O expansion) {
         currentEmbeddingChildrenGenerated++;
         communicationStrategy.addOutboundEmbedding(expansion);
     }
@@ -231,5 +233,14 @@ public class ExecutionEngine<O extends Embedding>
         }
 
         return aggregationStorage;
+    }
+
+    public int getNumberPartitions() {
+        return workerContext.getNumberPartitions();
+    }
+
+    @Override
+    public void aggregate(String name, LongWritable value) {
+       super.aggregate (name, value);
     }
 }

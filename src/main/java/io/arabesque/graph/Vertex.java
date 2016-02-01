@@ -6,7 +6,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-public class Vertex implements Writable {
+public class Vertex implements Writable, java.io.Serializable {
 
     private int vertexId;
     private int vertexLabel;

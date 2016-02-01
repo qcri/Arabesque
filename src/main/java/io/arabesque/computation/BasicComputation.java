@@ -13,12 +13,12 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
-public abstract class BasicComputation<E extends Embedding> implements Computation<E> {
+public abstract class BasicComputation<E extends Embedding> implements Computation<E>, java.io.Serializable {
     private static final Logger LOG = Logger.getLogger(BasicComputation.class);
 
     private boolean outputEnabled;
 
-    private ExecutionEngine<E> underlyingExecutionEngine;
+    private CommonExecutionEngine<E> underlyingExecutionEngine;
     private MainGraph mainGraph;
     private Configuration configuration;
     private IntConsumer expandConsumer;
@@ -26,7 +26,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
     private E currentEmbedding;
 
     @Override
-    public final void setUnderlyingExecutionEngine(ExecutionEngine<E> underlyingExecutionEngine) {
+    public final void setUnderlyingExecutionEngine(CommonExecutionEngine<E> underlyingExecutionEngine) {
         this.underlyingExecutionEngine = underlyingExecutionEngine;
     }
 
@@ -34,9 +34,9 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         return mainGraph;
     }
 
-    public Configuration getConfiguration() {
-        return configuration;
-    }
+    //public Configuration getConfiguration() {
+    //    return configuration;
+    //}
 
     @Override
     public void init() {
@@ -48,7 +48,6 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         };
 
         mainGraph = Configuration.get().getMainGraph();
-        configuration = Configuration.get();
         numChildrenEvaluated = 0;
 
         outputEnabled = Configuration.get().isOutputActive();
@@ -70,7 +69,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         }
 
         IntCollection possibleExtensions = getPossibleExtensions(embedding);
-
+        
         if (possibleExtensions != null) {
             filter(embedding, possibleExtensions);
         }
@@ -173,14 +172,14 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
 
     @Override
     public int getNumberPartitions() {
-        WorkerContext workerContext = underlyingExecutionEngine.getWorkerContext();
-        return workerContext.getNumberPartitions();
+        return underlyingExecutionEngine.getNumberPartitions();
     }
 
     @Override
     public final int getStep() {
         // When we achieve steps that reach long values, the universe
         // will probably have ended anyway
+        // ... that's true, doesn't matter
         return (int) underlyingExecutionEngine.getSuperstep();
     }
 
@@ -209,8 +208,8 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         LongWritable longWritable = new LongWritable();
 
         LOG.info("Num children evaluated: " + numChildrenEvaluated);
-        longWritable.set(numChildrenEvaluated);
-        underlyingExecutionEngine.aggregate(MasterExecutionEngine.AGG_CHILDREN_EVALUATED, longWritable);
+        //longWritable.set(numChildrenEvaluated);
+        //underlyingExecutionEngine.aggregate(MasterExecutionEngine.AGG_CHILDREN_EVALUATED, longWritable);
     }
 
     public void output(Embedding embedding) {

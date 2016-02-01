@@ -16,7 +16,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
 
 public abstract class BasicPattern implements Pattern {
@@ -43,7 +45,7 @@ public abstract class BasicPattern implements Pattern {
     // }}
 
     // Others {{
-    private final MainGraph mainGraph;
+    private transient final MainGraph mainGraph;
     private PatternEdgePool patternEdgePool;
 
     protected volatile boolean dirtyVertexPositionEquivalences;
@@ -462,6 +464,11 @@ public abstract class BasicPattern implements Pattern {
     }
 
     @Override
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+       write (objOutput);
+    }
+
+    @Override
     public void readFields(DataInput dataInput) throws IOException {
         reset();
 
@@ -471,6 +478,10 @@ public abstract class BasicPattern implements Pattern {
         for (int i = 0; i < vertices.size(); ++i) {
             vertexPositions.put(vertices.getUnchecked(i), i);
         }
+    }
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields(objInput);
     }
 
     protected PatternEdgeArrayList createPatternEdgeArrayList() {
@@ -520,13 +531,15 @@ public abstract class BasicPattern implements Pattern {
 
         BasicPattern that = (BasicPattern) o;
 
-        return edges.equals(that.edges);
+        return this.hashCode() == that.hashCode();//edges.equals(that.edges);
 
     }
 
     @Override
     public int hashCode() {
-        return edges.hashCode();
+       // TODO
+        return edges.isEmpty() ? mainGraph.getVertex(vertices.getUnchecked(0)).getVertexLabel() :
+           edges.hashCode();
     }
 
     public MainGraph getMainGraph() {

@@ -7,7 +7,7 @@ import net.openhft.koloboke.collect.map.IntIntMap;
 import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
 import net.openhft.koloboke.function.IntConsumer;
 
-public class BasicVertexNeighbourhood implements VertexNeighbourhood {
+public class BasicVertexNeighbourhood implements VertexNeighbourhood, java.io.Serializable {
     // Key = neighbour vertex id, Value = edge id that connects owner of neighbourhood with Key
     protected IntIntMap neighbourhoodMap;
 

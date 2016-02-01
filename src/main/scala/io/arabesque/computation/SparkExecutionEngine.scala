@@ -10,21 +10,20 @@ import io.arabesque.odag.{ODAGStash, ODAG}
 import io.arabesque.odag.ODAGStash._
 import io.arabesque.odag.domain.DomainEntry
 
-import org.apache.hadoop.io.Writable
-import org.apache.hadoop.io.LongWritable
+import org.apache.hadoop.io.{Writable, LongWritable}
 
-import scala.collection.mutable.Map
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{Map, ListBuffer}
 import scala.collection.JavaConversions._
 
-import java.util.concurrent.Executors
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.{Executors, ExecutorService}
 import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
                 DataInput, ByteArrayInputStream, DataInputStream, InputStream}
 
-import scala.annotation.tailrec
-
 /**
+ * Underlying engine that runs Arabesque workers in Spark.
+ * Each instance of this engine corresponds to a partition in Spark computation
+ * model. Instances lifetimes refers also to one superstep of computation due
+ * RDD's immutability.
  */
 class SparkExecutionEngine[O <: Embedding](
   partitionId: Int,
@@ -98,7 +97,7 @@ class SparkExecutionEngine[O <: Embedding](
    *
    * @param inboundStashes iterator of ODAG stashes
    */
-  @tailrec
+  @scala.annotation.tailrec
   private def expansionCompute(inboundStashes: Iterator[ODAGStash]): Unit = {
     if (superstep == 0) { // bootstrap
 
@@ -196,7 +195,7 @@ class SparkExecutionEngine[O <: Embedding](
 
       val reusableOdag = new ODAG(odag.getPattern(), odag.getNumberOfDomains())
 
-      @tailrec
+      @scala.annotation.tailrec
       private def hasNextRec: Boolean = currEntriesIterator match {
         case None =>
           domainIterator.hasNext
@@ -209,7 +208,7 @@ class SparkExecutionEngine[O <: Embedding](
 
       override def hasNext = hasNextRec
 
-      @tailrec
+      @scala.annotation.tailrec
       private def nextRec: ((Pattern,Int,Int),ODAG) = currEntriesIterator match {
 
         case None => // set next domain and recursive call

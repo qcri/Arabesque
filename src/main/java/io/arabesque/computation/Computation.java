@@ -56,7 +56,7 @@ public interface Computation<E extends Embedding> {
     // }}}
 
     // {{{ Internal
-    void setUnderlyingExecutionEngine(ExecutionEngine<E> executionEngine);
+    void setUnderlyingExecutionEngine(CommonExecutionEngine<E> executionEngine);
     void expand(E embedding);
     Class<? extends Embedding> getEmbeddingClass();
     // }}}
