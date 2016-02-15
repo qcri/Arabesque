@@ -17,11 +17,14 @@ import net.openhft.koloboke.collect.set.hash.HashIntSets;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
+import java.io.Externalizable;
 import java.util.Arrays;
 
-public class DomainSupport implements Writable, PatternAggregationAwareValue {
+public class DomainSupport implements Writable, Externalizable, PatternAggregationAwareValue {
     private static final ThreadLocal<ClearSetConsumer> clearSetConsumer =
             new ThreadLocal<ClearSetConsumer>() {
                 @Override
@@ -152,6 +155,10 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
         setFromEmbedding = false;
         embedding = null;
     }
+    
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+       write (objOutput);
+    }
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
@@ -185,6 +192,11 @@ public class DomainSupport implements Writable, PatternAggregationAwareValue {
                 domainSets[i].forEach(intWriterConsumer);
             }
         }
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields (objInput);
     }
 
     @Override

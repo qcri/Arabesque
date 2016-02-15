@@ -1,6 +1,7 @@
 package io.arabesque;
 
 import io.arabesque.conf.YamlConfiguration;
+import io.arabesque.computation.SparkMasterExecutionEngine;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -9,6 +10,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+
+import scala.collection.JavaConversions;
 
 public class ArabesqueRunner implements Tool {
     /**
@@ -32,13 +35,35 @@ public class ArabesqueRunner implements Tool {
 
     @Override
     public int run(String[] args) throws Exception {
+        YamlConfiguration yamlConfig = new YamlConfiguration(args);
+        yamlConfig.load();
+
+        LOG.info ("execution engine " + yamlConfig.getExecutionEngine());
+
+        if (yamlConfig.isSparkExecutionEngine()) 
+           return runSpark (yamlConfig);
+        else if (yamlConfig.isGiraphExecutionEngine())
+           return runGiraph (yamlConfig);
+        else return 1;
+    }
+
+    private int runSpark(YamlConfiguration yamlConfig) throws Exception {
+       SparkMasterExecutionEngine masterEngine = new SparkMasterExecutionEngine(
+             JavaConversions.mapAsScalaMap(yamlConfig.getProperties())
+       );
+
+       masterEngine.init();
+       masterEngine.compute();
+       masterEngine.finalize();
+       return 0;
+    }
+
+    private int runGiraph(YamlConfiguration yamlConfig) throws Exception {
         if (null == getConf()) {
             conf = new Configuration();
         }
 
         GiraphConfiguration giraphConf = new GiraphConfiguration(getConf());
-        YamlConfiguration yamlConfig = new YamlConfiguration(args);
-        yamlConfig.load();
         yamlConfig.populateGiraphConfiguration(giraphConf);
 
         // set up job for various platforms

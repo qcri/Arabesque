@@ -4,7 +4,7 @@ import io.arabesque.aggregation.AggregationStorage;
 import org.apache.hadoop.io.Writable;
 
 public class MasterComputation {
-    private MasterExecutionEngine executionEngine;
+    private CommonMasterExecutionEngine executionEngine;
 
     public void init() {
         // Do nothing by default
@@ -31,7 +31,7 @@ public class MasterComputation {
         executionEngine.setAggregatedValue(name, aggregation);
     }
 
-    public void setUnderlyingExecutionEngine(MasterExecutionEngine executionEngine) {
+    public void setUnderlyingExecutionEngine(CommonMasterExecutionEngine executionEngine) {
         this.executionEngine = executionEngine;
     }
 }

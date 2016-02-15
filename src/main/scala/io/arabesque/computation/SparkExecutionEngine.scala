@@ -2,18 +2,26 @@ package io.arabesque.computation
 
 import org.apache.spark.Logging
 import org.apache.spark.{Accumulable, Accumulator}
+import org.apache.spark.broadcast.Broadcast
 
-import io.arabesque.conf.Configuration
+import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding.Embedding
 import io.arabesque.pattern.Pattern
 import io.arabesque.odag.{ODAGStash, ODAG}
 import io.arabesque.odag.ODAGStash._
 import io.arabesque.odag.domain.DomainEntry
+import io.arabesque.aggregation.{
+  AggregationStorage,
+  AggregationStorageFactory,
+  AggregationStorageMetadata
+}
 
 import org.apache.hadoop.io.{Writable, LongWritable}
 
 import scala.collection.mutable.{Map, ListBuffer}
 import scala.collection.JavaConversions._
+
+import scala.reflect.ClassTag
 
 import java.util.concurrent.{Executors, ExecutorService}
 import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
@@ -26,11 +34,11 @@ import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStrea
  * RDD's immutability.
  */
 class SparkExecutionEngine[O <: Embedding](
-  partitionId: Int,
-  superstep: Int,
-  accums: Map[String,Accumulable[Map[Pattern,Long],(Pattern,Long)]],
-  numEmbeddings: Accumulator[Long])
-    extends CommonExecutionEngine[O] with Logging {
+    partitionId: Int,
+    superstep: Int,
+    accums: Map[String,Accumulator[_]],
+    previousAggregationsBc: Broadcast[_])
+  extends CommonExecutionEngine[O] with Logging {
 
   // configuration has input parameters, computation knows how to ensure
   // arabesque's computational model
@@ -53,6 +61,10 @@ class SparkExecutionEngine[O <: Embedding](
   var numPartitionsPerWorker: Int = _
   var pool: ExecutorService = _
 
+  // aggregation storages
+  var aggregationStorageFactory: AggregationStorageFactory = _
+  var aggregationStorages: Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
+
   /**
    * Instantiates the computation, parameters and resources required to execute
    * the superstep in this partition
@@ -61,7 +73,12 @@ class SparkExecutionEngine[O <: Embedding](
     configuration = Configuration.get()
 
     computation = configuration.createComputation()
+    computation.setUnderlyingExecutionEngine (this)
     computation.init()
+    computation.initAggregations()
+
+    if (configuration.getEmbeddingClass() == null)
+      configuration.setEmbeddingClass (computation.getEmbeddingClass())
 
     nextEmbeddingStash = new ODAGStash()
 
@@ -69,10 +86,14 @@ class SparkExecutionEngine[O <: Embedding](
     maxBlockSize = configuration.getInteger ("maxBlockSize", 10000) // TODO: magic number ??
 
 
-    numPartitionsPerWorker = getNumberPartitions()
+    numPartitionsPerWorker = configuration.getInteger ("num_odag_parts", getNumberPartitions())
+    logInfo (s"num odag parts = $numPartitionsPerWorker")
     pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
-    computation.setUnderlyingExecutionEngine (this)
+    // aggregation storage
+    aggregationStorageFactory = new AggregationStorageFactory
+    aggregationStorages = Map.empty
+
   }
 
   /**
@@ -97,7 +118,6 @@ class SparkExecutionEngine[O <: Embedding](
    *
    * @param inboundStashes iterator of ODAG stashes
    */
-  @scala.annotation.tailrec
   private def expansionCompute(inboundStashes: Iterator[ODAGStash]): Unit = {
     if (superstep == 0) { // bootstrap
 
@@ -105,13 +125,13 @@ class SparkExecutionEngine[O <: Embedding](
       computation.expand (initialEmbedd)
 
     } else {
-      getNextInboundEmbedding (inboundStashes) match {
+      var hasNext = true
+      while (hasNext) getNextInboundEmbedding (inboundStashes) match {
         case None =>
+          hasNext = false
 
         case Some(embedding) =>
           internalCompute (embedding)
-          // go for next embedding from stash
-          expansionCompute (inboundStashes)
 
       }
     }
@@ -165,12 +185,38 @@ class SparkExecutionEngine[O <: Embedding](
     }
   }
 
+ 
+  /**
+   * Flushes the aggregators registered with the computation. More specifically,
+   * AggregationStorages are accumulated in 'Spark Accumulators'
+   */
+  def flushAggregators = {
+    // accumulates an aggregator in the corresponding spark accumulator
+    def accumulate[T : ClassTag](it: T, accum: Accumulator[_]) = {
+      accum.asInstanceOf[Accumulator[T]] += it
+    }
+    // does the final local aggregation
+    // e.g. for motifs, turns quick patterns into canonical ones
+    def aggregate[K <: Writable, V <: Writable](agg1: AggregationStorage[K,V], agg2: AggregationStorage[_,_]) = {
+      agg1.finalLocalAggregate (agg2.asInstanceOf[AggregationStorage[K,V]])
+      agg1
+    }
+    for ((name,aggStorage) <- aggregationStorages.iterator) {
+      val finalAggStorage = aggregate (
+        aggregationStorageFactory.createAggregationStorage (name),
+        aggStorage
+      )
+      accumulate (finalAggStorage, accums(name))
+    }
+  }
+
   /**
    * Naively flushes outbound odags
    *
    * @return iterator of pairs of (pattern, odag)
    */
-  def flush: Iterator[(Pattern,ODAG)]  = {
+  def flushByPattern: Iterator[(Pattern,ODAG)]  = {
+    flushAggregators
     // consume content in *nextEmbeddingStash*
     for (odag <- nextEmbeddingStash.getEzips().iterator)
       yield (odag.getPattern(), odag)
@@ -181,7 +227,9 @@ class SparkExecutionEngine[O <: Embedding](
    *
    *  @return iterator of pairs of ((pattern,domainId,wordId), odag_with_one_entry)
    */
-  def flushInParts: Iterator[((Pattern,Int,Int), ODAG)] = {
+  def flushByEntries: Iterator[((Pattern,Int,Int), ODAG)] = {
+
+    flushAggregators
 
     /**
      * Iterator that split a big ODAG into small ODAGs containing only one entry
@@ -238,7 +286,9 @@ class SparkExecutionEngine[O <: Embedding](
    *
    * @return iterator of pairs ((pattern,partId), bytes)
    */
-  def flushOutputs: Iterator[((Pattern,Int),Array[Byte])] = {
+  def flushByParts: Iterator[((Pattern,Int),Array[Byte])] = {
+
+    flushAggregators
 
     val outputs = Array.fill[ByteArrayOutputStream](numPartitionsPerWorker)(new ByteArrayOutputStream())
     def createDataOutput(output: OutputStream): DataOutput = new DataOutputStream(output)
@@ -265,7 +315,7 @@ class SparkExecutionEngine[O <: Embedding](
         }
       }
     }
-    
+
     parts.iterator
   }
 
@@ -287,22 +337,43 @@ class SparkExecutionEngine[O <: Embedding](
   }
 
   /**
-   * TODO
+   *TODO
    */
-  override def getAggregatedValue[A <: Writable](name: String): A = {
-    null.asInstanceOf[A]
+  override def getAggregatedValue[A <: Writable](name: String): A =
+    previousAggregationsBc.value.asInstanceOf[Map[String,A]].get(name) match {
+      case Some(aggStorage) => aggStorage
+      case None =>
+        logWarning (s"Previous aggregation storage $name not found")
+        null.asInstanceOf[A]
+    }
+
+  /**
+   * Maps (key,value) to the respective local aggregator
+   *
+   * @param name identifies the aggregator
+   * @param key key to account for
+   * @param value value to be accounted for key in that aggregator
+   * 
+   */
+  override def map[K <: Writable, V <: Writable](name: String, key: K, value: V) = {
+    val aggStorage = getAggregationStorage[K,V] (name)
+    aggStorage.aggregateWithReusables (key, value)
   }
 
   /**
-   * TODO Right now it adds to two accumulators: (1) counting by motif pattern
-   * and (2) total of embeddings processed
+   * Retrieves or creates the local aggregator for the specified name.
+   * Obs. the name must match to the aggregator's metadata configured in
+   * *initAggregations* (Computation)
+   *
+   * @param name aggregator's name
+   * @return an aggregation storage with the specified name
    */
-  override def map[K <: Writable, V <: Writable](name: String, key: K, value: V) = {
-    accums.get(name) match {
-      case Some(accum) =>
-        numEmbeddings += 1
-        accum += (key.asInstanceOf[Pattern], value.asInstanceOf[LongWritable].get())
-    }
+  private def getAggregationStorage[K <: Writable, V <: Writable](name: String): AggregationStorage[K,V] = aggregationStorages.get(name) match {
+    case Some(aggregationStorage : AggregationStorage[K,V]) => aggregationStorage
+    case None =>
+      val aggregationStorage = aggregationStorageFactory.createAggregationStorage (name)
+      aggregationStorages.update (name, aggregationStorage)
+      aggregationStorage.asInstanceOf[AggregationStorage[K,V]]
   }
 
   // other functions
@@ -316,6 +387,6 @@ class SparkExecutionEngine[O <: Embedding](
   }
 
   override def output(outputString: String) = {
-    logInfo (outputString)
+    //logInfo (outputString)
   }
 }

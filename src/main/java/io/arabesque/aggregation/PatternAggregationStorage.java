@@ -7,7 +7,9 @@ import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.Iterator;
@@ -171,6 +173,18 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
     }
 
     @Override
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+        super.writeExternal (objOutput);
+
+        objOutput.writeInt(quick2CanonicalMap.size());
+
+        for (Map.Entry<K, K> quick2CanonicalEntry : quick2CanonicalMap.entrySet()) {
+            quick2CanonicalEntry.getKey().write(objOutput);
+            quick2CanonicalEntry.getValue().write(objOutput);
+        }
+    }
+
+    @Override
     public void readFields(DataInput dataInput) throws IOException {
         super.readFields(dataInput);
 
@@ -185,6 +199,28 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
 
                 K canonical = keyClassConstructor.newInstance();
                 canonical.readFields(dataInput);
+
+                quick2CanonicalMap.put(quick, canonical);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error reading quick2canonical mapping", e);
+        }
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+        super.readExternal (objInput);
+        try {
+            Constructor<K> keyClassConstructor = keyClass.getConstructor();
+
+            int sizeQuick2CanonicalMap = objInput.readInt();
+
+            for (int i = 0; i < sizeQuick2CanonicalMap; ++i) {
+                K quick = keyClassConstructor.newInstance();
+                quick.readFields(objInput);
+
+                K canonical = keyClassConstructor.newInstance();
+                canonical.readFields(objInput);
 
                 quick2CanonicalMap.put(quick, canonical);
             }

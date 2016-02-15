@@ -9,12 +9,16 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
+import java.io.Externalizable;
 import java.lang.reflect.Constructor;
 import java.util.*;
+import org.apache.log4j.Logger;
 
-public class AggregationStorage<K extends Writable, V extends Writable> implements Writable {
+public class AggregationStorage<K extends Writable, V extends Writable> implements Writable, Externalizable {
     private String name;
     protected Map<K, V> keyValueMap;
     protected Class<K> keyClass;
@@ -162,6 +166,61 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
             entry.getKey().write(dataOutput);
             entry.getValue().write(dataOutput);
         }
+
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+        objOutput.writeUTF(name);
+
+        objOutput.writeObject (keyClass);
+        objOutput.writeObject (valueClass);
+        objOutput.writeObject (reductionFunction);
+        objOutput.writeObject (endAggregationFunction);
+
+        objOutput.writeInt(keyValueMap.size());
+        for (Map.Entry<K, V> entry : keyValueMap.entrySet()) {
+            entry.getKey().write(objOutput);
+            entry.getValue().write(objOutput);
+        }
+
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+
+        name = objInput.readUTF();
+
+        keyClass = (Class<K>) objInput.readObject();
+        valueClass = (Class<V>) objInput.readObject();
+        reductionFunction = (ReductionFunction<V>) objInput.readObject();
+        endAggregationFunction = (EndAggregationFunction<K,V>) objInput.readObject();
+
+        if (keyValueMap == null) {
+            keyValueMap = new HashMap<>();
+        }
+
+        try {
+
+            Constructor<K> keyClassConstructor = keyClass.getConstructor();
+            Constructor<V> valueClassConstructor = valueClass.getConstructor();
+
+            int numEntries = objInput.readInt();
+
+            for (int i = 0; i < numEntries; ++i) {
+                K key = keyClassConstructor.newInstance();
+
+                key.readFields(objInput);
+
+                V value = valueClassConstructor.newInstance();
+
+                value.readFields(objInput);
+
+                keyValueMap.put(key, value);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error reading aggregation storage", e);
+        }
     }
 
     @Override
@@ -194,6 +253,8 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
         }
 
     }
+
+    
 
     public void endedAggregation() {
         if (endAggregationFunction != null) {

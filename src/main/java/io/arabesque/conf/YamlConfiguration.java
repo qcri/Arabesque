@@ -38,6 +38,11 @@ public class YamlConfiguration {
 
     private static final List<String> BASE_CONFIGS = Lists.newArrayList(DEFAULT_CONFIGURATION);
 
+    // execution engine
+    private static final String EXECUTION_ENGINE = "execution_engine";
+    private static final String SPARK = "spark";
+    private static final String GIRAPH = "giraph";
+
 
     private static final Options CMDLINE_OPTIONS;
     private static final Map<String, GiraphConfigurationAssignment> VALID_PROPERTIES =
@@ -138,6 +143,10 @@ public class YamlConfiguration {
         }
     }
 
+    public Map<String, Object> getProperties() {
+       return properties;
+    }
+
     public Object get(String key) {
         return properties.get(key);
     }
@@ -152,6 +161,18 @@ public class YamlConfiguration {
 
     public Boolean getBoolean(String key) {
         return Boolean.valueOf(getString(key));
+    }
+
+    public boolean isSparkExecutionEngine() {
+       return getString(EXECUTION_ENGINE).equals(SPARK);
+    }
+
+    public boolean isGiraphExecutionEngine() {
+       return getString(EXECUTION_ENGINE).equals(GIRAPH);
+    }
+
+    public String getExecutionEngine() {
+       return getString (EXECUTION_ENGINE);
     }
 
     public void populateGiraphConfiguration(GiraphConfiguration configuration) {

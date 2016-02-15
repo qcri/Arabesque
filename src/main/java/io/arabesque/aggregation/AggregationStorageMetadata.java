@@ -3,7 +3,9 @@ package io.arabesque.aggregation;
 import io.arabesque.aggregation.reductions.ReductionFunction;
 import org.apache.hadoop.io.Writable;
 
-public class AggregationStorageMetadata<K extends Writable, V extends Writable> {
+import java.io.Serializable;
+
+public class AggregationStorageMetadata<K extends Writable, V extends Writable> implements Serializable {
     private Class<K> keyClass;
     private Class<V> valueClass;
     private boolean persistent;

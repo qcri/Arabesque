@@ -8,6 +8,7 @@ import org.apache.spark.SerializableWritable
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.{Accumulator, Accumulable}
 import org.apache.spark.{AccumulatorParam, AccumulableParam}
+import org.apache.spark.rdd.RDD
 
 import org.apache.spark.util.SizeEstimator
 
@@ -19,25 +20,27 @@ import io.arabesque.odag.{ODAG, ODAGStash}
 import io.arabesque.embedding.{Embedding, VertexInducedEmbedding}
 import io.arabesque.pattern.Pattern
 
-import io.arabesque.conf.{Configuration, SparkConfiguration}
+import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
 
-import scala.collection.JavaConversions._
+import io.arabesque.conf.{Configuration, SparkConfiguration}
+import io.arabesque.conf.Configuration._
+
 import scala.collection.mutable.Map
+import scala.collection.JavaConversions._
 
 import java.util.concurrent.{ExecutorService, Executors}
 import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
                 DataInput, ByteArrayInputStream, DataInputStream, InputStream}
+
+import scala.reflect.ClassTag
 
 /**
  * Underlying engine that runs the Arabesque master.
  * It interacts directly with the RDD interface in Spark by handling the
  * SparkContext.
  */
-class SparkMasterExecutionEngine(confs: Map[String,String]) extends
+class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
     CommonMasterExecutionEngine with Logging {
-
-  private val conf = new SparkConf().setAppName("Arabesque Master Execution Engine")
-
 
   // TODO would be interesting to make Kryo the default serializer for Spark
   // however it would require great changes in the way classes are serialized by
@@ -46,23 +49,47 @@ class SparkMasterExecutionEngine(confs: Map[String,String]) extends
   //conf.registerKryoClasses(Array(
   //  classOf[ODAG]
   //  ))
+  
+  private var sparkConf: SparkConfiguration[_ <: Embedding] = _
 
-  private val sc = new SparkContext(conf)
-  sc.setLogLevel ("INFO")
+  private var sc: SparkContext = _
 
-  private val sparkConf = new SparkConfiguration(confs)
-  sparkConf.initialize()
-
-  // counting of motifs
-  private var accums: Map[String,Accumulable[Map[Pattern,Long], (Pattern,Long)]] = Map(
-    "motifs" -> sc.accumulable(Map.empty[Pattern,Long], "motifs")(PatternLongAccumParam)
-  )
+  private var aggAccums: Map[String,Accumulator[_]] = _
 
   private var superstep = 0
 
-  def init() = { }
+  private var masterComputation: MasterComputation = _
+
+  def init() = {
+    sparkConf = new SparkConfiguration(confs)
+    sparkConf.initialize()
+
+    sc = new SparkContext(sparkConf.nativeSparkConf)
+    val logLevel = sparkConf.getString ("log_level", "INFO").toUpperCase
+    sc.setLogLevel (logLevel)
+
+    // master computation
+    masterComputation = sparkConf.createMasterComputation()
+    masterComputation.setUnderlyingExecutionEngine(this)
+    masterComputation.init()
+
+    // master must know aggregators metadata
+    val computation = sparkConf.createComputation()
+    computation.initAggregations()
+
+    // create one spark accumulator for each aggregation storage registered by
+    // the computation via metadata
+    def createAggregationAccum[K <: Writable, V <: Writable](name: String, metadata: AggregationStorageMetadata[K,V]) = {
+      sc.accumulator (new AggregationStorage[K,V](name)) (new AggregationStorageParam[K,V](name))
+    }
+    aggAccums = Map.empty
+    for ((name,metadata) <- sparkConf.getAggregationsMetadata)
+      aggAccums.update (name, createAggregationAccum(name, metadata))
+
+  }
 
   override def haltComputation() = {
+    logInfo ("Halting master computation")
     sc.stop()
   }
 
@@ -72,117 +99,178 @@ class SparkMasterExecutionEngine(confs: Map[String,String]) extends
    * Master's computation takes place here, superstep by superstep
    */
   def compute() = {
+    val numPartitions = sparkConf.getInteger ("num_partitions", 10)
 
     // accumulatores and spark configuration w.r.t. Spark
-    val numEmbeddings = sc.accumulator(0L, "numEmbeddings")
-    val _accums = accums
+    val _aggAccums = aggAccums
     val sparkConfBc = sc.broadcast(sparkConf)
 
     // setup an RDD to simulate empty partitions and a broadcast variable to
     // communicate the global aggregated ODAGs on each step
-    val superstepRDD = sc.makeRDD (Seq.empty[Any], sparkConf.numPartitions)
-    var globalAggBc: Broadcast[scala.collection.Map[Pattern,ODAG]] = sc.broadcast (Map.empty)
+    val superstepRDD = sc.makeRDD (Seq.empty[Any], numPartitions).cache
+    var aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,ODAG]] = sc.broadcast (Map.empty)
 
-    do {
-      val _superstep = superstep
+    var previousAggregationsBc: Broadcast[_] = sc.broadcast (
+      aggAccums.map {case (name,accum) => (name,accum.value)}
+    )
+
+    val startTime = System.currentTimeMillis
+
+    def getExecutionEngine (superstep: Int) = {
 
       // read embeddings from global agg. ODAGs, expand, filter and process
-      val odags = superstepRDD.mapPartitionsWithIndex { (idx, _) =>
+      val execEngines = superstepRDD.mapPartitionsWithIndex { (idx, _) =>
 
         sparkConfBc.value.initialize()
 
-        val execEngine = new SparkExecutionEngine(idx, _superstep, _accums, numEmbeddings)
+        val execEngine = new SparkExecutionEngine(idx, superstep, _aggAccums, previousAggregationsBc)
         execEngine.init()
-        execEngine.compute (Iterator (new ODAGStash(globalAggBc.value)))
+        execEngine.compute (Iterator (new ODAGStash(aggregatedOdagsBc.value)))
         execEngine.finalize()
-
-        // TODO three options currently available to communicate ODAGs
-        //execEngine.flushInParts
-        //execEngine.flush
-        execEngine.flushOutputs
+        Iterator(execEngine)
       }
 
-      // (flushInParts) ODAGs' reduction by pattern as a key
-      //val globalAgg = odags.reduceByKey { (odag1, odag2) =>
-      //  odag1.aggregate (odag2)
-      //  odag1
-      //// resulting ODAGs must be deserialized for read(only)
-      //}.
-      //map { case ((pattern,_,_), odag) =>
-      //  (pattern, odag)
-      //}.reduceByKey { (odag1, odag2) =>
-      //  odag1.aggregate (odag2)
-      //  odag1
-      //}.
-      //map { case (pattern,odag) =>
-      //  odag.setSerializeAsWriteOnly(true)
-      //  (pattern,odag)
-      //}
-      
+      execEngines
+    }
 
-      // (flush)
-      //val globalAgg = odags.reduceByKey { (odag1, odag2) =>
-      //  odag1.aggregate (odag2)
-      //  odag1
-      //}.
-      //map { case (pattern, odag) =>
-      //  odag.setSerializeAsWriteOnly (true)
-      //  (pattern, odag)
-      //}
+    do {
 
-      // (flushOutputs)
-      val globalAgg = odags.combineByKey (
-        (byteArray: Array[Byte]) => {
-          val dataInput = new DataInputStream(new ByteArrayInputStream(byteArray))
-          val _odag = new ODAG(false)
-          _odag.readFields (dataInput)
-          _odag
-        },
-        (odag: ODAG, byteArray: Array[Byte]) => {
-          val dataInput = new DataInputStream(new ByteArrayInputStream(byteArray))
-          val _odag = new ODAG(false)
-          _odag.readFields (dataInput)
-          odag.aggregate (_odag)
-          odag
-        },
-        (odag1: ODAG, odag2: ODAG) => {
-          odag1.aggregate (odag2)
-          odag1
-        }
-      ).
-      map { case ((pattern,_),odag) =>
-        (pattern,odag)
-      }.reduceByKey { (odag1,odag2) =>
-        odag1.aggregate (odag2)
-        odag1
-      }.
-      map { tup =>
-        tup._2.setSerializeAsWriteOnly (true)
-        tup
+      val superstepStart = System.currentTimeMillis
+
+      val execEngines = getExecutionEngine (superstep)
+
+      val aggregatedOdags = sparkConf.getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
+        case SparkConfiguration.FLUSH_BY_PATTERN =>
+          val odags = execEngines.flatMap (_.flushByPattern)
+          aggregatedOdagsByPattern (odags)
+        case SparkConfiguration.FLUSH_BY_ENTRIES =>
+          val odags = execEngines.flatMap (_.flushByEntries)
+          aggregatedOdagsByEntries (odags)
+        case SparkConfiguration.FLUSH_BY_PARTS =>
+          val odags = execEngines.flatMap (_.flushByParts)
+          aggregatedOdagsByParts (odags)
       }
       
       // collect and broadcast new generation of ODAGs
-      val globalAggLocal = globalAgg.collectAsMap
-      globalAggBc.unpersist()
-      globalAggBc = sc.broadcast (globalAggLocal)
-      logInfo (s".superstep $superstep ended.")
-      logInfo (globalAggLocal.toString)
+      // this is the point of synchronization of the current superstep
+      val aggregatedOdagsLocal = aggregatedOdags.collectAsMap
+     
+      aggregatedOdagsBc.unpersist()
+      previousAggregationsBc.unpersist()
+      aggregatedOdagsBc = sc.broadcast (aggregatedOdagsLocal)
+      previousAggregationsBc = sc.broadcast (
+        aggAccums.map {case (name,accum) => (name,accum.value)}
+      )
+      
+      val superstepFinish = System.currentTimeMillis
+      logInfo (s"Superstep $superstep finished in ${superstepFinish - superstepStart} ms")
+      logInfo (s"Number of aggregated ODAGs = ${aggregatedOdagsLocal.size}")
+      
+      // whether the user chose to customize master computation, executed every
+      // superstep
+      masterComputation.compute()
+
       superstep += 1
 
-    } while (!globalAggBc.value.isEmpty) // while there are ODAGs to be processed
+    } while (!aggregatedOdagsBc.value.isEmpty) // while there are ODAGs to be processed
 
-    logInfo (".computation has ended. Num embeddings = " + numEmbeddings.value)
+    val finishTime = System.currentTimeMillis
+
+    logInfo ("Computation has finished")
+    logInfo (s"Computation took ${finishTime - startTime} ms")
+
+    aggAccums.foreach { case (name,accum) =>
+      logInfo (s"Accumulator/Aggregator [$name]\n${accum.value}")
+    }
 
   }
 
-  override def finalize() = {
+  def aggregatedOdagsByEntries(odags: RDD[((Pattern,Int,Int), ODAG)]) = {
 
-    // log the accumulators' results
-    accums.foreach {case (name,accum) =>
-      accum.value.toSeq.sortBy(_._2).foreach {case (k,v) =>
-        logInfo (s"$name: $k -> $v")
-      }
+    // (flushInEntries) ODAGs' reduction by pattern as a key
+    val aggregatedOdags = odags.reduceByKey { (odag1, odag2) =>
+      odag1.aggregate (odag2)
+      odag1
+      // resulting ODAGs must be deserialized for read(only)
+    }.
+    map { case ((pattern,_,_), odag) =>
+      (pattern, odag)
+      }.reduceByKey { (odag1, odag2) =>
+        odag1.aggregate (odag2)
+        odag1
+      }.
+    map { case (pattern,odag) =>
+      odag.setSerializeAsWriteOnly(true)
+      (pattern,odag)
     }
+
+    aggregatedOdags
+  }
+    
+
+  def aggregatedOdagsByPattern(odags: RDD[(Pattern, ODAG)]) = {
+
+    // (flushByPattern)
+    val aggregatedOdags = odags.reduceByKey { (odag1, odag2) =>
+      odag1.aggregate (odag2)
+      odag1
+    }.
+    map { case (pattern, odag) =>
+      odag.setSerializeAsWriteOnly (true)
+      (pattern, odag)
+    }
+
+    aggregatedOdags
+  }
+
+  def aggregatedOdagsByParts(odags: RDD[((Pattern,Int), Array[Byte])]) = {
+
+    // (flushByParts)
+    val aggregatedOdags = odags.combineByKey (
+      (byteArray: Array[Byte]) => {
+        val dataInput = new DataInputStream(new ByteArrayInputStream(byteArray))
+        val _odag = new ODAG(false)
+        _odag.readFields (dataInput)
+        _odag
+      },
+      (odag: ODAG, byteArray: Array[Byte]) => {
+        val dataInput = new DataInputStream(new ByteArrayInputStream(byteArray))
+        val _odag = new ODAG(false)
+        _odag.readFields (dataInput)
+        odag.aggregate (_odag)
+        odag
+      },
+      (odag1: ODAG, odag2: ODAG) => {
+        odag1.aggregate (odag2)
+        odag1
+      }
+    ).
+    map { case ((pattern,_),odag) =>
+      (pattern,odag)
+    }.reduceByKey { (odag1,odag2) =>
+      odag1.aggregate (odag2)
+      odag1
+    }.
+    map { tup =>
+      tup._2.setSerializeAsWriteOnly (true)
+      tup
+    }
+
+    aggregatedOdags
+  }
+  
+  override def getAggregatedValue[T <: Writable](name: String) = aggAccums.get(name) match {
+    case Some(accum) => accum.value.asInstanceOf[T]
+    case None =>
+      logWarning (s"Aggregation/accumulator $name not found")
+      null.asInstanceOf[T]
+  }
+
+  override def setAggregatedValue[T <: Writable](name: String, value: T) = {
+    logWarning ("Setting aggregated value has no effect in spark execution engine")
+  }
+
+  override def finalize() = {
     super.finalize()
     sc.stop() // stop spark context, this is important
   }
@@ -194,12 +282,16 @@ class SparkMasterExecutionEngine(confs: Map[String,String]) extends
  */
 object SparkMasterExecutionEngine {
   def main(args: Array[String]) {
-    val confs: Map[String,String] = Map.empty ++ args.map {str =>
+    val confs: Map[String,Any] =
+      // TODO initial testing suporting motifs computation
+      Map(CONF_COMPUTATION_CLASS -> "io.arabesque.examples.motif.MotifComputation") ++ 
+    args.map {str =>
       val arr = str split "="
       (arr(0), arr(1))
     }.toMap
 
     val masterEngine = new SparkMasterExecutionEngine(confs)
+    masterEngine.init
     masterEngine.compute
     masterEngine.finalize
   }
@@ -208,32 +300,44 @@ object SparkMasterExecutionEngine {
 // ad-hoc accumulators (aka things that are aggregated in the master) for the
 // motif-problem
 abstract class ArabesqueAccumulatorParam[K,V] extends AccumulableParam[Map[K,V], (K,V)] {
-  def zero(initialValue: Map[K,V]): Map[K,V] = initialValue
 }
 
 object PatternLongAccumParam extends ArabesqueAccumulatorParam[Pattern,Long] {
 
+  val quick2Canonical: Map[Pattern,Pattern] = Map.empty
+  
+  def zero(initialValue: Map[Pattern,Long]): Map[Pattern,Long] = initialValue.withDefaultValue (0)
+
   def addInPlace(v1: Map[Pattern,Long], v2: Map[Pattern,Long]): Map[Pattern,Long] = {
     var (merged,toMerge) = if (v1.size > v2.size) (v1,v2) else (v2,v1)
-    for ((k,v) <- toMerge.iterator) merged.get(k) match {
-      case Some(_v) =>
-        merged += (k -> (_v + v))
-      case None =>
-        merged += (k -> v)
+    for ((k,v) <- toMerge.iterator) {
+      merged.update (k, merged(k) + v)
     }
     merged
   }
 
   def addAccumulator(acc: Map[Pattern,Long], elem: (Pattern,Long)) = {
-    var toMerge = acc
-    val (k,v) = elem
-    acc.get(k) match {
-      case Some(_v) =>
-        toMerge += (k -> (_v + v))
-      case None =>
-        toMerge += (k -> v)
-    }
-    toMerge
+    val k = elem._1//getCanonical(_k)
+    val v = elem._2
+    acc.update (k, acc(k) + v)
+    acc
   }
 
+  def getCanonical(quickPattern: Pattern) = quick2Canonical.get(quickPattern) match {
+    case Some(canonicalPattern) => canonicalPattern
+    case None =>
+      val canonicalPattern = quickPattern.copy
+      canonicalPattern.turnCanonical
+      quick2Canonical += (quickPattern -> canonicalPattern)
+      canonicalPattern
+  }
+
+}
+
+class AggregationStorageParam[K <: Writable, V <: Writable](name: String) extends AccumulatorParam[AggregationStorage[K,V]] {
+  def zero(initialValue: AggregationStorage[K,V]) = new AggregationStorage[K,V](name)
+  def addInPlace(ag1: AggregationStorage[K,V], ag2: AggregationStorage[K,V]) = {
+    ag1.aggregate (ag2)
+    ag1
+  }
 }

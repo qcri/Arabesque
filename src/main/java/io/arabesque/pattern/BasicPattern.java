@@ -531,14 +531,15 @@ public abstract class BasicPattern implements Pattern {
 
         BasicPattern that = (BasicPattern) o;
 
-        return this.hashCode() == that.hashCode();//edges.equals(that.edges);
+        return edges.equals(that.edges);
+        //return this.hashCode() == that.hashCode();
 
     }
 
     @Override
     public int hashCode() {
        // TODO
-        return edges.isEmpty() ? mainGraph.getVertex(vertices.getUnchecked(0)).getVertexLabel() :
+        return //edges.isEmpty() ? mainGraph.getVertex(vertices.getUnchecked(0)).getVertexLabel() :
            edges.hashCode();
     }
 

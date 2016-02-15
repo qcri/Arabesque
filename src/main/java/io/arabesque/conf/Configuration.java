@@ -117,14 +117,15 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     private String outputPath;
     private int defaultAggregatorSplits;
 
-    private Map<String, AggregationStorageMetadata> aggregationsMetadata;
+    private transient Map<String, AggregationStorageMetadata> aggregationsMetadata;
     private transient MainGraph mainGraph;
     private boolean isGraphEdgeLabelled;
-    private boolean initialized = false;
+    protected boolean initialized = false;
     private boolean isGraphMulti;
 
     public static <C extends Configuration> C get() {
         if (instance == null) {
+           LOG.error ("instance is null");
             throw new RuntimeException("Oh-oh, Null configuration");
         }
 
@@ -369,6 +370,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return Collections.unmodifiableMap(aggregationsMetadata);
     }
 
+    public void setAggregationsMetadata(Map<String,AggregationStorageMetadata> aggregationsMetadata) {
+       this.aggregationsMetadata = aggregationsMetadata;
+    }
+
     public <K extends Writable, V extends Writable>
     void registerAggregation(String name, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction, int numSplits) {
         if (aggregationsMetadata.containsKey(name)) {
@@ -421,6 +426,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public Class<? extends Computation> getComputationClass() {
         return computationClass;
+    }
+
+    public void setMasterComputationClass(Class<? extends MasterComputation> masterComputationClass) {
+       this.masterComputationClass = masterComputationClass;
     }
 
     public void setComputationClass(Class<? extends Computation> computationClass) {

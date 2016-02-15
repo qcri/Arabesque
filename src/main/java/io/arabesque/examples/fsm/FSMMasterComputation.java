@@ -7,6 +7,7 @@ import io.arabesque.pattern.Pattern;
 public class FSMMasterComputation extends MasterComputation {
     @Override
     public void compute() {
+        System.out.println ("Master computing");
         AggregationStorage<Pattern, DomainSupport> aggregationStorage =
                 readAggregation(FSMComputation.AGG_SUPPORT);
 
