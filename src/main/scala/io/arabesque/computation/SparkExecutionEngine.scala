@@ -10,11 +10,9 @@ import io.arabesque.pattern.Pattern
 import io.arabesque.odag.{ODAGStash, ODAG}
 import io.arabesque.odag.ODAGStash._
 import io.arabesque.odag.domain.DomainEntry
-import io.arabesque.aggregation.{
-  AggregationStorage,
-  AggregationStorageFactory,
-  AggregationStorageMetadata
-}
+import io.arabesque.aggregation.{AggregationStorage,
+                                 AggregationStorageFactory,
+                                 AggregationStorageMetadata}
 
 import org.apache.hadoop.io.{Writable, LongWritable}
 
@@ -87,7 +85,6 @@ class SparkExecutionEngine[O <: Embedding](
 
 
     numPartitionsPerWorker = configuration.getInteger ("num_odag_parts", getNumberPartitions())
-    logInfo (s"num odag parts = $numPartitionsPerWorker")
     pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
     // aggregation storage

@@ -1,15 +1,25 @@
 #! /usr/bin/env sh
 
-#hdfs dfs -rm -r Output
+# add another execution engines here
+SPARK_EXEC_ENGINE="spark"; SPARK_CMD="$(realpath run_arabesque_spark.sh)"
+GIRAPH_EXEC_ENGINE="giraph"; GIRAPH_CMD="$(realpath run_arabesque_giraph.sh)"
 
-ARABESQUE_JAR_DIR="`pwd`"
-ARABESQUE_JAR=`find $ARABESQUE_JAR_DIR -maxdepth 1 -name "arabesque-*-jar-with-dependencies.jar" | head -1`
+execution_engine=$(echo -n `cat $@ | grep execution_engine | cut -d":" -f2`)
 
-if [ -z "$ARABESQUE_JAR" ] ; then
-  echo "No Arabesque jar found in $ARABESQUE_JAR_DIR. Did you compile it?"
-  exit 66
-fi
+case $execution_engine in
+   $SPARK_EXEC_ENGINE)
+      echo "Running $SPARK_EXEC_ENGINE execution engine"
+      echo "$SPARK_CMD $@"
+      exec $SPARK_CMD $@
+      ;;
 
-HADOOP_CP=".:${ARABESQUE_JAR}"
+   $GIRAPH_EXEC_ENGINE)
+      echo "Running $GIRAPH_EXEC_ENGINE execution engine"
+      echo "$GIRAPH_CMD $@"
+      $GIRAPH_CMD $@
+      ;;
 
-HADOOP_CLASSPATH=$HADOOP_CP hadoop jar $ARABESQUE_JAR io.arabesque.ArabesqueRunner -y $@
+   *)
+      echo "Please inform execution_engine in the YAML files"
+      ;;
+esac

@@ -162,14 +162,14 @@ class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
         aggAccums.map {case (name,accum) => (name,accum.value)}
       )
       
-      val superstepFinish = System.currentTimeMillis
-      logInfo (s"Superstep $superstep finished in ${superstepFinish - superstepStart} ms")
-      logInfo (s"Number of aggregated ODAGs = ${aggregatedOdagsLocal.size}")
-      
       // whether the user chose to customize master computation, executed every
       // superstep
       masterComputation.compute()
 
+      val superstepFinish = System.currentTimeMillis
+      logInfo (s"Superstep $superstep finished in ${superstepFinish - superstepStart} ms")
+      logInfo (s"Number of aggregated ODAGs = ${aggregatedOdagsLocal.size}")
+      
       superstep += 1
 
     } while (!aggregatedOdagsBc.value.isEmpty) // while there are ODAGs to be processed
@@ -277,63 +277,14 @@ class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
 }
 
 /**
- * Companion object with the main function
- * TODO an integration with ArabesqueRunner would deprecate this
+ * Companion object: static methods and fields
  */
 object SparkMasterExecutionEngine {
-  def main(args: Array[String]) {
-    val confs: Map[String,Any] =
-      // TODO initial testing suporting motifs computation
-      Map(CONF_COMPUTATION_CLASS -> "io.arabesque.examples.motif.MotifComputation") ++ 
-    args.map {str =>
-      val arr = str split "="
-      (arr(0), arr(1))
-    }.toMap
-
-    val masterEngine = new SparkMasterExecutionEngine(confs)
-    masterEngine.init
-    masterEngine.compute
-    masterEngine.finalize
-  }
 }
 
-// ad-hoc accumulators (aka things that are aggregated in the master) for the
-// motif-problem
-abstract class ArabesqueAccumulatorParam[K,V] extends AccumulableParam[Map[K,V], (K,V)] {
-}
-
-object PatternLongAccumParam extends ArabesqueAccumulatorParam[Pattern,Long] {
-
-  val quick2Canonical: Map[Pattern,Pattern] = Map.empty
-  
-  def zero(initialValue: Map[Pattern,Long]): Map[Pattern,Long] = initialValue.withDefaultValue (0)
-
-  def addInPlace(v1: Map[Pattern,Long], v2: Map[Pattern,Long]): Map[Pattern,Long] = {
-    var (merged,toMerge) = if (v1.size > v2.size) (v1,v2) else (v2,v1)
-    for ((k,v) <- toMerge.iterator) {
-      merged.update (k, merged(k) + v)
-    }
-    merged
-  }
-
-  def addAccumulator(acc: Map[Pattern,Long], elem: (Pattern,Long)) = {
-    val k = elem._1//getCanonical(_k)
-    val v = elem._2
-    acc.update (k, acc(k) + v)
-    acc
-  }
-
-  def getCanonical(quickPattern: Pattern) = quick2Canonical.get(quickPattern) match {
-    case Some(canonicalPattern) => canonicalPattern
-    case None =>
-      val canonicalPattern = quickPattern.copy
-      canonicalPattern.turnCanonical
-      quick2Canonical += (quickPattern -> canonicalPattern)
-      canonicalPattern
-  }
-
-}
-
+/**
+ * Param used to accumulate Aggregation Storages
+ */
 class AggregationStorageParam[K <: Writable, V <: Writable](name: String) extends AccumulatorParam[AggregationStorage[K,V]] {
   def zero(initialValue: AggregationStorage[K,V]) = new AggregationStorage[K,V](name)
   def addInPlace(ag1: AggregationStorage[K,V], ag2: AggregationStorage[K,V]) = {

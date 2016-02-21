@@ -7,6 +7,7 @@ import io.arabesque.graph.{MainGraph, BasicMainGraph}
 import io.arabesque.pattern.Pattern
 
 import org.apache.spark.SparkConf
+import org.apache.spark.Logging
 
 import scala.collection.mutable.Map
 
@@ -15,10 +16,11 @@ import scala.collection.JavaConversions._
 /**
  * Configurations are passed along in this mapping
  */
-class SparkConfiguration[O <: Embedding](confs: Map[String,Any]) extends Configuration[O] {
+class SparkConfiguration[O <: Embedding](confs: Map[String,Any]) extends Configuration[O] with Logging {
 
   /**
-   * Translates Arabesque configuration into SparkConf
+   * Translates Arabesque configuration into SparkConf.
+   * ATENTION: This is highly spark-dependent
    */
   def nativeSparkConf = {
     assert (initialized)
@@ -26,16 +28,21 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any]) extends Configu
     val conf = new SparkConf().
       setAppName ("Arabesque Master Execution Engine").
       setMaster (sparkMaster)
+        
+    conf.set ("spark.executor.memory", getString("worker_memory", "1g"))
 
     sparkMaster match {
       case "yarn-client" | "yarn-cluster" =>
-        conf.set ("spark.executor.instances", getString("num_workers", "1"))
-        conf.set ("spark.executor.cores", getString("num_compute_threads", "1"))
+        conf.set ("spark.executor.instances", getInteger("num_workers", 1).toString)
+        conf.set ("spark.executor.cores", getInteger("num_compute_threads", 1).toString)
+
       case standaloneUrl : String if standaloneUrl startsWith "spark://" =>
         conf.set ("spark.cores.max",
           (getInteger("num_workers", 1) * getInteger("num_compute_threads", 1)).toString)
+
       case _ =>
     }
+    logInfo (s"Spark configurations:\n${conf.getAll.mkString("\n")}")
     conf
   }
 
@@ -62,40 +69,57 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any]) extends Configu
 
   }
 
-  // TODO: generalize the initialization
-  override def initialize() {
+  /**
+   * Garantees that arabesque configuration is properly set
+   *
+   * TODO: generalize the initialization in the superclass Configuration
+   */
+  override def initialize(): Unit = synchronized {
+    try {
+      Configuration.get()
+    } catch {
+      case e: RuntimeException =>
+        initializeInJvm()
+    }
+  }
+
+  /**
+   * Called whether no arabesque configuration is set in the running jvm
+   */
+  private def initializeInJvm(): Unit = {
+
     fixAssignments
 
     // common configs
     setMainGraphClass (
-      getClass (CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT).asInstanceOf[Class[_ <: MainGraph]]
+      getClass (CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT).
+      asInstanceOf[Class[_ <: MainGraph]]
     )
 
     setMasterComputationClass (
-      getClass (CONF_MASTER_COMPUTATION_CLASS, CONF_MASTER_COMPUTATION_CLASS_DEFAULT).asInstanceOf[Class[_ <: MasterComputation]]
+      getClass (CONF_MASTER_COMPUTATION_CLASS, CONF_MASTER_COMPUTATION_CLASS_DEFAULT).
+      asInstanceOf[Class[_ <: MasterComputation]]
     )
     
     setComputationClass (
-      getClass (CONF_COMPUTATION_CLASS, CONF_COMPUTATION_CLASS_DEFAULT).asInstanceOf[Class[_ <: Computation[O]]]
+      getClass (CONF_COMPUTATION_CLASS, CONF_COMPUTATION_CLASS_DEFAULT).
+      asInstanceOf[Class[_ <: Computation[O]]]
     )
 
     setPatternClass (
-      getClass (CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT).asInstanceOf[Class[_ <: Pattern]]
+      getClass (CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT).
+      asInstanceOf[Class[_ <: Pattern]]
     )
 
     setAggregationsMetadata (new java.util.HashMap())
 
     // main graph
     if (getMainGraph() == null) {
-      try {
-        setMainGraph(Configuration.get[Configuration[O]].getMainGraph())
-      } catch {
-        case e: RuntimeException =>
-          println (".main graph is null, gonna read it.")
-          setMainGraph (createGraph())
-      }
+      logInfo ("Main graph is null, gonna read it")
+      setMainGraph (createGraph())
     }
-    Configuration.setIfUnset (this)
+    
+    Configuration.set (this)
 
     initialized = true
   }

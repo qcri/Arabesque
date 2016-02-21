@@ -2,7 +2,7 @@
 
 [http://arabesque.io](http://arabesque.io)
 
-*Current Version:* 1.0-BETA
+*Current Version:* 1.0.2-BETA
 
 Arabesque is a distributed graph mining system that enables quick and easy
 development of graph mining algorithms, while providing a scalable and efficient
@@ -19,7 +19,10 @@ Arabesque is open-source with the Apache 2.0 license.
 ## Requirements for running
 
 * Linux/Mac with 64-bit JVM
-* [A functioning installation of Hadoop2 with MapReduce (local or in a cluster)](http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/)
+* At least one of the supported execution engines installed (local or in a cluster):
+   * [Hadoop2/Giraph](http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/) or
+   * [Spark](https://chongyaorobin.wordpress.com/2015/07/01/step-by-step-of-installing-apache-spark-on-apache-hadoop/)
+
 
 ## Preparing your input
 Arabesque currently takes as input graphs with the following format:
@@ -39,7 +42,7 @@ You can find an execution-helper script and several configuration files for the 
 folder in the repository](https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/scripts):
 
 * `run_arabesque.sh` - Launcher for arabesque executions. Takes as parameters one or more yaml files describing the configuration of the execution to be run. Configurations are applied in sequence with configurations in subsequent yaml files overriding entries of previous ones.
-* `cluster.yaml` - File with configurations related to the cluster and, so, common to all algorithms: number of workers, number of threads per worker, number of partitions, etc.
+* `cluster.yaml` - File with configurations related to the cluster and, so, common to all algorithms: execution engine, number of workers, number of threads per worker, number of partitions, etc.
 * `<algorithm>.yaml` - Files with configurations related to particular algorithm executions using as input the [provided citeseer graph](https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/data):
   * `fsm.yaml` - Run frequent subgraph mining over the citeseer graph.
   * `cliques.yaml` - Run clique finding over the citeseer graph.
@@ -62,17 +65,21 @@ folder in the repository](https://github.com/Qatar-Computing-Research-Institute/
   hdfs dfs -put <input graph file> <destination graph file in HDFS>
   ```
 
-4. Configure the `cluster.yaml` file with the desired number of containers, threads per container and other cluster-wide configurations.
+4. Configure the `cluster.yaml` file with the desired number of containers, threads per container and other cluster-wide configurations. Remember to include the desirable execution engine: (i) 'spark' for [Spark](http://spark.apache.org/) or 'giraph' [Hadoop2/Giraph](http://giraph.apache.org/). In case of Spark, include also the [master URL](http://spark.apache.org/docs/latest/submitting-applications.html#master-urls) (`spark_master`) which indicates the desirable deployment. See folder `scripts` for examples.
 
 5. Configure the algorithm-specific yamls to reflect the HDFS location of your input graph as well as the parameters you want to use (max size for motifs and cliques or support for FSM).
 
 6. Run your desired algorithm by executing:
 
   ```
-  ./run_arabesque.sh cluster.yaml <algorithm>.yaml
+  # giraph
+  ./run_arabesque.sh cluster-giraph.yaml <algorithm>.yaml
+  # or spark (make sure SPARK_HOME is set)
+  ./run_arabesque.sh cluster-spark.yaml <algorithm>.yaml
   ```
 
-7. Follow execution progress by checking the logs of the Hadoop containers.
+7. Follow execution progress by checking the logs of the Hadoop containers or
+   local logs.
 
 8. Check any output (generated with calls to the `output` function) in the HDFS path indicated by the `output_path` configuration entry.
 

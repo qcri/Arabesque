@@ -1,7 +1,6 @@
 computation: io.arabesque.examples.motif.MotifComputation
 input_graph_path: citeseer-single-label.graph
 output_path: Motifs_Output
-#communication_strategy: embeddings
 
 # Custom parameters
 arabesque.motif.maxsize: 3
