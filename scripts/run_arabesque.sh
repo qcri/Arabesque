@@ -1,8 +1,9 @@
 #! /usr/bin/env sh
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # add another execution engines here
-SPARK_EXEC_ENGINE="spark"; SPARK_CMD="$(realpath run_arabesque_spark.sh)"
-GIRAPH_EXEC_ENGINE="giraph"; GIRAPH_CMD="$(realpath run_arabesque_giraph.sh)"
+SPARK_EXEC_ENGINE="spark"; SPARK_CMD="$DIR/run_arabesque_spark.sh"
+GIRAPH_EXEC_ENGINE="giraph"; GIRAPH_CMD="$DIR/run_arabesque_giraph.sh"
 
 execution_engine=$(echo -n `cat $@ | grep execution_engine | cut -d":" -f2`)
 

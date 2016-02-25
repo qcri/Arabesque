@@ -102,15 +102,18 @@
             <filtering>false</filtering>
          </resource>
       </resources>
+
       <plugins>
          <plugin>
             <groupId>org.scala-tools</groupId>
             <artifactId>maven-scala-plugin</artifactId>
             <executions>
                <execution>
+                  <id>scala-compiles-first</id>
+                  <phase>process-resources</phase>
                   <goals>
+                     <goal>add-source</goal>
                      <goal>compile</goal>
-                     <goal>testCompile</goal>
                   </goals>
                </execution>
             </executions>

@@ -52,7 +52,6 @@ public class ArabesqueRunner implements Tool {
              JavaConversions.mapAsScalaMap(yamlConfig.getProperties())
        );
 
-       masterEngine.init();
        masterEngine.compute();
        masterEngine.finalize();
        return 0;

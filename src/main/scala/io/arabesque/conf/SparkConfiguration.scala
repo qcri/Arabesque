@@ -16,13 +16,23 @@ import scala.collection.JavaConversions._
 /**
  * Configurations are passed along in this mapping
  */
-class SparkConfiguration[O <: Embedding](confs: Map[String,Any]) extends Configuration[O] with Logging {
+class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
+    extends Configuration[O] with Logging {
+
+  def this() {
+    this (Map.empty)
+  }
+
+  def set(key: String, value: Any): SparkConfiguration[O] = {
+    confs.update (key, value)
+    this
+  }
 
   /**
    * Translates Arabesque configuration into SparkConf.
    * ATENTION: This is highly spark-dependent
    */
-  def nativeSparkConf = {
+  def sparkConf = {
     assert (initialized)
     val sparkMaster = getString ("spark_master", "local[*]")
     val conf = new SparkConf().
@@ -75,11 +85,9 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any]) extends Configu
    * TODO: generalize the initialization in the superclass Configuration
    */
   override def initialize(): Unit = synchronized {
-    try {
-      Configuration.get()
-    } catch {
-      case e: RuntimeException =>
-        initializeInJvm()
+    if (Configuration.isUnset || this != Configuration.get) {
+      initializeInJvm()
+      Configuration.set (this)
     }
   }
 
@@ -114,12 +122,10 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any]) extends Configu
     setAggregationsMetadata (new java.util.HashMap())
 
     // main graph
-    if (getMainGraph() == null) {
+    if (getMainGraph() == null && initialized) {
       logInfo ("Main graph is null, gonna read it")
       setMainGraph (createGraph())
     }
-    
-    Configuration.set (this)
 
     initialized = true
   }

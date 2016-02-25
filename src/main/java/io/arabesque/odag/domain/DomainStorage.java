@@ -235,8 +235,6 @@ public class DomainStorage extends Storage<DomainStorage> {
             return;
         }
 
-        System.out.println ("finalize construction " + Thread.currentThread().getId());
-
         // All entries in the last domain necessarily have a count of 1 since they have no connections.
         for (DomainEntry domainEntry : domainEntries.get(numberOfDomains - 1).values()) {
             domainEntry.setCounter(1);

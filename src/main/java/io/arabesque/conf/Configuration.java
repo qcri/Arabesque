@@ -123,6 +123,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     protected boolean initialized = false;
     private boolean isGraphMulti;
 
+    public static boolean isUnset() {
+       return instance == null;
+    }
+
     public static <C extends Configuration> C get() {
         if (instance == null) {
            LOG.error ("instance is null");
@@ -133,7 +137,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     }
 
     public synchronized static void setIfUnset(Configuration configuration) {
-        if (instance == null) {
+        if (isUnset()) {
             set(configuration);
         }
     }

@@ -39,7 +39,7 @@ import scala.reflect.ClassTag
  * It interacts directly with the RDD interface in Spark by handling the
  * SparkContext.
  */
-class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
+class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) extends
     CommonMasterExecutionEngine with Logging {
 
   // TODO would be interesting to make Kryo the default serializer for Spark
@@ -50,7 +50,8 @@ class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
   //  classOf[ODAG]
   //  ))
   
-  private var sparkConf: SparkConfiguration[_ <: Embedding] = _
+  //private var config: SparkConfiguration[_ <: Embedding] = _
+  config.initialize()
 
   private var sc: SparkContext = _
 
@@ -60,30 +61,42 @@ class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
 
   private var masterComputation: MasterComputation = _
 
-  def init() = {
-    sparkConf = new SparkConfiguration(confs)
-    sparkConf.initialize()
+  def this(confs: Map[String,Any]) {
+    this (new SparkConfiguration(confs))
 
-    sc = new SparkContext(sparkConf.nativeSparkConf)
-    val logLevel = sparkConf.getString ("log_level", "INFO").toUpperCase
+    sc = new SparkContext(config.sparkConf)
+    val logLevel = config.getString ("log_level", "INFO").toUpperCase
     sc.setLogLevel (logLevel)
 
+    init()
+  }
+
+  def this(_sc: SparkContext, config: SparkConfiguration[_ <: Embedding]) {
+    this (config)
+    sc = _sc
+
+    init()
+  }
+
+  def init() = {
+    
     // master computation
-    masterComputation = sparkConf.createMasterComputation()
+    masterComputation = config.createMasterComputation()
     masterComputation.setUnderlyingExecutionEngine(this)
     masterComputation.init()
 
     // master must know aggregators metadata
-    val computation = sparkConf.createComputation()
+    val computation = config.createComputation()
     computation.initAggregations()
 
     // create one spark accumulator for each aggregation storage registered by
     // the computation via metadata
-    def createAggregationAccum[K <: Writable, V <: Writable](name: String, metadata: AggregationStorageMetadata[K,V]) = {
-      sc.accumulator (new AggregationStorage[K,V](name)) (new AggregationStorageParam[K,V](name))
+    def createAggregationAccum [K <: Writable, V <: Writable] (name: String,
+        metadata: AggregationStorageMetadata[K,V]) = {
+      sc.accumulator (new AggregationStorage[K,V](name))(new AggregationStorageParam[K,V](name))
     }
     aggAccums = Map.empty
-    for ((name,metadata) <- sparkConf.getAggregationsMetadata)
+    for ((name,metadata) <- config.getAggregationsMetadata)
       aggAccums.update (name, createAggregationAccum(name, metadata))
 
   }
@@ -99,11 +112,11 @@ class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
    * Master's computation takes place here, superstep by superstep
    */
   def compute() = {
-    val numPartitions = sparkConf.getInteger ("num_partitions", 10)
+    val numPartitions = config.getInteger ("num_partitions", 10)
 
     // accumulatores and spark configuration w.r.t. Spark
     val _aggAccums = aggAccums
-    val sparkConfBc = sc.broadcast(sparkConf)
+    val configBc = sc.broadcast(config)
 
     // setup an RDD to simulate empty partitions and a broadcast variable to
     // communicate the global aggregated ODAGs on each step
@@ -121,7 +134,7 @@ class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
       // read embeddings from global agg. ODAGs, expand, filter and process
       val execEngines = superstepRDD.mapPartitionsWithIndex { (idx, _) =>
 
-        sparkConfBc.value.initialize()
+        configBc.value.initialize()
 
         val execEngine = new SparkExecutionEngine(idx, superstep, _aggAccums, previousAggregationsBc)
         execEngine.init()
@@ -139,7 +152,7 @@ class SparkMasterExecutionEngine(confs: Map[String,Any]) extends
 
       val execEngines = getExecutionEngine (superstep)
 
-      val aggregatedOdags = sparkConf.getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
+      val aggregatedOdags = config.getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
         case SparkConfiguration.FLUSH_BY_PATTERN =>
           val odags = execEngines.flatMap (_.flushByPattern)
           aggregatedOdagsByPattern (odags)

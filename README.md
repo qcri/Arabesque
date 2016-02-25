@@ -94,3 +94,48 @@ cd $PROJECT_PATH
 git remote rename origin upstream
 git remote add origin $YOUR_REPO_URL
 ```
+
+## Arabesque notebook
+
+Arabesque notebook runs in [Toree](https://github.com/apache/incubator-toree),
+which deploy Spark in Jupyter notebook environment. Follow these steps:
+   1. Configure the env variables for Spark and Arabesque:
+
+   ```
+   export SPARK_HOME=<path_to_spark_installation>
+   export ARABESQUE_HOME=<path_to_arabesque_installation>
+   ```
+
+   You can do it by setting ```arabesque-env.sh``` (root of the project) and sourcing it:
+
+   ```
+   source arabesque-env.sh
+   ```
+
+   2. [Install Jupyter](http://jupyter.readthedocs.org/en/latest/install.html) 
+
+   3. Install toree using pip installer:
+
+   ```
+   pip install toree
+   ```
+
+   4. Register toree kernel with jupyter:
+
+   ```
+   jupyter toree install \
+      --spark_home=$SPARK_HOME \
+      --spark_opts="--master local[*] --jars target/arabesque-1.0.2-BETA-jar-with-dependencies.jar" \
+      --kernel_name="arabesque_1.0.2" \
+      --user
+   ```
+
+   5. Start jupyter notebook:
+
+   ```
+   cd $ARABESQUE_HOME
+   jupyter notebook
+   ```
+
+   6. The last step will open jupyter's web interface. Just click on
+      ```arabesque-demo.ipynb``` and try some concepts/snippets.
