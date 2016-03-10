@@ -40,11 +40,13 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
       setMaster (sparkMaster)
         
     conf.set ("spark.executor.memory", getString("worker_memory", "1g"))
+    conf.set ("spark.driver.memory", getString("worker_memory", "1g"))
 
     sparkMaster match {
       case "yarn-client" | "yarn-cluster" =>
         conf.set ("spark.executor.instances", getInteger("num_workers", 1).toString)
         conf.set ("spark.executor.cores", getInteger("num_compute_threads", 1).toString)
+        conf.set ("spark.driver.cores", getInteger("num_compute_threads", 1).toString)
 
       case standaloneUrl : String if standaloneUrl startsWith "spark://" =>
         conf.set ("spark.cores.max",
@@ -121,16 +123,17 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 
     setAggregationsMetadata (new java.util.HashMap())
 
-    // main graph
-    if (getMainGraph() == null && initialized) {
+    setOutputPath (getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT))
+    
+      // main graph
+    if ((getMainGraph() == null && initialized)
+      || (getString ("spark_master", "local[*]") startsWith "local[")) {
       logInfo ("Main graph is null, gonna read it")
       setMainGraph (createGraph())
     }
 
     initialized = true
   }
-
-  override def isOutputActive() = false
 
   def getValue(key: String, defaultValue: Any): Any = confs.get(key) match {
     case Some(value) => value

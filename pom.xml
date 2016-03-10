@@ -41,6 +41,14 @@
          <organization>Qatar Computing Research Institute</organization>
          <organizationUrl>http://qcri.org.qa</organizationUrl>
       </developer>
+      <developer>
+         <name>Vinicius Dias</name>
+         <email>viniciusvdias@dcc.ufmg.br</email>
+         <timezone>-3</timezone>
+         <organization>Universidade Federal de Minas Gerais</organization>
+         <organizationUrl>https://www.ufmg.br/english/</organizationUrl>
+      </developer>
+
    </developers>
    <scm>
       <connection>scm:git:git@github.com:Qatar-Computing-Research-Institute/Arabesque.git</connection>

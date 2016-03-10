@@ -13,7 +13,9 @@ import io.arabesque.odag.domain.DomainEntry
 import io.arabesque.aggregation.{AggregationStorage,
                                  AggregationStorageFactory,
                                  AggregationStorageMetadata}
+import io.arabesque.utils.{SerializableConfiguration, SerializableWritable}
 
+import org.apache.hadoop.fs.{Path, FileSystem}
 import org.apache.hadoop.io.{Writable, LongWritable}
 
 import scala.collection.mutable.{Map, ListBuffer}
@@ -23,18 +25,21 @@ import scala.reflect.ClassTag
 
 import java.util.concurrent.{Executors, ExecutorService}
 import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
-                DataInput, ByteArrayInputStream, DataInputStream, InputStream}
+                DataInput, ByteArrayInputStream, DataInputStream, InputStream,
+                OutputStreamWriter}
 
 /**
  * Underlying engine that runs Arabesque workers in Spark.
  * Each instance of this engine corresponds to a partition in Spark computation
- * model. Instances lifetimes refers also to one superstep of computation due
+ * model. Instances' lifetimes refer also to one superstep of computation due
  * RDD's immutability.
  */
 class SparkExecutionEngine[O <: Embedding](
     partitionId: Int,
     superstep: Int,
+    hadoopConf: SerializableConfiguration,
     accums: Map[String,Accumulator[_]],
+    // TODO do not broadcast if user's code does not requires it
     previousAggregationsBc: Broadcast[_])
   extends CommonExecutionEngine[O] with Logging {
 
@@ -63,6 +68,10 @@ class SparkExecutionEngine[O <: Embedding](
   var aggregationStorageFactory: AggregationStorageFactory = _
   var aggregationStorages: Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
+  // output
+  var outputStreamOpt: Option[OutputStreamWriter] = _
+  var outputPath: Path = _
+
   /**
    * Instantiates the computation, parameters and resources required to execute
    * the superstep in this partition
@@ -80,17 +89,22 @@ class SparkExecutionEngine[O <: Embedding](
 
     nextEmbeddingStash = new ODAGStash()
 
-    numBlocks = configuration.getInteger ("numBlocks", getNumberPartitions() * getNumberPartitions())
+    numBlocks = configuration.getInteger ("numBlocks",
+      getNumberPartitions() * getNumberPartitions())
     maxBlockSize = configuration.getInteger ("maxBlockSize", 10000) // TODO: magic number ??
 
-
     numPartitionsPerWorker = configuration.getInteger ("num_odag_parts", getNumberPartitions())
+    // TODO: the engine in Spark is volatile, maybe get this pool out of here
+    // (maybe in configuration, which will be initialized once per JVM)
     pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
     // aggregation storage
     aggregationStorageFactory = new AggregationStorageFactory
     aggregationStorages = Map.empty
 
+    // output
+    outputStreamOpt = None
+    outputPath = new Path(configuration.getOutputPath)
   }
 
   /**
@@ -98,6 +112,7 @@ class SparkExecutionEngine[O <: Embedding](
    */
   override def finalize() = {
     super.finalize()
+    if (outputStreamOpt.isDefined) outputStreamOpt.get.close
     pool.shutdown()
   }
 
@@ -182,12 +197,25 @@ class SparkExecutionEngine[O <: Embedding](
     }
   }
 
- 
+  def flushAggregationsByName(name: String) = {
+    // does the final local aggregation
+    // e.g. for motifs, turns quick patterns into canonical ones
+    def aggregate[K <: Writable, V <: Writable](agg1: AggregationStorage[K,V], agg2: AggregationStorage[_,_]) = {
+      agg1.finalLocalAggregate (agg2.asInstanceOf[AggregationStorage[K,V]])
+      agg1
+    }
+    val aggStorage = getAggregationStorage(name)
+    val finalAggStorage = aggregate (
+      aggregationStorageFactory.createAggregationStorage (name),
+      aggStorage)
+    finalAggStorage.getMapping.map {case (k,v) => (new SerializableWritable(k), new SerializableWritable(v))}.iterator
+  }
+
   /**
    * Flushes the aggregators registered with the computation. More specifically,
    * AggregationStorages are accumulated in 'Spark Accumulators'
    */
-  def flushAggregators = {
+  def flushAggregatorsWithAccum = {
     // accumulates an aggregator in the corresponding spark accumulator
     def accumulate[T : ClassTag](it: T, accum: Accumulator[_]) = {
       accum.asInstanceOf[Accumulator[T]] += it
@@ -213,7 +241,7 @@ class SparkExecutionEngine[O <: Embedding](
    * @return iterator of pairs of (pattern, odag)
    */
   def flushByPattern: Iterator[(Pattern,ODAG)]  = {
-    flushAggregators
+    //flushAggregators
     // consume content in *nextEmbeddingStash*
     for (odag <- nextEmbeddingStash.getEzips().iterator)
       yield (odag.getPattern(), odag)
@@ -226,7 +254,7 @@ class SparkExecutionEngine[O <: Embedding](
    */
   def flushByEntries: Iterator[((Pattern,Int,Int), ODAG)] = {
 
-    flushAggregators
+    //flushAggregators
 
     /**
      * Iterator that split a big ODAG into small ODAGs containing only one entry
@@ -285,7 +313,7 @@ class SparkExecutionEngine[O <: Embedding](
    */
   def flushByParts: Iterator[((Pattern,Int),Array[Byte])] = {
 
-    flushAggregators
+    //flushAggregators
 
     val outputs = Array.fill[ByteArrayOutputStream](numPartitionsPerWorker)(new ByteArrayOutputStream())
     def createDataOutput(output: OutputStream): DataOutput = new DataOutputStream(output)
@@ -373,6 +401,33 @@ class SparkExecutionEngine[O <: Embedding](
       aggregationStorage.asInstanceOf[AggregationStorage[K,V]]
   }
 
+  /**
+   * Maybe output string to fileSystem
+   *
+   * @param outputString data to write
+   */
+  override def output(outputString: String) = {
+    if (configuration.isOutputActive) {
+      writeOutput(outputString)
+    }
+  }
+
+  private def writeOutput(outputString: String) = outputStreamOpt match {
+    case Some(outputStream) =>
+      outputStream.write(outputString)
+      outputStream.write("\n")
+
+    case None =>
+      logInfo (s"[partitionId=${getPartitionId}] Creating output stream")
+      val fs = FileSystem.get(hadoopConf.value)
+      val superstepPath = new Path(outputPath, s"${getSuperstep}")
+      val partitionPath = new Path(superstepPath, s"${partitionId}")
+      val outputStream = new OutputStreamWriter(fs.create(partitionPath))
+      outputStreamOpt = Some(outputStream)
+      outputStream.write(outputString)
+      outputStream.write("\n")
+  }
+  
   // other functions
   override def getPartitionId() = partitionId
 
@@ -381,9 +436,7 @@ class SparkExecutionEngine[O <: Embedding](
   override def getSuperstep() = superstep
 
   override def aggregate(name: String, value: LongWritable) = {
-  }
-
-  override def output(outputString: String) = {
-    //logInfo (outputString)
+    // TODO implement with Spark Accumulators: this is ok because is not
+    // critical
   }
 }

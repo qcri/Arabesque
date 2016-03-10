@@ -2,7 +2,7 @@ package io.arabesque.aggregation.reductions;
 
 import org.apache.hadoop.io.LongWritable;
 
-public class LongSumReduction implements ReductionFunction<LongWritable> {
+public class LongSumReduction extends ReductionFunction<LongWritable> {
     @Override
     public LongWritable reduce(LongWritable k1, LongWritable k2) {
         if (k1 != null && k2 != null) {

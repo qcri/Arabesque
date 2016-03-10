@@ -36,6 +36,11 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
         init(name);
     }
 
+    public AggregationStorage(String name, Map<K,V> keyValueMap) {
+       init(name);
+       this.keyValueMap = keyValueMap;
+    }
+
     protected void init(String name) {
         if (keyValueMap == null) {
             keyValueMap = new HashMap<>();

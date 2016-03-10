@@ -416,6 +416,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return outputPath;
     }
 
+    public void setOutputPath(String outputPath) {
+        this.outputPath = outputPath;
+    }
+
     public MasterComputation createMasterComputation() {
         return ReflectionUtils.newInstance(masterComputationClass);
     }
