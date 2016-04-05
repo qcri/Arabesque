@@ -64,7 +64,8 @@
       <giraph.version>1.2.0-ARABESQUE</giraph.version>
       <hadoop.version>2.6.0</hadoop.version>
       <spark.version>1.6.0</spark.version>
-      <scala.version>2.10.5</scala.version>
+      <scala.version>2.10.6</scala.version>
+      <scala.binary.version>2.10</scala.binary.version>
       <giraph.scope>compile</giraph.scope>
       <hadoop.scope>provided</hadoop.scope>
       <spark.scope>provided</spark.scope>
@@ -112,7 +113,7 @@
       </resources>
 
       <plugins>
-         <plugin>
+         <!--<plugin>
             <groupId>org.scala-tools</groupId>
             <artifactId>maven-scala-plugin</artifactId>
             <executions>
@@ -122,10 +123,35 @@
                   <goals>
                      <goal>add-source</goal>
                      <goal>compile</goal>
+                     <goal>testCompile</goal>
                   </goals>
                </execution>
             </executions>
-         </plugin>
+         </plugin>-->
+
+         <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>3.2.2</version>
+          <executions>
+            <execution>
+              <id>scala-compile-first</id>
+              <phase>process-resources</phase>
+              <goals>
+                 <goal>add-source</goal>
+                 <goal>compile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>scala-test-compile-first</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>testCompile</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
@@ -154,6 +180,7 @@
             <version>2.19</version>
             <configuration>
                <!--<trimStackTrace>false</trimStackTrace>-->
+               <!-- <skipTests>true</skipTests>-->
                <includes>
                   <include>**/*Spec.*</include>
                </includes>
@@ -184,6 +211,24 @@
                </execution>
             </executions>
          </plugin>
+         <plugin>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest-maven-plugin</artifactId>
+            <version>1.0</version>
+            <configuration>
+               <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+               <junitxml>.</junitxml>
+               <filereports>WDF TestSuite.txt</filereports>
+            </configuration>
+            <executions>
+               <execution>
+                  <id>test</id>
+                  <goals>
+                     <goal>test</goal>
+                  </goals>
+               </execution>
+            </executions>
+         </plugin>
       </plugins>
    </build>
 
@@ -203,6 +248,15 @@
          <version>${scala.version}</version>
          <scope>${scala.scope}</scope>
       </dependency>
+
+      <!-- Scala Testing-->
+      <dependency>
+         <groupId>org.scalatest</groupId>
+         <artifactId>scalatest_${scala.binary.version}</artifactId>
+         <version>2.2.6</version>
+         <scope>test</scope>
+      </dependency>
+
       <!-- Spark dependencies -->
       <dependency>
          <groupId>org.apache.spark</groupId>

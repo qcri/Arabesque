@@ -16,7 +16,10 @@ import org.apache.hadoop.io.{Writable, LongWritable, IntWritable}
 
 import io.arabesque.graph.BasicMainGraph
 
-import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
+import io.arabesque.aggregation.{AggregationStorage,
+                                 PatternAggregationStorage,
+                                 AggregationStorageMetadata,
+                                 AggregationStorageFactory}
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.conf.Configuration._
 import io.arabesque.odag.{ODAG, ODAGStash}
@@ -55,13 +58,14 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
   //conf.registerKryoClasses(Array(
   //  classOf[ODAG]
   //  ))
-  
-  //private var config: SparkConfiguration[_ <: Embedding] = _
+ 
+  // testing
   config.initialize()
 
   private var sc: SparkContext = _
 
-  // TODO accumulators will not be used anymore for custom aggregation
+  // Spark accumulators for stats counting (non-critical)
+  // Ad-hoc arabesque approach for user-defined aggregations
   private var aggAccums: Map[String,Accumulator[_]] = _
   private var aggregations: Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
@@ -82,7 +86,6 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
   def this(_sc: SparkContext, config: SparkConfiguration[_ <: Embedding]) {
     this (config)
     sc = _sc
-
     init()
   }
 
@@ -97,15 +100,11 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     val computation = config.createComputation()
     computation.initAggregations()
 
-    // create one spark accumulator for each aggregation storage registered by
-    // the computation via metadata
-    def createAggregationAccum [K <: Writable, V <: Writable] (name: String,
-        metadata: AggregationStorageMetadata[K,V]) = {
-      sc.accumulator (new AggregationStorage[K,V](name))(new AggregationStorageParam[K,V](name))
-    }
+    // stats aggregation via accumulators
     aggAccums = Map.empty
-    for ((name,metadata) <- config.getAggregationsMetadata)
-      aggAccums.update (name, createAggregationAccum(name, metadata))
+    aggAccums.update (AGG_EMBEDDINGS_GENERATED, sc.accumulator [Long] (0L, AGG_EMBEDDINGS_GENERATED))
+    aggAccums.update (AGG_EMBEDDINGS_PROCESSED, sc.accumulator [Long] (0L, AGG_EMBEDDINGS_PROCESSED))
+    aggAccums.update (AGG_EMBEDDINGS_OUTPUT, sc.accumulator [Long] (0L, AGG_EMBEDDINGS_OUTPUT))
 
   }
 
@@ -124,7 +123,6 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
     // accumulatores and spark configuration w.r.t. Spark
     // TODO: ship serHaddopConf with SparkConfiguration
-    val _aggAccums = aggAccums
     val configBc = sc.broadcast(config)
     val serHadoopConf = new SerializableConfiguration(sc.hadoopConfiguration)
 
@@ -134,7 +132,6 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     var aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,ODAG]] = sc.broadcast (Map.empty)
 
     var previousAggregationsBc: Broadcast[_] = sc.broadcast (
-      //aggAccums.map {case (name,accum) => (name,accum.value)}
       Map.empty[String,AggregationStorage[_ <: Writable, _ <: Writable]]
     )
 
@@ -142,6 +139,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
     do {
 
+      val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
 
       val execEngines = getExecutionEngines (
@@ -155,50 +153,14 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
       // keep engines (filled with expansions and aggregations) for the rest of
       // the superstep
-      //execEngines.cache
+      execEngines.cache
 
-      // materialize engines before proceed:
-      // 1. it will expand embeddings locally on each partition
-      // 2. the embeddings that survive filtering are packed into ODAGs, still
-      //    locally
-      // 3. the expansions (embeddings) may also feed local AggregationStorages
-      execEngines.count
-
-      // we choose the flush method for ODAGs: load-balancing vs. overhead
-      val aggregatedOdags = config.getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
-        case SparkConfiguration.FLUSH_BY_PATTERN =>
-          val odags = execEngines.flatMap (_.flushByPattern)
-          aggregatedOdagsByPattern (odags)
-        case SparkConfiguration.FLUSH_BY_ENTRIES =>
-          val odags = execEngines.flatMap (_.flushByEntries)
-          aggregatedOdagsByEntries (odags)
-        case SparkConfiguration.FLUSH_BY_PARTS =>
-          val odags = execEngines.flatMap (_.flushByParts)
-          aggregatedOdagsByParts (odags)
-      }
-
-      /** Now we can submit the job that will flush and aggregate ODAGs
-       *  (odagsFuture) and the set of jobs that will aggregate
-       *  AggregationStorages. Naturally, at this point, this may happen
-       *  concurrently. */
+      /** [1] We extract and aggregate the *aggregations* globally.
+       *  That gives us the opportunity to do aggregationFilter in the generated
+       *  ODAGs before collecting/broadcasting */
 
       // create futures (two jobs submitted roughly simultaneously)
-      val odagsFuture = Future { aggregatedOdags.collectAsMap  }
       val aggregationsFuture = getAggregations (execEngines, numPartitions)
-
-      // odags
-      Await.ready (odagsFuture, atMost = Duration.Inf)
-      odagsFuture.value.get match {
-        case Success(aggregatedOdagsLocal) =>
-          logInfo (s"Number of aggregated ODAGs = ${aggregatedOdagsLocal.size}")
-          aggregatedOdagsBc.unpersist()
-          aggregatedOdagsBc = sc.broadcast (aggregatedOdagsLocal)
-
-        case Failure(e) =>
-          logError (s"Error in collecting odags ${e.getMessage}")
-          throw e
-      }
-
       // aggregations
       Await.ready (aggregationsFuture, atMost = Duration.Inf)
       aggregationsFuture.value.get match {
@@ -219,9 +181,47 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
           throw e
       }
 
-      //previousAggregationsBc = sc.broadcast (
-      //  aggAccums.map {case (name,accum) => (name,accum.value)}
-      //)
+      /** [2] At this point we have updated the *previousAggregations*. Now we
+       *  can: (i) aggregationFilter the ODAGs residing in the execution
+       *  engines, if this applies; and (ii) flush the remaining ODAGs for
+       *  global aggregation.
+       */
+      
+      // we choose the flush method for ODAGs: load-balancing vs. overhead
+      val aggregatedOdags = config.getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
+        case SparkConfiguration.FLUSH_BY_PATTERN =>
+          val odags = execEngines.
+            map (_.withNewAggregations (previousAggregationsBc)). // update previousAggregations
+            flatMap (_.flushByPattern)
+          aggregatedOdagsByPattern (odags)
+
+        case SparkConfiguration.FLUSH_BY_ENTRIES =>
+          val odags = execEngines.
+            map (_.withNewAggregations (previousAggregationsBc)). // update previousAggregations
+            flatMap (_.flushByEntries)
+          aggregatedOdagsByEntries (odags)
+
+        case SparkConfiguration.FLUSH_BY_PARTS =>
+          val odags = execEngines.
+            map (_.withNewAggregations (previousAggregationsBc)). // update previousAggregations
+            flatMap (_.flushByParts)
+          aggregatedOdagsByParts (odags)
+      }
+
+
+      val odagsFuture = Future { aggregatedOdags.collectAsMap  }
+      // odags
+      Await.ready (odagsFuture, atMost = Duration.Inf)
+      odagsFuture.value.get match {
+        case Success(aggregatedOdagsLocal) =>
+          logInfo (s"Number of aggregated ODAGs = ${aggregatedOdagsLocal.size}")
+          aggregatedOdagsBc.unpersist()
+          aggregatedOdagsBc = sc.broadcast (aggregatedOdagsLocal)
+
+        case Failure(e) =>
+          logError (s"Error in collecting odags ${e.getMessage}")
+          throw e
+      }
 
       // the exec engines have no use anymore, make room for the next round
       execEngines.unpersist()
@@ -233,6 +233,12 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
       val superstepFinish = System.currentTimeMillis
       logInfo (s"Superstep $superstep finished in ${superstepFinish - superstepStart} ms")
       
+      // print stats
+      aggAccums = aggAccums.map { case (name,accum) =>
+        logInfo (s"Accumulator[$name]: ${accum.value}")
+        (name -> sc.accumulator [Long] (0L, name))
+      }
+      
       superstep += 1
 
     } while (!sc.isStopped && !aggregatedOdagsBc.value.isEmpty) // while there are ODAGs to be processed
@@ -240,14 +246,11 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     val finishTime = System.currentTimeMillis
 
     logInfo (s"Computation has finished. It took ${finishTime - startTime} ms")
-
-    //aggAccums.foreach { case (name,accum) =>
-    //  logInfo (s"Accumulator/Aggregator [$name]\n${accum.value}")
-    //}
+    
   }
 
   /**
-   * Creates an RDD of execution engines for the superstep
+   * Creates an RDD of execution engines 
    * TODO
    */
   private def getExecutionEngines[E <: Embedding](
@@ -371,26 +374,19 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     def reduce[K <: Writable, V <: Writable](
         name: String,
         metadata: AggregationStorageMetadata[K,V])
-      (implicit kt: ClassTag[K], vt: ClassTag[V]) = Future[AggregationStorage[_ <: Writable, _ <: Writable]] {
+      (implicit kt: ClassTag[K], vt: ClassTag[V]) =
+        Future[AggregationStorage[_ <: Writable, _ <: Writable]] {
 
       val keyValues = execEngines.flatMap (execEngine =>
-          execEngine.flushAggregationsByName(name).asInstanceOf[Iterator[(SerializableWritable[K],SerializableWritable[V])]]
+          execEngine.flushAggregationsByName(name).
+            asInstanceOf[Iterator[AggregationStorage[K,V]]]
           )
-      val func = metadata.getReductionFunction.func.call _
-      val aggStorage = keyValues.reduceByKey {(sw1, sw2) =>
-        sw1.t = func(sw1.value, sw2.value)
-        sw1
-      }.map { case (swk, swv) =>
-        val aggStorage = new AggregationStorage[K,V] (
-          name, Map(swk.value -> swv.value)
-        )
-        aggStorage.endedAggregation
-        aggStorage
-      }.reduce { (agg1,agg2) =>
+      val aggStorage = keyValues.reduce { (agg1,agg2) =>
         agg1.aggregate (agg2)
         agg1
       }
       
+      aggStorage.endedAggregation
       aggStorage
     }
 
@@ -407,17 +403,11 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
       case Success(aggStorages) =>
         aggStorages.foreach (aggStorage => aggregations.update (aggStorage.getName, aggStorage))
       case Failure(e) =>
+        throw e
     }
 
     aggregations
   }
-
-  //override def getAggregatedValue[T <: Writable](name: String) = aggAccums.get(name) match {
-  //  case Some(accum) => accum.value.asInstanceOf[T]
-  //  case None =>
-  //    logWarning (s"Aggregation/accumulator $name not found")
-  //    null.asInstanceOf[T]
-  //}
 
   override def getAggregatedValue[T <: Writable](name: String) = aggregations.get(name) match {
     case Some(aggStorage) => aggStorage.asInstanceOf[T]
@@ -440,6 +430,10 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
  * Companion object: static methods and fields
  */
 object SparkMasterExecutionEngine {
+  val AGG_EMBEDDINGS_PROCESSED = "embeddings_processed"
+  val AGG_PROCESSED_SIZE_ODAG = "processed_size_odag"
+  val AGG_EMBEDDINGS_GENERATED = "embeddings_generated"
+  val AGG_EMBEDDINGS_OUTPUT = "embeddings_output"
 }
 
 /**

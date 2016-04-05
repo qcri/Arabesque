@@ -61,7 +61,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
     @Override
     public boolean aggregationFilter(Pattern pattern) {
-        return previousStepAggregation.containsKey(pattern);
+       return previousStepAggregation.containsKey(pattern);
     }
 
     @Override

@@ -217,6 +217,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         LOG.info("Configuration initialized");
     }
 
+    public boolean isInitialized() {
+       return initialized;
+    }
+
     public ImmutableClassesGiraphConfiguration getUnderlyingConfiguration() {
         return giraphConfiguration;
     }

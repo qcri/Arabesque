@@ -302,6 +302,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
                         Pattern partPattern = receivedPart.getPattern();
 
                         if (!computation.aggregationFilter(partPattern)) {
+                            System.out.println ("filtering pattern " + partPattern);
                             continue;
                         }
 

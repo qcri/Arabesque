@@ -33,7 +33,7 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    * ATENTION: This is highly spark-dependent
    */
   def sparkConf = {
-    assert (initialized)
+    assert (isInitialized)
     val sparkMaster = getString ("spark_master", "local[*]")
     val conf = new SparkConf().
       setAppName ("Arabesque Master Execution Engine").
@@ -125,9 +125,10 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 
     setOutputPath (getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT))
     
-      // main graph
-    if ((getMainGraph() == null && initialized)
-      || (getString ("spark_master", "local[*]") startsWith "local[")) {
+    // main graph
+    if ( (getMainGraph() == null && initialized)
+         || (getString ("spark_master", "local[*]") startsWith "local[")
+         ) {
       logInfo ("Main graph is null, gonna read it")
       setMainGraph (createGraph())
     }

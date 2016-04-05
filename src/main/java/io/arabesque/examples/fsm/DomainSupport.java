@@ -37,6 +37,7 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
     private HashIntSet domainsReachedSupport;
     private boolean enoughSupport;
     private int support;
+    private int currentSupport;
     private int numberOfDomains;
     private IntWriterConsumer intWriterConsumer;
     private IntCollectionAddConsumer intAdderConsumer;
@@ -48,6 +49,7 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
         this.domainsReachedSupport = HashIntSets.newMutableSet();
         this.enoughSupport = false;
         this.setFromEmbedding = false;
+        this.currentSupport = 1;
     }
 
     public DomainSupport(int support) {
@@ -167,6 +169,7 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
         }
 
         dataOutput.writeInt(support);
+        dataOutput.writeInt(currentSupport);
         dataOutput.writeInt(numberOfDomains);
 
         if (enoughSupport) {
@@ -204,6 +207,7 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
         this.clear();
 
         support = dataInput.readInt();
+        currentSupport = dataInput.readInt();
         numberOfDomains = dataInput.readInt();
 
         if (dataInput.readBoolean()) {
@@ -242,6 +246,7 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
                 "domainsReachedSupport=" + domainsReachedSupport +
                 ", enoughSupport=" + enoughSupport +
                 ", support=" + support +
+                ", currentSupport=" + currentSupport +
                 ", numberOfDomains=" + numberOfDomains);
 
         if (domainSets != null) {
@@ -358,6 +363,9 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
     public void aggregate(DomainSupport other) {
         if (this == other)
             return;
+
+        // current support
+        this.currentSupport += other.currentSupport;
 
         // If we already have support, do nothing
         if (this.enoughSupport) {

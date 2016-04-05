@@ -10,13 +10,15 @@ public class FSMMasterComputation extends MasterComputation {
         System.out.println ("Master computing");
         AggregationStorage<Pattern, DomainSupport> aggregationStorage =
                 readAggregation(FSMComputation.AGG_SUPPORT);
+            
+        System.out.println("Aggregation Storage: " + aggregationStorage);
 
         if (aggregationStorage.getNumberMappings() > 0) {
             System.out.println("Frequent patterns:");
 
             int i = 1;
             for (Pattern pattern : aggregationStorage.getKeys()) {
-                System.out.println(i + ": " + pattern);
+                System.out.println(i + ": " + pattern + ": " + aggregationStorage.getValue(pattern));
                 ++i;
             }
         }

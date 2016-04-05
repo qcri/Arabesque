@@ -512,7 +512,7 @@ public abstract class BasicPattern implements Pattern {
     @Override
     public String toOutputString() {
         if (getNumberOfEdges() > 0) {
-            return StringUtils.join(edges, ", ");
+            return StringUtils.join(edges, ",");
         }
         else if (getNumberOfVertices() == 1) {
             Vertex vertex = mainGraph.getVertex(vertices.getUnchecked(0));
