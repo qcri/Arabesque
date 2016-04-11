@@ -110,6 +110,10 @@ public class ExecutionEngine<O extends Embedding>
         numberOfEmbeddingsOutput++;
     }
 
+    public void output(Embedding embedding) {
+       output(embedding.toOutputString());
+    }
+
     @Override
     public void postSuperstep() {
         super.postSuperstep();

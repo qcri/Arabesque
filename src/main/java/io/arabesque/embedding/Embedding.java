@@ -5,7 +5,9 @@ import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.IntCollection;
 
-public interface Embedding extends WritableObject {
+import java.io.Externalizable;
+
+public interface Embedding extends WritableObject, Externalizable {
     IntArrayList getWords();
 
     IntArrayList getVertices();

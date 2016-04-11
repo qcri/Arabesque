@@ -140,10 +140,12 @@ case class SparkExecutionEngine[O <: Embedding](
     val comp = configuration.createComputation.asInstanceOf[Computation[O]]
     val execEngine = this.copy (
       previousAggregationsBc = aggregationsBc,
-      computation = comp)
+      computation = comp,
+      accums = accums)
     comp.setUnderlyingExecutionEngine (execEngine)
     comp.init()
     comp.initAggregations()
+    
     execEngine
   }
 
@@ -279,7 +281,6 @@ case class SparkExecutionEngine[O <: Embedding](
    * @return iterator of pairs of (pattern, odag)
    */
   def flushByPattern: Iterator[(Pattern,ODAG)]  = {
-    flushStatsAccumulators
     // consume content in *nextEmbeddingStash*
     for (odag <- nextEmbeddingStash.getEzips().iterator
          if computation.aggregationFilter (odag.getPattern))
@@ -295,8 +296,6 @@ case class SparkExecutionEngine[O <: Embedding](
    *  @return iterator of pairs of ((pattern,domainId,wordId), odag_with_one_entry)
    */
   def flushByEntries: Iterator[((Pattern,Int,Int), ODAG)] = {
-
-    flushStatsAccumulators
 
     /**
      * Iterator that split a big ODAG into small ODAGs containing only one entry
@@ -360,8 +359,6 @@ case class SparkExecutionEngine[O <: Embedding](
    * @return iterator of pairs ((pattern,partId), bytes)
    */
   def flushByParts: Iterator[((Pattern,Int),Array[Byte])] = {
-
-    flushStatsAccumulators
 
     val outputs = Array.fill[ByteArrayOutputStream](numPartitionsPerWorker)(new ByteArrayOutputStream())
     def createDataOutput(output: OutputStream): DataOutput = new DataOutputStream(output)

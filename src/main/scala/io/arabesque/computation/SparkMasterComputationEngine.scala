@@ -1,10 +1,9 @@
-/* ArabesqueTest.scala */
-
 package io.arabesque.computation
 
 import org.apache.spark.{Logging, SparkContext, SparkConf}
 import org.apache.spark.SparkContext._
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.storage.StorageLevel._
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.{Accumulator, Accumulable}
 import org.apache.spark.{AccumulatorParam, AccumulableParam}
@@ -13,6 +12,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.util.SizeEstimator
 
 import org.apache.hadoop.io.{Writable, LongWritable, IntWritable}
+import org.apache.hadoop.fs.{Path, FileSystem}
 
 import io.arabesque.graph.BasicMainGraph
 
@@ -20,10 +20,16 @@ import io.arabesque.aggregation.{AggregationStorage,
                                  PatternAggregationStorage,
                                  AggregationStorageMetadata,
                                  AggregationStorageFactory}
+
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.conf.Configuration._
 import io.arabesque.odag.{ODAG, ODAGStash}
-import io.arabesque.embedding.{Embedding, VertexInducedEmbedding}
+
+import io.arabesque.embedding.{Embedding,
+                               VertexInducedEmbedding,
+                               EdgeInducedEmbedding}
+
+import io.arabesque.embedding.ResultEmbedding
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.{SerializableConfiguration, SerializableWritable}
 
@@ -73,6 +79,9 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
   private var masterComputation: MasterComputation = _
 
+  private var odags: List[RDD[ODAG]] = List()
+  private var embeddings: List[RDD[Array[Int]]] = List()
+
   def this(confs: Map[String,Any]) {
     this (new SparkConfiguration(confs))
 
@@ -89,7 +98,25 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     init()
   }
 
+  /** user must call init() after */
+  def this(_sc: SparkContext) {
+    this (Map.empty[String,Any])
+  }
+
+  def sparkContext: SparkContext = sc
+  def arabConfig: SparkConfiguration[_ <: Embedding] = config
+
   def init() = {
+
+    // garantees that outputPath does not exist
+    if (config.isOutputActive) {
+      val fs = FileSystem.get(sc.hadoopConfiguration)
+      val outputPath = new Path(config.getOutputPath)
+      if (fs.exists (outputPath))
+        throw new RuntimeException (
+          s"Output path ${config.getOutputPath} exists. Choose another one."
+          )
+    }
     
     // master computation
     masterComputation = config.createMasterComputation()
@@ -208,6 +235,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
           aggregatedOdagsByParts (odags)
       }
 
+      odags = aggregatedOdags.values :: odags
 
       val odagsFuture = Future { aggregatedOdags.collectAsMap  }
       // odags
@@ -422,7 +450,31 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
   override def finalize() = {
     super.finalize()
-    sc.stop() // stop spark context, this is important
+  }
+
+  /**
+   * Functions that retrieve the results of this computation.
+   * Current fields:
+   *  - Odags of each superstep.
+   *  - Embeddings if the output is enabled. Our choice is to read the results
+   *  produced by the supersteps from external storage. We avoid memory issues
+   *  by not keeping all the embeddings in memory.
+   */
+  def getOdags: RDD[ODAG] = {
+    sc.union (odags.toSeq)
+  }
+  def getEmbeddings: RDD[ResultEmbedding] = {
+
+    val embeddPath = s"${config.getOutputPath}"
+    val fs = FileSystem.get (sc.hadoopConfiguration)
+
+    if (config.isOutputActive && fs.exists (new Path (embeddPath))) {
+      logInfo (s"Reading embedding words from: ${config.getOutputPath}")
+      sc.textFile (s"${embeddPath}/*").map (ResultEmbedding(_))
+    } else {
+      sc.emptyRDD[ResultEmbedding]
+    }
+
   }
 }
 

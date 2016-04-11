@@ -5,6 +5,7 @@ import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.IntCollection;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.IOException;
 
 public class EdgeInducedEmbedding extends BasicEmbedding {
@@ -141,5 +142,10 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         for (int i = 0; i < numEdges; ++i) {
             updateVertices(edges.getUnchecked(i));
         }
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields(objInput);
     }
 }

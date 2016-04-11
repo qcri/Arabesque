@@ -136,6 +136,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return (C) instance;
     }
 
+    public static void unset() {
+       instance = null;
+    }
+
     public synchronized static void setIfUnset(Configuration configuration) {
         if (isUnset()) {
             set(configuration);
@@ -191,7 +195,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
         aggregationsMetadata = new HashMap<>();
 
-        outputPath = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT);
+        outputPath = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT + "_" + computationClass.getName());
 
         defaultAggregatorSplits = getInteger(CONF_DEFAULT_AGGREGATOR_SPLITS, CONF_DEFAULT_AGGREGATOR_SPLITS_DEFAULT);
 

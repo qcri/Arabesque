@@ -16,16 +16,26 @@ import scala.collection.JavaConversions._
 /**
  * Configurations are passed along in this mapping
  */
-class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
+case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     extends Configuration[O] with Logging {
 
   def this() {
     this (Map.empty)
   }
 
+  /**
+   * Sets a configuration (mutable)
+   */
   def set(key: String, value: Any): SparkConfiguration[O] = {
     confs.update (key, value)
     this
+  }
+
+  /**
+   * Sets a configuration (immutable)
+   */
+  def withNewConfig(key: String, value: Any): SparkConfiguration[O] = {
+    this.copy (confs = confs ++ Map(key -> value))
   }
 
   /**
@@ -123,7 +133,8 @@ class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 
     setAggregationsMetadata (new java.util.HashMap())
 
-    setOutputPath (getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT))
+    setOutputPath (getString(CONF_OUTPUT_PATH,
+      s"${CONF_OUTPUT_PATH_DEFAULT}_${getComputationClass.getName}"))
     
     // main graph
     if ( (getMainGraph() == null && initialized)

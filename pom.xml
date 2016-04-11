@@ -182,7 +182,7 @@
                <!--<trimStackTrace>false</trimStackTrace>-->
                <!-- <skipTests>true</skipTests>-->
                <includes>
-                  <include>**/*Spec.*</include>
+                  <!-- <include>**/*Spec.*</include> -->
                </includes>
             </configuration>
          </plugin>

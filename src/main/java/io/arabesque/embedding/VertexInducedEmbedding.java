@@ -5,6 +5,7 @@ import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.function.IntConsumer;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.IOException;
 
 public class VertexInducedEmbedding extends BasicEmbedding {
@@ -109,6 +110,11 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         for (int i = 0; i < numVertices; ++i) {
             updateEdges(vertices.getUnchecked(i), i);
         }
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields(objInput);
     }
 
     /**
