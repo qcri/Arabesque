@@ -28,6 +28,7 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    */
   def set(key: String, value: Any): SparkConfiguration[O] = {
     confs.update (key, value)
+    fixAssignments
     this
   }
 
@@ -35,7 +36,9 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    * Sets a configuration (immutable)
    */
   def withNewConfig(key: String, value: Any): SparkConfiguration[O] = {
-    this.copy (confs = confs ++ Map(key -> value))
+    val newConfig = this.copy [O] (confs = confs ++ Map(key -> value))
+    newConfig.fixAssignments
+    newConfig
   }
 
   /**
@@ -71,11 +74,13 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
   /**
    * Update assign internal names to user defined properties
    */
-  def fixAssignments = {
+  private def fixAssignments = {
     def updateIfExists(key: String, config: String) = confs.remove (key) match {
       case Some(value) => confs.update (config, value)
       case None =>
     }
+    // log level
+    updateIfExists ("log_level", CONF_LOG_LEVEL)
     
     // computation classes
     updateIfExists ("master_computation", CONF_MASTER_COMPUTATION_CLASS)
@@ -133,8 +138,8 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 
     setAggregationsMetadata (new java.util.HashMap())
 
-    setOutputPath (getString(CONF_OUTPUT_PATH,
-      s"${CONF_OUTPUT_PATH_DEFAULT}_${getComputationClass.getName}"))
+    val outputPathBase = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT)
+    setOutputPath (s"${outputPathBase}-${java.util.UUID.randomUUID}")
     
     // main graph
     if ( (getMainGraph() == null && initialized)
@@ -167,5 +172,5 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 object SparkConfiguration {
   val FLUSH_BY_PATTERN = "flush_by_pattern" // good for regular distributions
   val FLUSH_BY_ENTRIES = "flush_by_entries" // good for irregular distributions but small embedding domains
-  val FLUSH_BY_PARTS   = "flush_by_parts" // good for irregular distributions, period
+  val FLUSH_BY_PARTS   = "flush_by_parts"   // good for irregular distributions, period
 }

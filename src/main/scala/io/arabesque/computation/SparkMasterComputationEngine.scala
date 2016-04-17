@@ -11,7 +11,7 @@ import org.apache.spark.rdd.RDD
 
 import org.apache.spark.util.SizeEstimator
 
-import org.apache.hadoop.io.{Writable, LongWritable, IntWritable}
+import org.apache.hadoop.io.{Writable, LongWritable, IntWritable, NullWritable}
 import org.apache.hadoop.fs.{Path, FileSystem}
 
 import io.arabesque.graph.BasicMainGraph
@@ -25,11 +25,9 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.conf.Configuration._
 import io.arabesque.odag.{ODAG, ODAGStash}
 
-import io.arabesque.embedding.{Embedding,
-                               VertexInducedEmbedding,
-                               EdgeInducedEmbedding}
+import io.arabesque.embedding.{Embedding, VertexInducedEmbedding, EdgeInducedEmbedding,
+                               ResultEmbedding, VEmbedding, EEmbedding}
 
-import io.arabesque.embedding.ResultEmbedding
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.{SerializableConfiguration, SerializableWritable}
 
@@ -57,14 +55,6 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
   import SparkMasterExecutionEngine._
 
-  // TODO would be interesting to make Kryo the default serializer for Spark
-  // however it would require great changes in the way classes are serialized by
-  // default (Serializable vs. Externalizable vs. Writable for Hadoop)
-  //conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-  //conf.registerKryoClasses(Array(
-  //  classOf[ODAG]
-  //  ))
- 
   // testing
   config.initialize()
 
@@ -73,7 +63,8 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
   // Spark accumulators for stats counting (non-critical)
   // Ad-hoc arabesque approach for user-defined aggregations
   private var aggAccums: Map[String,Accumulator[_]] = _
-  private var aggregations: Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
+  private var aggregations
+    : Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
   private var superstep = 0
 
@@ -129,9 +120,12 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
     // stats aggregation via accumulators
     aggAccums = Map.empty
-    aggAccums.update (AGG_EMBEDDINGS_GENERATED, sc.accumulator [Long] (0L, AGG_EMBEDDINGS_GENERATED))
-    aggAccums.update (AGG_EMBEDDINGS_PROCESSED, sc.accumulator [Long] (0L, AGG_EMBEDDINGS_PROCESSED))
-    aggAccums.update (AGG_EMBEDDINGS_OUTPUT, sc.accumulator [Long] (0L, AGG_EMBEDDINGS_OUTPUT))
+    aggAccums.update (AGG_EMBEDDINGS_GENERATED,
+      sc.accumulator [Long] (0L, AGG_EMBEDDINGS_GENERATED))
+    aggAccums.update (AGG_EMBEDDINGS_PROCESSED,
+      sc.accumulator [Long] (0L, AGG_EMBEDDINGS_PROCESSED))
+    aggAccums.update (AGG_EMBEDDINGS_OUTPUT,
+      sc.accumulator [Long] (0L, AGG_EMBEDDINGS_OUTPUT))
 
   }
 
@@ -156,7 +150,8 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     // setup an RDD to simulate empty partitions and a broadcast variable to
     // communicate the global aggregated ODAGs on each step
     val superstepRDD = sc.makeRDD (Seq.empty[Any], numPartitions).cache
-    var aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,ODAG]] = sc.broadcast (Map.empty)
+    var aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,ODAG]] =
+      sc.broadcast (Map.empty)
 
     var previousAggregationsBc: Broadcast[_] = sc.broadcast (
       Map.empty[String,AggregationStorage[_ <: Writable, _ <: Writable]]
@@ -319,7 +314,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
       odag1
     }.
     map { case (pattern, odag) =>
-      odag.setSerializeAsWriteOnly (true)
+      odag.setSerializeAsReadOnly (true)
       (pattern, odag)
     }
 
@@ -342,7 +337,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
         odag1
       }.
     map { case (pattern,odag) =>
-      odag.setSerializeAsWriteOnly(true)
+      odag.setSerializeAsReadOnly(true)
       (pattern,odag)
     }
 
@@ -379,7 +374,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
       odag1
     }.
     map { tup =>
-      tup._2.setSerializeAsWriteOnly (true)
+      tup._2.setSerializeAsReadOnly (true)
       tup
     }
 
@@ -470,7 +465,19 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
     if (config.isOutputActive && fs.exists (new Path (embeddPath))) {
       logInfo (s"Reading embedding words from: ${config.getOutputPath}")
-      sc.textFile (s"${embeddPath}/*").map (ResultEmbedding(_))
+      //sc.textFile (s"${embeddPath}/*").map (ResultEmbedding(_))
+
+      // we must decide at runtime the concrete Writable to be used
+      val resEmbeddingClass = if (config.getEmbeddingClass == classOf[EdgeInducedEmbedding])
+        classOf[EEmbedding]
+      else if (config.getEmbeddingClass == classOf[VertexInducedEmbedding])
+        classOf[VEmbedding]
+      else
+        classOf[ResultEmbedding] // not allowed, will crash and should not happen
+
+      sc.sequenceFile (s"${embeddPath}/*", classOf[NullWritable], resEmbeddingClass).
+        values.
+        asInstanceOf[RDD[ResultEmbedding]]
     } else {
       sc.emptyRDD[ResultEmbedding]
     }

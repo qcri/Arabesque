@@ -7,6 +7,7 @@ import io.arabesque.pattern.Pattern
 import io.arabesque.embedding.Embedding
 import io.arabesque.embedding.ResultEmbedding
 
+import org.apache.hadoop.fs.{Path, FileSystem}
 import org.apache.spark.Logging
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -25,25 +26,85 @@ case class ArabesqueResult(
   /**
    * Lazy evaluation for the results
    */
-  private lazy val masterEngine: SparkMasterExecutionEngine = {
-    val masterEngine = new SparkMasterExecutionEngine(sc, config)
-    masterEngine.compute
-    masterEngine.finalize
-    masterEngine
+  private var masterEngineOpt: Option[SparkMasterExecutionEngine] = None
+  def masterEngine: SparkMasterExecutionEngine = masterEngineOpt match {
+    case None =>
+      logInfo (s"starting/computing master execution engine")
+      val _masterEngine = new SparkMasterExecutionEngine(sc, config)
+      _masterEngine.compute
+      _masterEngine.finalize
+      masterEngineOpt = Some(_masterEngine)
+      _masterEngine
+    case Some(_masterEngine) =>
+      _masterEngine
   }
 
   /**
    * Output embeddings
    */
-  lazy val embeddings: RDD[ResultEmbedding] = {
-    masterEngine.getEmbeddings
+  private var embeddingsOpt: Option[RDD[ResultEmbedding]] = None
+  def embeddings: RDD[ResultEmbedding] = embeddingsOpt match {
+    case None if config.isOutputActive =>
+      val _embeddings = masterEngine.getEmbeddings
+      embeddingsOpt = Some(_embeddings)
+      _embeddings
+    case Some(_embeddings) if config.isOutputActive =>
+      _embeddings
+    case _ =>
+      config.set ("output_active", true)
+      masterEngineOpt = None
+      embeddingsOpt = None
+      odagsOpt = None
+      embeddings
   }
 
   /**
    * ODAGs of all supersteps
    */
-  lazy val odags: RDD[ODAG] = {
-    masterEngine.getOdags
+  private var odagsOpt: Option[RDD[ODAG]] = None
+  def odags: RDD[ODAG] = odagsOpt match {
+    case None =>
+      val _odags = masterEngine.getOdags
+      odagsOpt = Some(_odags)
+      _odags
+    case Some(_odags) =>
+      _odags
+  }
+
+  /**
+   * Saves embeddings as sequence files (HDFS): [NullWritable,ResultEmbedding]
+   * Behavior:
+   *  - If at this point no computation was performed we just configure
+   *  the execution engine and force the computation(count action)
+   *  - Otherwise we rename the embeddings path to *path* and clear the
+   *  embeddings RDD variable, which will force the creation of a new RDD with
+   *  the corrected path.
+   *
+   * @param path hdfs(hdfs://) or local (file://) path
+   */
+  def saveEmbeddingsAsSequenceFile(path: String): Unit = embeddingsOpt match {
+    case None =>
+      logInfo ("no emebeddings found, computing them ... ")
+      config.set ("output_path", path)
+      embeddings.count
+
+    case Some(_embeddings) =>
+      logInfo (s"found results, renaming from ${config.getOutputPath} to ${path}")
+      val fs = FileSystem.get(sc.hadoopConfiguration)
+      fs.rename (new Path(config.getOutputPath), new Path(path))
+      if (config.getOutputPath != path) embeddingsOpt = None
+      config.setOutputPath (path)
+  }
+
+  /**
+   * Saves the embeddings as text
+   *
+   * @param path hdfs(hdfs://) or local(file://) path
+   */
+  def saveEmbeddingsAsTextFile(path: String): Unit = {
+    embeddings.
+      map (emb => emb.words.mkString(" ")).
+      saveAsTextFile (path)
   }
 
   /**

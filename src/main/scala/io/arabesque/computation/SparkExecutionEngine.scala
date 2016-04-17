@@ -1,11 +1,15 @@
 package io.arabesque.computation
 
+import org.apache.log4j.{Logger, Level}
+
 import org.apache.spark.Logging
+import org.apache.spark.SparkEnv
 import org.apache.spark.{Accumulable, Accumulator}
 import org.apache.spark.broadcast.Broadcast
 
 import io.arabesque.conf.{Configuration, SparkConfiguration}
-import io.arabesque.embedding.Embedding
+import io.arabesque.embedding.{Embedding, EdgeInducedEmbedding, VertexInducedEmbedding,
+                               ResultEmbedding, VEmbedding, EEmbedding}
 import io.arabesque.pattern.Pattern
 import io.arabesque.odag.{ODAGStash, ODAG}
 import io.arabesque.odag.ODAGStash._
@@ -16,7 +20,9 @@ import io.arabesque.aggregation.{AggregationStorage,
 import io.arabesque.utils.{SerializableConfiguration, SerializableWritable}
 
 import org.apache.hadoop.fs.{Path, FileSystem}
-import org.apache.hadoop.io.{Writable, LongWritable}
+import org.apache.hadoop.io.{Writable, LongWritable, NullWritable}
+import org.apache.hadoop.io.SequenceFile
+import org.apache.hadoop.io.SequenceFile.Writer
 
 import scala.collection.mutable.{Map, ListBuffer}
 import scala.collection.JavaConversions._
@@ -25,8 +31,9 @@ import scala.reflect.ClassTag
 
 import java.util.concurrent.{Executors, ExecutorService}
 import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
+                FileOutputStream, ObjectOutputStream,
                 DataInput, ByteArrayInputStream, DataInputStream, InputStream,
-                OutputStreamWriter}
+                OutputStreamWriter, File}
 
 /**
  * Underlying engine that runs Arabesque workers in Spark.
@@ -71,6 +78,8 @@ case class SparkExecutionEngine[O <: Embedding](
   var aggregationStorages: Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
   // output
+  var embeddingWriterOpt: Option[Writer] = _
+  var tmpFile: File = _
   var outputStreamOpt: Option[OutputStreamWriter] = _
   var outputPath: Path = _
 
@@ -85,6 +94,11 @@ case class SparkExecutionEngine[O <: Embedding](
    */
   def init() = {
     configuration = Configuration.get()
+
+    // set log level (from spark logging)
+    val logLevel = Level.toLevel (configuration.getLogLevel)
+    Logger.getLogger(logName).setLevel (logLevel)
+    Logger.getLogger(classOf[ODAG].getName.stripSuffix("$")).setLevel (logLevel)
 
     computation = configuration.createComputation()
     computation.setUnderlyingExecutionEngine (this)
@@ -102,7 +116,7 @@ case class SparkExecutionEngine[O <: Embedding](
 
     numPartitionsPerWorker = configuration.getInteger ("num_odag_parts", getNumberPartitions())
     // TODO: the engine in Spark is volatile, maybe get this pool out of here
-    // (maybe in configuration, which will be initialized once per JVM)
+    // (maybe within configuration, which will be initialized once per JVM)
     pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
     // aggregation storage
@@ -111,6 +125,7 @@ case class SparkExecutionEngine[O <: Embedding](
 
     // output
     outputStreamOpt = None
+    embeddingWriterOpt = None
     outputPath = new Path(configuration.getOutputPath)
 
     // accumulators
@@ -124,7 +139,9 @@ case class SparkExecutionEngine[O <: Embedding](
    */
   override def finalize() = {
     super.finalize()
+    // make sure we close writers
     if (outputStreamOpt.isDefined) outputStreamOpt.get.close
+    if (embeddingWriterOpt.isDefined) embeddingWriterOpt.get.close
     pool.shutdown()
   }
 
@@ -150,7 +167,7 @@ case class SparkExecutionEngine[O <: Embedding](
   }
 
   /**
-   * Realizes the computation of this module, i.e., expand/compute
+   * It does the computation of this module, i.e., expand/compute
    *
    * @param inboundStashes iterator of ODAG stashes
    */
@@ -197,13 +214,17 @@ case class SparkExecutionEngine[O <: Embedding](
    * compressed embeddings
    * @return some embedding or none
    */
-  def getNextInboundEmbedding(remainingStashes: Iterator[ODAGStash]): Option[O] = {
+  def getNextInboundEmbedding(
+      remainingStashes: Iterator[ODAGStash]): Option[O] = {
     if (currentEmbeddingStash == null) {
       
       if (remainingStashes.hasNext) {
 
         currentEmbeddingStash = remainingStashes.next
-        currentEmbeddingStash.finalizeConstruction (pool, numPartitionsPerWorker)
+        currentEmbeddingStash.finalizeConstruction (pool,
+          numPartitionsPerWorker)
+        /* ready to debug stash of odags */
+        debugOdags (currentEmbeddingStash)
 
         // odag stashes have an efficient reader for compressed embeddings
         odagStashReader = new EfficientReader[O] (currentEmbeddingStash,
@@ -218,16 +239,12 @@ case class SparkExecutionEngine[O <: Embedding](
 
     // new embedding was found
     if (odagStashReader.hasNext) {
-
       Some(odagStashReader.next)
-
     // no more embeddings to be read from current stash, try to get another
     // stash by recursive call
     } else {
-
       currentEmbeddingStash = null
       getNextInboundEmbedding(remainingStashes)
-
     }
   }
 
@@ -445,12 +462,45 @@ case class SparkExecutionEngine[O <: Embedding](
    * @param name aggregator's name
    * @return an aggregation storage with the specified name
    */
-  private def getAggregationStorage[K <: Writable, V <: Writable](name: String): AggregationStorage[K,V] = aggregationStorages.get(name) match {
+  private def getAggregationStorage[K <: Writable, V <: Writable](name: String)
+      : AggregationStorage[K,V] = aggregationStorages.get(name) match {
     case Some(aggregationStorage : AggregationStorage[K,V]) => aggregationStorage
     case None =>
       val aggregationStorage = aggregationStorageFactory.createAggregationStorage (name)
       aggregationStorages.update (name, aggregationStorage)
       aggregationStorage.asInstanceOf[AggregationStorage[K,V]]
+  }
+
+  /**
+   * TODO: change srialization ??
+   */
+  override def output(embedding: Embedding) = embeddingWriterOpt match {
+    case Some(embeddingWriter) =>
+      val resEmbedding = ResultEmbedding (embedding)
+      embeddingWriter.append (NullWritable.get, resEmbedding)
+
+    case None =>
+
+      // we must decide at runtime the concrete Writable to be used
+      val resEmbeddingClass = if (embedding.isInstanceOf[EdgeInducedEmbedding])
+        classOf[EEmbedding]
+      else if (embedding.isInstanceOf[VertexInducedEmbedding])
+        classOf[VEmbedding]
+      else
+        classOf[ResultEmbedding] // not allowed, will crash and should not happen
+
+      // instantiate the embedding writer (sequence file)
+      val superstepPath = new Path(outputPath, s"${getSuperstep}")
+      val partitionPath = new Path(superstepPath, s"${partitionId}")
+      val embeddingWriter = SequenceFile.createWriter(hadoopConf.value,
+        Writer.file(partitionPath),
+        Writer.keyClass(classOf[NullWritable]),
+        Writer.valueClass(resEmbeddingClass))
+
+      embeddingWriterOpt = Some(embeddingWriter)
+      
+      val resEmbedding = ResultEmbedding (embedding)
+      embeddingWriter.append (NullWritable.get, resEmbedding)
   }
 
   /**
@@ -479,6 +529,12 @@ case class SparkExecutionEngine[O <: Embedding](
       outputStreamOpt = Some(outputStream)
       outputStream.write(outputString)
       outputStream.write("\n")
+  }
+
+  private def debugOdags(odagStash: ODAGStash): Unit = {
+    for (odag <- odagStash.getEzips) {
+      logDebug (odag.getStorage.getStats.toString)
+    }
   }
   
   // other functions

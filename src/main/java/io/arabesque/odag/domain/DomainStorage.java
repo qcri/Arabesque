@@ -15,6 +15,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class DomainStorage extends Storage<DomainStorage> {
@@ -150,6 +151,9 @@ public class DomainStorage extends Storage<DomainStorage> {
     @Override
     public long getNumberOfEnumerations() {
         if (countsDirty) {
+            /* ATTENTION: instead of an exception we return -1.
+             * This way we can identify whether the ODAG is ready or not for
+             * reading */
             //throw new RuntimeException("Should have never been the case");
             return -1;
         }
@@ -184,6 +188,12 @@ public class DomainStorage extends Storage<DomainStorage> {
             Computation<Embedding> computation,
             int numPartitions, int numBlocks, int maxBlockSize) {
         throw new RuntimeException("Shouldn't be read");
+    }
+
+    public void finalizeConstruction() {
+       ExecutorService pool = Executors.newSingleThreadExecutor ();
+       finalizeConstruction(pool, 1);
+       pool.shutdown();
     }
 
     public synchronized void finalizeConstruction(ExecutorService pool, int numParts) {
@@ -403,11 +413,13 @@ public class DomainStorage extends Storage<DomainStorage> {
         sb.append(", ");
 
         for (int i = 0; i < domainEntries.size(); i++) {
-            sb.append("Domain[" + i + "] size " + domainEntries.get(i).size() + "\n");
+            sb.append("Domain[" + i + "] size " + domainEntries.get(i).size() + ", ");
         }
 
         return sb.toString();
     }
+
+    
 
     public String toStringDebug() {
         StringBuilder sb = new StringBuilder();
@@ -435,8 +447,10 @@ public class DomainStorage extends Storage<DomainStorage> {
                 //This debug function will fail if called on the readOnly domain.
                 IntCursor neighbourCursor = domainEntry.getPointersCursor();
 
-                while (neighbourCursor.moveNext()) {
-                    neighbours.add(neighbourCursor.elem());
+                if (neighbourCursor != null) {
+                   while (neighbourCursor.moveNext()) {
+                      neighbours.add(neighbourCursor.elem());
+                   }
                 }
             }
 

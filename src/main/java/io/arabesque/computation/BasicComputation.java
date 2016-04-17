@@ -212,9 +212,10 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         //underlyingExecutionEngine.aggregate(MasterExecutionEngine.AGG_CHILDREN_EVALUATED, longWritable);
     }
 
+    @Override
     public void output(Embedding embedding) {
         if (outputEnabled) {
-            output(embedding.toOutputString());
+            underlyingExecutionEngine.output(embedding);
         }
     }
 

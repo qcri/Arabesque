@@ -110,6 +110,7 @@ public class ExecutionEngine<O extends Embedding>
         numberOfEmbeddingsOutput++;
     }
 
+    @Override
     public void output(Embedding embedding) {
        output(embedding.toOutputString());
     }

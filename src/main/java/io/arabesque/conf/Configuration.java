@@ -45,6 +45,8 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final int M = 1000 * K;
     public static final int B = 1000 * M;
 
+    public static final String CONF_LOG_LEVEL = "arabesque.log.level";
+    public static final String CONF_LOG_LEVEL_DEFAULT = "info";
     public static final String CONF_MAINGRAPH_CLASS = "arabesque.graph.class";
     public static final String CONF_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.BasicMainGraph";
     public static final String CONF_MAINGRAPH_PATH = "arabesque.graph.location";
@@ -293,6 +295,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return cacheThresholdSize;
     }
 
+    public String getLogLevel() {
+       return getString (CONF_LOG_LEVEL, CONF_LOG_LEVEL_DEFAULT);
+    }
+
     public String getMainGraphPath() {
         return getString(CONF_MAINGRAPH_PATH, CONF_MAINGRAPH_PATH_DEFAULT);
     }
@@ -451,5 +457,6 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public void setComputationClass(Class<? extends Computation> computationClass) {
        this.computationClass = computationClass;
     }
+
 }
 

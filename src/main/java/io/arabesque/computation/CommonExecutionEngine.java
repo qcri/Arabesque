@@ -37,4 +37,6 @@ public interface CommonExecutionEngine<O extends Embedding> {
     
     void output(String outputString);
 
+    void output(Embedding embedding);
+
 }
