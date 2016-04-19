@@ -413,8 +413,11 @@ public class DomainStorage extends Storage<DomainStorage> {
         sb.append(", ");
 
         for (int i = 0; i < domainEntries.size(); i++) {
-            sb.append("Domain[" + i + "] size " + domainEntries.get(i).size() + ", ");
+            sb.append("Domain[" + i + "] size " + domainEntries.get(i).size());
+            if (i != domainEntries.size() - 1)
+               sb.append (", ");
         }
+        sb.append("}");
 
         return sb.toString();
     }

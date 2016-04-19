@@ -102,7 +102,7 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    * TODO: generalize the initialization in the superclass Configuration
    */
   override def initialize(): Unit = synchronized {
-    if (Configuration.isUnset || this != Configuration.get) {
+    if (Configuration.isUnset || uuid != Configuration.get[SparkConfiguration[O]].uuid) {
       initializeInJvm()
       Configuration.set (this)
     }
@@ -139,7 +139,7 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     setAggregationsMetadata (new java.util.HashMap())
 
     val outputPathBase = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT)
-    setOutputPath (s"${outputPathBase}-${java.util.UUID.randomUUID}")
+    setOutputPath (s"${outputPathBase}-${uuid}")
     
     // main graph
     if ( (getMainGraph() == null && initialized)

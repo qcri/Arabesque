@@ -1,5 +1,6 @@
 package io.arabesque.computation
 
+import org.apache.log4j.{Logger, Level}
 import org.apache.spark.{Logging, SparkContext, SparkConf}
 import org.apache.spark.SparkContext._
 import org.apache.spark.storage.StorageLevel
@@ -98,6 +99,9 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
   def arabConfig: SparkConfiguration[_ <: Embedding] = config
 
   def init() = {
+
+    val logLevel = Level.toLevel (config.getLogLevel)
+    Logger.getLogger(logName).setLevel (logLevel)
 
     // garantees that outputPath does not exist
     if (config.isOutputActive) {
@@ -240,6 +244,20 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
           logInfo (s"Number of aggregated ODAGs = ${aggregatedOdagsLocal.size}")
           aggregatedOdagsBc.unpersist()
           aggregatedOdagsBc = sc.broadcast (aggregatedOdagsLocal)
+
+          /* maybe debug odag stats */
+          if (log.isDebugEnabled) {
+            for ((_,odag) <- aggregatedOdagsLocal.iterator) {
+              val storage = odag.getStorage
+              storage.finalizeConstruction
+              logDebug (
+                s"Superstep{${superstep}}" +
+                s";${storage.toStringResume}" +
+                s";${storage.getStats}" +
+                s";${storage.getStats.getSizeEstimations}"
+              )
+            }
+          }
 
         case Failure(e) =>
           logError (s"Error in collecting odags ${e.getMessage}")

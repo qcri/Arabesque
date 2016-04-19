@@ -98,7 +98,6 @@ case class SparkExecutionEngine[O <: Embedding](
     // set log level (from spark logging)
     val logLevel = Level.toLevel (configuration.getLogLevel)
     Logger.getLogger(logName).setLevel (logLevel)
-    Logger.getLogger(classOf[ODAG].getName.stripSuffix("$")).setLevel (logLevel)
 
     computation = configuration.createComputation()
     computation.setUnderlyingExecutionEngine (this)
@@ -223,8 +222,6 @@ case class SparkExecutionEngine[O <: Embedding](
         currentEmbeddingStash = remainingStashes.next
         currentEmbeddingStash.finalizeConstruction (pool,
           numPartitionsPerWorker)
-        /* ready to debug stash of odags */
-        debugOdags (currentEmbeddingStash)
 
         // odag stashes have an efficient reader for compressed embeddings
         odagStashReader = new EfficientReader[O] (currentEmbeddingStash,
@@ -531,11 +528,7 @@ case class SparkExecutionEngine[O <: Embedding](
       outputStream.write("\n")
   }
 
-  private def debugOdags(odagStash: ODAGStash): Unit = {
-    for (odag <- odagStash.getEzips) {
-      logDebug (odag.getStorage.getStats.toString)
-    }
-  }
+  
   
   // other functions
   override def getPartitionId() = partitionId

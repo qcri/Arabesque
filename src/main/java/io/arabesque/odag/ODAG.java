@@ -10,6 +10,7 @@ import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
 
 import java.io.DataInput;
 import java.io.ObjectInput;
@@ -20,8 +21,6 @@ import java.io.Externalizable;
 import java.util.concurrent.ExecutorService;
 
 public class ODAG implements Writable, Externalizable {
-    private static final Logger LOG = Logger.getLogger(ODAG.class);
-
     private Pattern pattern;
     private DomainStorage storage;
 
@@ -116,13 +115,6 @@ public class ODAG implements Writable, Externalizable {
     }
 
     public void setSerializeAsReadOnly (boolean serializeAsReadOnly) {
-       // debug odag before turning it into a ready-only structure
-       if (LOG.isDebugEnabled()) {
-         storage.finalizeConstruction();
-         LOG.debug (storage.toStringResume());
-         LOG.debug (storage.getStats().toString());
-         LOG.debug (storage.getStats().getSizeEstimations());
-       }
        this.serializeAsReadOnly = serializeAsReadOnly;
     }
 

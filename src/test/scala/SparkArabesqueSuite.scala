@@ -95,40 +95,37 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test ("[motifs] arabesque API") {
-    val motifsRes = arabGraph.motifs (4).
+    val motifsRes = arabGraph.motifs (3).
       set ("output_path", s"target/${sc.applicationId}/Motifs_Output").
       set ("log_level", "debug")
     val odags = motifsRes.odags
     val embeddings = motifsRes.embeddings
-    //assert (odags.count == 2)
-    //assert (embeddings.count == 24546)
+    assert (embeddings.count == 24546)
   }
 
-  //test ("[fsm] arabesque API") {
-  //  val fsmRes = arabGraph.fsm (100, 3).
-  //    set ("output_path", s"target/${sc.applicationId}/FSM_Output")
-  //  val odags = fsmRes.odags
-  //  val embeddings = fsmRes.embeddings
-  //  assert (odags.count == 3)
-  //  assert (embeddings.count == 31414)
-  //}
+  test ("[fsm] arabesque API") {
+    val fsmRes = arabGraph.fsm (100, 3).
+      set ("output_path", s"target/${sc.applicationId}/FSM_Output")
+    val odags = fsmRes.odags
+    val embeddings = fsmRes.embeddings
+    assert (embeddings.count == 31414)
+  }
 
-  //test ("[triangles] arabesque API") {
-  //  val trianglesRes = arabGraph.triangles().
-  //    set ("output_path", s"target/${sc.applicationId}/Triangles_Output")
-  //  val odags = trianglesRes.odags
-  //  val embeddings = trianglesRes.embeddings
-  //  assert (odags.count == 2)
-  //  assert (embeddings.count == 0)
-  //}
+  test ("[triangles] arabesque API") {
+    val trianglesRes = arabGraph.triangles().
+      set ("output_path", s"target/${sc.applicationId}/Triangles_Output")
+    val odags = trianglesRes.odags
+    val embeddings = trianglesRes.embeddings
+    assert (odags.count == 2)
+    assert (embeddings.count == 0)
+  }
 
-  //test ("[cliques] arabesque API") {
-  //  val cliquesRes = arabGraph.cliques (3).
-  //    set ("output_path", s"target/${sc.applicationId}/Cliques_Output")
-  //  val odags = cliquesRes.odags
-  //  val embeddings = cliquesRes.embeddings
-  //  assert (odags.count == 2)
-  //  assert (embeddings.count == 1166)
-  //}
+  test ("[cliques] arabesque API") {
+    val cliquesRes = arabGraph.cliques (3).
+      set ("output_path", s"target/${sc.applicationId}/Cliques_Output")
+    val odags = cliquesRes.odags
+    val embeddings = cliquesRes.embeddings
+    assert (embeddings.count == 1166)
+  }
 
 } 

@@ -30,8 +30,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 public class Configuration<O extends Embedding> implements java.io.Serializable {
+    
+    // temp solution to cope with static configurations: changing soon
+    protected UUID uuid = UUID.randomUUID();
+
     private static final Logger LOG = Logger.getLogger(Configuration.class);
     public static final int KB = 1024;
     public static final int MB = 1024 * KB;

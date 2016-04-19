@@ -42,7 +42,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
-    config.set ("output_path", "Motifs_Output")
+    config.set ("output_path", "/tmp/Motifs_Output")
     config.set ("arabesque.motif.maxsize", maxSize)
     config.set ("computation", "io.arabesque.gmlib.motif.MotifComputation")
     motifs (config)

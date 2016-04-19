@@ -4,6 +4,9 @@ import io.arabesque.graph.Edge
 import java.io.DataOutput
 import java.io.DataInput
 
+/**
+  * Current semantic: Array(a, b, c, d) -> edges: (a,b) (c,d)
+  */
 case class EEmbedding(var words: Array[Int]) extends ResultEmbedding {
 
   // must have because we are messing around with Writables
@@ -13,12 +16,12 @@ case class EEmbedding(var words: Array[Int]) extends ResultEmbedding {
 
   override def readFields(in: DataInput): Unit = {
     val wordsLen = in.readInt
-    words = new Array[Int](wordsLen)
+    words = new Array [Int] (wordsLen)
     for (i <- 0 until wordsLen) words(i) = in.readInt
   }
 
   override def toString = {
-    s"EEmbedding(${words.mkString (", ")}"
+    s"EEmbedding(${words.mkString (", ")})"
   }
 }
 
