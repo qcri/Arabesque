@@ -83,6 +83,9 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String CONF_MASTER_COMPUTATION_CLASS = "arabesque.master_computation.class";
     public static final String CONF_MASTER_COMPUTATION_CLASS_DEFAULT = "io.arabesque.computation.MasterComputation";
 
+    public static final String CONF_COMM_STRATEGY = "arabesque.comm.strategy";
+    public static final String CONF_COMM_STRATEGY_DEFAULT = "odag";
+
     public static final String CONF_COMM_STRATEGY_FACTORY_CLASS = "arabesque.comm.factory.class";
     public static final String CONF_COMM_STRATEGY_FACTORY_CLASS_DEFAULT = "io.arabesque.computation.comm.ODAGCommunicationStrategyFactory";
 
@@ -102,6 +105,9 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public static final String CONF_DEFAULT_AGGREGATOR_SPLITS = "arabesque.aggregators.default_splits";
     public static final int CONF_DEFAULT_AGGREGATOR_SPLITS_DEFAULT = 1;
+
+    public static final String CONF_INCREMENTAL_AGGREGATION = "arabesque.aggregation.incremental";
+    public static final boolean CONF_INCREMENTAL_AGGREGATION_DEFAULT = false;
 
     protected static Configuration instance = null;
     private ImmutableClassesGiraphConfiguration giraphConfiguration;
@@ -129,6 +135,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     private boolean isGraphEdgeLabelled;
     protected boolean initialized = false;
     private boolean isGraphMulti;
+
+    public UUID getUUID() {
+       return uuid;
+    }
 
     public static boolean isUnset() {
        return instance == null;
@@ -461,6 +471,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public void setComputationClass(Class<? extends Computation> computationClass) {
        this.computationClass = computationClass;
+    }
+
+    public boolean isAggregationIncremental() {
+       return getBoolean (CONF_INCREMENTAL_AGGREGATION, CONF_INCREMENTAL_AGGREGATION_DEFAULT);
     }
 
 }

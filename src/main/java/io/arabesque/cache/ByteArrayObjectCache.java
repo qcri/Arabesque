@@ -6,7 +6,9 @@ import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
 import java.util.Iterator;
 
@@ -107,12 +109,22 @@ public class ByteArrayObjectCache implements ObjectCache {
     }
 
     @Override
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+       write (objOutput);
+    }
+
+    @Override
     public void readFields(DataInput dataInput) throws IOException {
         int size = dataInput.readInt();
 
         byteArrayOutputCache.reset();
         byteArrayOutputCache.skipBytes(size);
         dataInput.readFully(byteArrayOutputCache.getByteArray(), 0, size);
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields(objInput);
     }
 
     public void reset() {

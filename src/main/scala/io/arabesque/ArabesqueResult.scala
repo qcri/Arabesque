@@ -1,15 +1,11 @@
 package io.arabesque
 
-import io.arabesque.computation.SparkMasterExecutionEngine
+import io.arabesque.computation.SparkMasterEngine
 import io.arabesque.conf.SparkConfiguration
+import io.arabesque.embedding.{Embedding, ResultEmbedding}
 import io.arabesque.odag.ODAG
-import io.arabesque.pattern.Pattern
-import io.arabesque.embedding.Embedding
-import io.arabesque.embedding.ResultEmbedding
-
-import org.apache.hadoop.fs.{Path, FileSystem}
-import org.apache.spark.Logging
-import org.apache.spark.SparkContext
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.{Logging, SparkContext}
 import org.apache.spark.rdd.RDD
 
 /**
@@ -26,13 +22,13 @@ case class ArabesqueResult(
   /**
    * Lazy evaluation for the results
    */
-  private var masterEngineOpt: Option[SparkMasterExecutionEngine] = None
-  def masterEngine: SparkMasterExecutionEngine = masterEngineOpt match {
+  private var masterEngineOpt: Option[SparkMasterEngine] = None
+  def masterEngine: SparkMasterEngine = masterEngineOpt match {
     case None =>
       logInfo (s"starting/computing master execution engine")
-      val _masterEngine = new SparkMasterExecutionEngine(sc, config)
+      val _masterEngine = SparkMasterEngine(sc, config)
       _masterEngine.compute
-      _masterEngine.finalize
+      _masterEngine.finalizeComputation
       masterEngineOpt = Some(_masterEngine)
       _masterEngine
     case Some(_masterEngine) =>
@@ -85,7 +81,7 @@ case class ArabesqueResult(
   def saveEmbeddingsAsSequenceFile(path: String): Unit = embeddingsOpt match {
     case None =>
       logInfo ("no emebeddings found, computing them ... ")
-      config.set ("output_path", path)
+      config.setOutputPath (path)
       embeddings.count
 
     case Some(_embeddings) =>
@@ -94,6 +90,7 @@ case class ArabesqueResult(
       fs.rename (new Path(config.getOutputPath), new Path(path))
       if (config.getOutputPath != path) embeddingsOpt = None
       config.setOutputPath (path)
+
   }
 
   /**

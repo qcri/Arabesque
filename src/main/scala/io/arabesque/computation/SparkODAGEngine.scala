@@ -1,39 +1,27 @@
 package io.arabesque.computation
 
-import org.apache.log4j.{Logger, Level}
+import java.io._
+import java.util.concurrent.{ExecutorService, Executors}
 
-import org.apache.spark.Logging
-import org.apache.spark.SparkEnv
-import org.apache.spark.{Accumulable, Accumulator}
-import org.apache.spark.broadcast.Broadcast
-
+import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
 import io.arabesque.conf.{Configuration, SparkConfiguration}
-import io.arabesque.embedding.{Embedding, EdgeInducedEmbedding, VertexInducedEmbedding,
-                               ResultEmbedding, VEmbedding, EEmbedding}
-import io.arabesque.pattern.Pattern
-import io.arabesque.odag.{ODAGStash, ODAG}
+import io.arabesque.embedding._
 import io.arabesque.odag.ODAGStash._
 import io.arabesque.odag.domain.DomainEntry
-import io.arabesque.aggregation.{AggregationStorage,
-                                 AggregationStorageFactory,
-                                 AggregationStorageMetadata}
-import io.arabesque.utils.{SerializableConfiguration, SerializableWritable}
-
-import org.apache.hadoop.fs.{Path, FileSystem}
-import org.apache.hadoop.io.{Writable, LongWritable, NullWritable}
+import io.arabesque.odag.{ODAG, ODAGStash}
+import io.arabesque.pattern.Pattern
+import io.arabesque.utils.SerializableConfiguration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.SequenceFile
 import org.apache.hadoop.io.SequenceFile.Writer
+import org.apache.hadoop.io.{LongWritable, NullWritable, Writable}
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.{Accumulator, Logging}
+import org.apache.spark.broadcast.Broadcast
 
-import scala.collection.mutable.{Map, ListBuffer}
 import scala.collection.JavaConversions._
-
+import scala.collection.mutable.{ListBuffer, Map}
 import scala.reflect.ClassTag
-
-import java.util.concurrent.{Executors, ExecutorService}
-import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
-                FileOutputStream, ObjectOutputStream,
-                DataInput, ByteArrayInputStream, DataInputStream, InputStream,
-                OutputStreamWriter, File}
 
 /**
  * Underlying engine that runs Arabesque workers in Spark.
@@ -41,30 +29,33 @@ import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStrea
  * model. Instances' lifetimes refer also to one superstep of computation due
  * RDD's immutability.
  */
-case class SparkExecutionEngine[O <: Embedding](
+case class SparkODAGEngine[O <: Embedding](
     partitionId: Int,
     superstep: Int,
     hadoopConf: SerializableConfiguration,
     accums: Map[String,Accumulator[_]],
     // TODO do not broadcast if user's code does not requires it
-    previousAggregationsBc: Broadcast[_],
-    var computation: Computation[O] = null,
-    var nextEmbeddingStash: ODAGStash = null)
-  extends CommonExecutionEngine[O] with Logging {
+    previousAggregationsBc: Broadcast[_])
+  extends SparkEngine[O] {
 
   // configuration has input parameters, computation knows how to ensure
   // arabesque's computational model
-  var configuration: Configuration[O] = _
-  //var computation: Computation[O] = _
+  @transient lazy val configuration: Configuration[O] = Configuration.get [Configuration[O]]
+  @transient lazy val computation: Computation[O] = {
+    val computation = configuration.createComputation [O]
+    computation.setUnderlyingExecutionEngine (this)
+    computation.init()
+    computation.initAggregations()
+    computation
+  }
 
   // local configs
   var numBlocks: Int = _
   var maxBlockSize: Int = _
-  
+
   // stashes
   var currentEmbeddingStash: ODAGStash = _
-  //var nextEmbeddingStash: ODAGStash = _
-  var aggregatedEmbeddingStash: ODAGStash = _
+  var nextEmbeddingStash: ODAGStash = _
 
   // stash efficient reader
   var odagStashReader: EfficientReader[O] = _
@@ -74,14 +65,13 @@ case class SparkExecutionEngine[O <: Embedding](
   var pool: ExecutorService = _
 
   // aggregation storages
-  var aggregationStorageFactory: AggregationStorageFactory = _
+  @transient lazy val aggregationStorageFactory = new AggregationStorageFactory
   var aggregationStorages: Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
   // output
-  var embeddingWriterOpt: Option[Writer] = _
-  var tmpFile: File = _
-  var outputStreamOpt: Option[OutputStreamWriter] = _
-  var outputPath: Path = _
+  @transient var embeddingWriterOpt: Option[Writer] = None
+  @transient var outputStreamOpt: Option[OutputStreamWriter] = None
+  @transient lazy val outputPath: Path = new Path(configuration.getOutputPath)
 
   // to feed accumulators
   private var numEmbeddingsProcessed: Long = _
@@ -93,16 +83,9 @@ case class SparkExecutionEngine[O <: Embedding](
    * the superstep in this partition
    */
   def init() = {
-    configuration = Configuration.get()
-
     // set log level (from spark logging)
     val logLevel = Level.toLevel (configuration.getLogLevel)
     Logger.getLogger(logName).setLevel (logLevel)
-
-    computation = configuration.createComputation()
-    computation.setUnderlyingExecutionEngine (this)
-    computation.init()
-    computation.initAggregations()
 
     if (configuration.getEmbeddingClass() == null)
       configuration.setEmbeddingClass (computation.getEmbeddingClass())
@@ -119,13 +102,7 @@ case class SparkExecutionEngine[O <: Embedding](
     pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
     // aggregation storage
-    aggregationStorageFactory = new AggregationStorageFactory
     aggregationStorages = Map.empty
-
-    // output
-    outputStreamOpt = None
-    embeddingWriterOpt = None
-    outputPath = new Path(configuration.getOutputPath)
 
     // accumulators
     numEmbeddingsProcessed = 0
@@ -149,18 +126,18 @@ case class SparkExecutionEngine[O <: Embedding](
    * variables updated (immutability)
    *
    * @param aggregationsBc broadcast variable with aggregations
-   *
    * @return the new execution engine, ready for flushing
    */
-  def withNewAggregations(aggregationsBc: Broadcast[_]): SparkExecutionEngine[O] = {
-    val comp = configuration.createComputation.asInstanceOf[Computation[O]]
-    val execEngine = this.copy (
+  def withNewAggregations(aggregationsBc: Broadcast[_]): SparkODAGEngine[O] = {
+    
+    // we first get a copy of the this execution engine, with previous
+    // aggregations updated
+    val execEngine = this.copy [O] (
       previousAggregationsBc = aggregationsBc,
-      computation = comp,
       accums = accums)
-    comp.setUnderlyingExecutionEngine (execEngine)
-    comp.init()
-    comp.initAggregations()
+
+    // set next stash with odags
+    execEngine.nextEmbeddingStash = nextEmbeddingStash
     
     execEngine
   }
@@ -170,7 +147,10 @@ case class SparkExecutionEngine[O <: Embedding](
    *
    * @param inboundStashes iterator of ODAG stashes
    */
-  def compute(inboundStashes: Iterator[ODAGStash]) = expansionCompute (inboundStashes)
+  def compute(inboundStashes: Iterator[ODAGStash]) = {
+    expansionCompute (inboundStashes)
+    flushStatsAccumulators
+  }
 
   /**
    * Iterates over ODAG stashes and call expansion/compute procedures on them.
@@ -248,27 +228,26 @@ case class SparkExecutionEngine[O <: Embedding](
   /**
    * Any Spark accumulator used for stats accounting is flushed here
    */
-  private def flushStatsAccumulators = {
+  private def flushStatsAccumulators: Unit = {
     // accumulates an aggregator in the corresponding spark accumulator
     def accumulate[T : ClassTag](it: T, accum: Accumulator[_]) = {
       accum.asInstanceOf[Accumulator[T]] += it
     }
     logInfo (s"Embeddings processed: ${numEmbeddingsProcessed}")
     accumulate (numEmbeddingsProcessed,
-      accums(SparkMasterExecutionEngine.AGG_EMBEDDINGS_PROCESSED))
+      accums(SparkODAGMasterEngine.AGG_EMBEDDINGS_PROCESSED))
     logInfo (s"Embeddings generated: ${numEmbeddingsGenerated}")
     accumulate (numEmbeddingsGenerated,
-      accums(SparkMasterExecutionEngine.AGG_EMBEDDINGS_GENERATED))
+      accums(SparkODAGMasterEngine.AGG_EMBEDDINGS_GENERATED))
     logInfo (s"Embeddings output: ${numEmbeddingsOutput}")
     accumulate (numEmbeddingsOutput,
-      accums(SparkMasterExecutionEngine.AGG_EMBEDDINGS_OUTPUT))
+      accums(SparkODAGMasterEngine.AGG_EMBEDDINGS_OUTPUT))
   }
 
   /**
    * Flushes a given aggregation.
    *
    * @param name name of the aggregation
-   *
    * @return iterator of aggregation storages
    * TODO: split aggregations before flush them and review the return type
    */
@@ -284,6 +263,13 @@ case class SparkExecutionEngine[O <: Embedding](
       aggregationStorageFactory.createAggregationStorage (name),
       aggStorage)
     Iterator(finalAggStorage)
+  }
+
+  def flush: Iterator[(_,_)] = configuration.
+      getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
+    case SparkConfiguration.FLUSH_BY_PATTERN => flushByPattern
+    case SparkConfiguration.FLUSH_BY_ENTRIES => flushByEntries
+    case SparkConfiguration.FLUSH_BY_PARTS =>   flushByParts
   }
 
   /**
@@ -427,7 +413,6 @@ case class SparkExecutionEngine[O <: Embedding](
    * engine.
    *
    * @param name name of the aggregation
-   *
    * @return the aggregated value or null if no aggregation was found
    */
   override def getAggregatedValue[A <: Writable](name: String): A =
@@ -466,6 +451,10 @@ case class SparkExecutionEngine[O <: Embedding](
       val aggregationStorage = aggregationStorageFactory.createAggregationStorage (name)
       aggregationStorages.update (name, aggregationStorage)
       aggregationStorage.asInstanceOf[AggregationStorage[K,V]]
+    case Some(aggregationStorage) =>
+      val e = new RuntimeException (s"Unexpected type for aggregation ${aggregationStorage}")
+      logError (s"Wrong type of aggregation storage: ${e.getMessage}")
+      throw e
   }
 
   /**
@@ -527,8 +516,6 @@ case class SparkExecutionEngine[O <: Embedding](
       outputStream.write(outputString)
       outputStream.write("\n")
   }
-
-  
   
   // other functions
   override def getPartitionId() = partitionId

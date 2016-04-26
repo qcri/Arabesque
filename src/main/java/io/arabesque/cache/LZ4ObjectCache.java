@@ -9,7 +9,9 @@ import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.log4j.Logger;
 
 import java.io.DataInput;
+import java.io.ObjectInput;
 import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -76,6 +78,11 @@ public class LZ4ObjectCache extends ByteArrayObjectCache {
         super.write(dataOutput);
     }
 
+    @Override
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+       write (objOutput);
+    }
+
     private void decompressDataInput() {
         if (!Configuration.get().isUseCompressedCaches() || uncompressed) {
             return;
@@ -104,5 +111,10 @@ public class LZ4ObjectCache extends ByteArrayObjectCache {
             uncompressed = true;
         }
         super.readFields(dataInput);
+    }
+
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields(objInput);
     }
 }

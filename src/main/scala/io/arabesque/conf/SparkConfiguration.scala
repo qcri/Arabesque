@@ -1,17 +1,13 @@
 package io.arabesque.conf
 
-import io.arabesque.conf.Configuration._
 import io.arabesque.computation.{Computation, MasterComputation}
+import io.arabesque.conf.Configuration._
 import io.arabesque.embedding.Embedding
-import io.arabesque.graph.{MainGraph, BasicMainGraph}
+import io.arabesque.graph.MainGraph
 import io.arabesque.pattern.Pattern
-
-import org.apache.spark.SparkConf
-import org.apache.spark.Logging
+import org.apache.spark.{Logging, SparkConf}
 
 import scala.collection.mutable.Map
-
-import scala.collection.JavaConversions._
 
 /**
  * Configurations are passed along in this mapping
@@ -86,6 +82,9 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     updateIfExists ("master_computation", CONF_MASTER_COMPUTATION_CLASS)
     updateIfExists ("computation", CONF_COMPUTATION_CLASS)
 
+    // communication strategy
+    updateIfExists ("comm_strategy", CONF_COMM_STRATEGY)
+
     // input
     updateIfExists ("input_graph_path", CONF_MAINGRAPH_PATH)
     updateIfExists ("input_graph_local", CONF_MAINGRAPH_LOCAL)
@@ -93,6 +92,9 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     // output
     updateIfExists ("output_active", CONF_OUTPUT_ACTIVE)
     updateIfExists ("output_path", CONF_OUTPUT_PATH)
+
+    // aggregation
+    updateIfExists ("incremental_aggregation", CONF_INCREMENTAL_AGGREGATION)
 
   }
 
@@ -138,8 +140,7 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 
     setAggregationsMetadata (new java.util.HashMap())
 
-    val outputPathBase = getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT)
-    setOutputPath (s"${outputPathBase}-${uuid}")
+    setOutputPath (getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT))
     
     // main graph
     if ( (getMainGraph() == null && initialized)
@@ -166,11 +167,12 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
   override def getBoolean(key: String, defaultValue: java.lang.Boolean) =
     getValue(key, defaultValue).asInstanceOf[Boolean]
 
-  override def toString = s"[sparkConf, mainGraphClass=${getMainGraphClass()}, embeddingClass=${getEmbeddingClass()}, computationClass=${getComputationClass()}]"
 }
 
 object SparkConfiguration {
   val FLUSH_BY_PATTERN = "flush_by_pattern" // good for regular distributions
   val FLUSH_BY_ENTRIES = "flush_by_entries" // good for irregular distributions but small embedding domains
   val FLUSH_BY_PARTS   = "flush_by_parts"   // good for irregular distributions, period
+  val COMM_ODAG = "odag"                    // pack embeddings with odags
+  val COMM_EMBEDDING = "embedding"          // pack embeddings with compressed caches (e.g., LZ4)
 }

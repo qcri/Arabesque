@@ -1,12 +1,10 @@
 package io.arabesque
 
-import io.arabesque.computation.SparkMasterExecutionEngine
-import io.arabesque.conf.{SparkConfiguration, Configuration}
-
+import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding.Embedding
-
 import org.apache.spark.Logging
-import org.apache.spark.SparkContext
+
+import java.util.UUID
 
 /**
  * Arabesque graph for calling algorithms on
@@ -15,6 +13,9 @@ class ArabesqueGraph(
     path: String,
     local: Boolean,
     arab: ArabesqueContext) extends Logging {
+
+  private val uuid: UUID = UUID.randomUUID
+  def tmpPath: String = s"${arab.tmpPath}/graph-${uuid}"
 
   def this(path: String, arab: ArabesqueContext) = {
     this (path, false, arab)
@@ -42,7 +43,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
-    config.set ("output_path", "/tmp/Motifs_Output")
+    config.set ("output_path", s"${tmpPath}/motifs-${config.getUUID}")
     config.set ("arabesque.motif.maxsize", maxSize)
     config.set ("computation", "io.arabesque.gmlib.motif.MotifComputation")
     motifs (config)
@@ -65,7 +66,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
-    config.set ("output_path", "FSM_Output")
+    config.set ("output_path", s"${tmpPath}/fsm-${config.getUUID}")
     config.set ("arabesque.fsm.maxsize", maxSize)
     config.set ("arabesque.fsm.support", support)
     config.set ("computation", "io.arabesque.gmlib.fsm.FSMComputation")
@@ -86,7 +87,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
-    config.set ("output_path", "Triangles_Output")
+    config.set ("output_path", s"${tmpPath}/triangles-${config.getUUID}")
     config.set ("computation", "io.arabesque.gmlib.triangles.CountingTrianglesComputation")
     triangles (config)
   }
@@ -107,7 +108,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
-    config.set ("output_path", "Cliques_Output")
+    config.set ("output_path", s"${tmpPath}/cliques-${config.getUUID}")
     config.set ("arabesque.clique.maxsize", maxSize)
     config.set ("computation", "io.arabesque.gmlib.clique.CliqueComputation")
     cliques (config)

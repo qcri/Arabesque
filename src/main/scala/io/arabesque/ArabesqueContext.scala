@@ -1,14 +1,17 @@
 package io.arabesque
 
-import io.arabesque.computation.SparkMasterExecutionEngine
+import org.apache.spark.{Logging, SparkContext}
+import org.apache.hadoop.fs.{FileSystem, Path}
 
-import org.apache.spark.Logging
-import org.apache.spark.SparkContext
+import java.util.UUID
 
 /**
  * Context for creating Arabesque Applications
  */
 class ArabesqueContext(sc: SparkContext) extends Logging {
+
+  private val uuid: UUID = UUID.randomUUID
+  def tmpPath: String = s"/tmp/arabesque-${uuid}"
 
   def sparkContext: SparkContext = sc
 
@@ -17,5 +20,8 @@ class ArabesqueContext(sc: SparkContext) extends Logging {
   }
 
   def stop() = {
+    val fs = FileSystem.get (sc.hadoopConfiguration)
+    val res = fs.delete (new Path(tmpPath))
+    logInfo (s"Removing arabesque temp directory: ${tmpPath} (${res})")
   }
 }

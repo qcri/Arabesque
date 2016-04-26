@@ -1,12 +1,12 @@
 package io.arabesque.embedding
 
-import org.apache.hadoop.io.Writable
 import java.io.DataOutput
-import java.io.DataInput
+
+import org.apache.hadoop.io.Writable
 
 trait ResultEmbedding extends Writable {
   def words: Array[Int]
-  
+
   override def write(out: DataOutput): Unit = {
     out.writeInt (words.size)
     words.foreach (w => out.writeInt(w))

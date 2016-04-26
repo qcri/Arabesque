@@ -1,65 +1,40 @@
 package io.arabesque.computation
 
-import org.apache.log4j.{Logger, Level}
-import org.apache.spark.{Logging, SparkContext, SparkConf}
-import org.apache.spark.SparkContext._
-import org.apache.spark.storage.StorageLevel
-import org.apache.spark.storage.StorageLevel._
-import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.{Accumulator, Accumulable}
-import org.apache.spark.{AccumulatorParam, AccumulableParam}
-import org.apache.spark.rdd.RDD
+import java.io.{ByteArrayInputStream, DataInputStream}
 
-import org.apache.spark.util.SizeEstimator
-
-import org.apache.hadoop.io.{Writable, LongWritable, IntWritable, NullWritable}
-import org.apache.hadoop.fs.{Path, FileSystem}
-
-import io.arabesque.graph.BasicMainGraph
-
-import io.arabesque.aggregation.{AggregationStorage,
-                                 PatternAggregationStorage,
-                                 AggregationStorageMetadata,
-                                 AggregationStorageFactory}
-
-import io.arabesque.conf.{Configuration, SparkConfiguration}
-import io.arabesque.conf.Configuration._
+import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
+import io.arabesque.conf.SparkConfiguration
+import io.arabesque.embedding._
 import io.arabesque.odag.{ODAG, ODAGStash}
-
-import io.arabesque.embedding.{Embedding, VertexInducedEmbedding, EdgeInducedEmbedding,
-                               ResultEmbedding, VEmbedding, EEmbedding}
-
 import io.arabesque.pattern.Pattern
-import io.arabesque.utils.{SerializableConfiguration, SerializableWritable}
+import io.arabesque.utils.SerializableConfiguration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.io.{NullWritable, Writable}
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{Accumulator, AccumulatorParam, SparkContext}
 
-import scala.collection.mutable.Map
 import scala.collection.JavaConversions._
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration.Duration
-
+import scala.collection.mutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Success, Failure}
-
-import java.util.concurrent.{ExecutorService, Executors}
-import java.io.{DataOutput, ByteArrayOutputStream, DataOutputStream, OutputStream,
-                DataInput, ByteArrayInputStream, DataInputStream, InputStream}
-
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
 /**
  * Underlying engine that runs the Arabesque master.
  * It interacts directly with the RDD interface in Spark by handling the
  * SparkContext.
  */
-class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) extends
-    CommonMasterExecutionEngine with Logging {
+class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
+    extends SparkMasterEngine(config) {
 
-  import SparkMasterExecutionEngine._
+  import SparkODAGMasterEngine._
 
   // testing
   config.initialize()
-
-  private var sc: SparkContext = _
 
   // Spark accumulators for stats counting (non-critical)
   // Ad-hoc arabesque approach for user-defined aggregations
@@ -72,10 +47,15 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
   private var masterComputation: MasterComputation = _
 
   private var odags: List[RDD[ODAG]] = List()
-  private var embeddings: List[RDD[Array[Int]]] = List()
+
+  def this(_sc: SparkContext, config: SparkConfiguration[E]) {
+    this (config)
+    sc = _sc
+    init()
+  }
 
   def this(confs: Map[String,Any]) {
-    this (new SparkConfiguration(confs))
+    this (new SparkConfiguration [E] (confs))
 
     sc = new SparkContext(config.sparkConf)
     val logLevel = config.getString ("log_level", "INFO").toUpperCase
@@ -84,21 +64,10 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     init()
   }
 
-  def this(_sc: SparkContext, config: SparkConfiguration[_ <: Embedding]) {
-    this (config)
-    sc = _sc
-    init()
-  }
-
-  /** user must call init() after */
-  def this(_sc: SparkContext) {
-    this (Map.empty[String,Any])
-  }
-
   def sparkContext: SparkContext = sc
   def arabConfig: SparkConfiguration[_ <: Embedding] = config
 
-  def init() = {
+  override def init() = {
 
     val logLevel = Level.toLevel (config.getLogLevel)
     Logger.getLogger(logName).setLevel (logLevel)
@@ -112,7 +81,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
           s"Output path ${config.getOutputPath} exists. Choose another one."
           )
     }
-    
+
     // master computation
     masterComputation = config.createMasterComputation()
     masterComputation.setUnderlyingExecutionEngine(this)
@@ -143,7 +112,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
   /**
    * Master's computation takes place here, superstep by superstep
    */
-  def compute() = {
+  override def compute() = {
     val numPartitions = config.getInteger ("num_partitions", 10)
 
     // accumulatores and spark configuration w.r.t. Spark
@@ -192,8 +161,8 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
       aggregationsFuture.value.get match {
         case Success(previousAggregations) =>
 
-          aggregations = previousAggregations
-          
+          aggregations = mergeOrReplaceAggregations (aggregations, previousAggregations)
+
           logInfo (s"""Aggregations and sizes
             ${previousAggregations.
             map(tup => (tup._1,tup._2.getNumberMappings)).mkString("\n")}
@@ -212,9 +181,10 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
        *  engines, if this applies; and (ii) flush the remaining ODAGs for
        *  global aggregation.
        */
-      
+
       // we choose the flush method for ODAGs: load-balancing vs. overhead
-      val aggregatedOdags = config.getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
+      val aggregatedOdags = config.
+        getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
         case SparkConfiguration.FLUSH_BY_PATTERN =>
           val odags = execEngines.
             map (_.withNewAggregations (previousAggregationsBc)). // update previousAggregations
@@ -266,20 +236,20 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
       // the exec engines have no use anymore, make room for the next round
       execEngines.unpersist()
-      
+
       // whether the user chose to customize master computation, executed every
       // superstep
       masterComputation.compute()
 
       val superstepFinish = System.currentTimeMillis
       logInfo (s"Superstep $superstep finished in ${superstepFinish - superstepStart} ms")
-      
+
       // print stats
       aggAccums = aggAccums.map { case (name,accum) =>
         logInfo (s"Accumulator[$name]: ${accum.value}")
         (name -> sc.accumulator [Long] (0L, name))
       }
-      
+
       superstep += 1
 
     } while (!sc.isStopped && !aggregatedOdagsBc.value.isEmpty) // while there are ODAGs to be processed
@@ -287,11 +257,11 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     val finishTime = System.currentTimeMillis
 
     logInfo (s"Computation has finished. It took ${finishTime - startTime} ms")
-    
+
   }
 
   /**
-   * Creates an RDD of execution engines 
+   * Creates an RDD of execution engines
    * TODO
    */
   private def getExecutionEngines[E <: Embedding](
@@ -308,7 +278,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
       configBc.value.initialize()
 
-      val execEngine = new SparkExecutionEngine(
+      val execEngine = new SparkODAGEngine [E] (
         partitionId = idx,
         superstep = superstep,
         hadoopConf = serHadoopConf,
@@ -361,7 +331,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
 
     aggregatedOdags
   }
-    
+
 
   private def aggregatedOdagsByParts(odags: RDD[((Pattern,Int), Array[Byte])]) = {
 
@@ -409,8 +379,8 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
    *
    */
   def getAggregations(
-      execEngines: RDD[SparkExecutionEngine[Nothing]],
-      numPartitions: Int) = Future {
+    execEngines: RDD[SparkODAGEngine[E]],
+    numPartitions: Int) = Future {
 
     def reduce[K <: Writable, V <: Writable](
         name: String,
@@ -426,7 +396,7 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
         agg1.aggregate (agg2)
         agg1
       }
-      
+
       aggStorage.endedAggregation
       aggStorage
     }
@@ -461,65 +431,20 @@ class SparkMasterExecutionEngine(config: SparkConfiguration[_ <: Embedding]) ext
     logWarning ("Setting aggregated value has no effect in spark execution engine")
   }
 
-  override def finalize() = {
+  override def finalizeComputation() = {
     super.finalize()
   }
 
-  /**
-   * Functions that retrieve the results of this computation.
-   * Current fields:
-   *  - Odags of each superstep.
-   *  - Embeddings if the output is enabled. Our choice is to read the results
-   *  produced by the supersteps from external storage. We avoid memory issues
-   *  by not keeping all the embeddings in memory.
-   */
-  def getOdags: RDD[ODAG] = {
+  override def getOdags: RDD[ODAG] = {
     sc.union (odags.toSeq)
-  }
-  def getEmbeddings: RDD[ResultEmbedding] = {
-
-    val embeddPath = s"${config.getOutputPath}"
-    val fs = FileSystem.get (sc.hadoopConfiguration)
-
-    if (config.isOutputActive && fs.exists (new Path (embeddPath))) {
-      logInfo (s"Reading embedding words from: ${config.getOutputPath}")
-      //sc.textFile (s"${embeddPath}/*").map (ResultEmbedding(_))
-
-      // we must decide at runtime the concrete Writable to be used
-      val resEmbeddingClass = if (config.getEmbeddingClass == classOf[EdgeInducedEmbedding])
-        classOf[EEmbedding]
-      else if (config.getEmbeddingClass == classOf[VertexInducedEmbedding])
-        classOf[VEmbedding]
-      else
-        classOf[ResultEmbedding] // not allowed, will crash and should not happen
-
-      sc.sequenceFile (s"${embeddPath}/*", classOf[NullWritable], resEmbeddingClass).
-        values.
-        asInstanceOf[RDD[ResultEmbedding]]
-    } else {
-      sc.emptyRDD[ResultEmbedding]
-    }
-
   }
 }
 
 /**
  * Companion object: static methods and fields
  */
-object SparkMasterExecutionEngine {
+object SparkODAGMasterEngine {
   val AGG_EMBEDDINGS_PROCESSED = "embeddings_processed"
-  val AGG_PROCESSED_SIZE_ODAG = "processed_size_odag"
   val AGG_EMBEDDINGS_GENERATED = "embeddings_generated"
   val AGG_EMBEDDINGS_OUTPUT = "embeddings_output"
-}
-
-/**
- * Param used to accumulate Aggregation Storages
- */
-class AggregationStorageParam[K <: Writable, V <: Writable](name: String) extends AccumulatorParam[AggregationStorage[K,V]] {
-  def zero(initialValue: AggregationStorage[K,V]) = new AggregationStorage[K,V](name)
-  def addInPlace(ag1: AggregationStorage[K,V], ag2: AggregationStorage[K,V]) = {
-    ag1.aggregate (ag2)
-    ag1
-  }
 }

@@ -6,13 +6,16 @@ import org.scalatest.BeforeAndAfterAll
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.SparkContext._
 
-import io.arabesque.computation.SparkMasterExecutionEngine
+import io.arabesque.computation.SparkODAGMasterEngine$
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 
 import io.arabesque._
 
 // TODO: break these tests into several *suites*
 class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
+
+  import Configuration._
+  import SparkConfiguration._
 
   private val master = "local[2]"
   private val appName = "arabesque-spark"
@@ -27,9 +30,9 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
     // configure log levels
     import org.apache.log4j.Logger
     import org.apache.log4j.Level
-    //Logger.getLogger("org").setLevel(Level.ERROR)
-    //Logger.getLogger("akka").setLevel(Level.ERROR)
-    //Logger.getLogger("io").setLevel(Level.ERROR)
+    Logger.getLogger("org").setLevel(Level.ERROR)
+    Logger.getLogger("akka").setLevel(Level.ERROR)
+    Logger.getLogger("io").setLevel(Level.ERROR)
 
     // spark conf and context
     val conf = new SparkConf().
@@ -94,38 +97,82 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
     
   }
 
-  test ("[motifs] arabesque API") {
+  val motifsNumEmbeddings = 24546
+  test ("[motifs,odag] arabesque API") {
     val motifsRes = arabGraph.motifs (3).
-      set ("output_path", s"target/${sc.applicationId}/Motifs_Output").
+      set ("comm_strategy", COMM_ODAG).
       set ("log_level", "debug")
     val odags = motifsRes.odags
+    assert (odags.count != 0)
     val embeddings = motifsRes.embeddings
-    assert (embeddings.count == 24546)
+    assert (embeddings.count == motifsNumEmbeddings)
+    assert (embeddings.distinct.count == motifsNumEmbeddings)
+  }
+  test ("[motifs,embedding] arabesque API") {
+    val motifsRes = arabGraph.motifs (3).
+      set ("log_level", "debug").
+      set ("comm_strategy", COMM_EMBEDDING)
+    val odags = motifsRes.odags
+    assert (odags.count == 0)
+    val embeddings = motifsRes.embeddings
+    assert (embeddings.count == motifsNumEmbeddings)
+    assert (embeddings.distinct.count == motifsNumEmbeddings)
   }
 
-  test ("[fsm] arabesque API") {
+  val fsmNumEmbeddings = 31414
+  test ("[fsm,odag] arabesque API") {
     val fsmRes = arabGraph.fsm (100, 3).
-      set ("output_path", s"target/${sc.applicationId}/FSM_Output")
+      set ("comm_strategy", COMM_ODAG)
     val odags = fsmRes.odags
     val embeddings = fsmRes.embeddings
-    assert (embeddings.count == 31414)
+    assert (embeddings.count == fsmNumEmbeddings)
+    assert (embeddings.distinct.count == fsmNumEmbeddings)
+  }
+  test ("[fsm,embedding] arabesque API") {
+    val fsmRes = arabGraph.fsm (100, 3).
+      set ("comm_strategy", COMM_EMBEDDING)
+    val odags = fsmRes.odags
+    assert (odags.count == 0)
+    val embeddings = fsmRes.embeddings
+    assert (embeddings.count == fsmNumEmbeddings)
+    assert (embeddings.distinct.count == fsmNumEmbeddings)
   }
 
-  test ("[triangles] arabesque API") {
+  val trianglesNumEmbeddings = 0
+  test ("[triangles,odag] arabesque API") {
     val trianglesRes = arabGraph.triangles().
-      set ("output_path", s"target/${sc.applicationId}/Triangles_Output")
+      set ("comm_strategy", COMM_ODAG)
     val odags = trianglesRes.odags
     val embeddings = trianglesRes.embeddings
-    assert (odags.count == 2)
-    assert (embeddings.count == 0)
+    assert (embeddings.count == trianglesNumEmbeddings)
+    assert (embeddings.distinct.count == trianglesNumEmbeddings)
+  }
+  test ("[triangles,embedding] arabesque API") {
+    val trianglesRes = arabGraph.triangles().
+      set ("comm_strategy", COMM_EMBEDDING)
+    val odags = trianglesRes.odags
+    assert (odags.count == 0)
+    val embeddings = trianglesRes.embeddings
+    assert (embeddings.count == trianglesNumEmbeddings)
+    assert (embeddings.distinct.count == trianglesNumEmbeddings)
   }
 
-  test ("[cliques] arabesque API") {
+  val cliquesNumEmbeddings = 1166
+  test ("[cliques,odag] arabesque API") {
     val cliquesRes = arabGraph.cliques (3).
-      set ("output_path", s"target/${sc.applicationId}/Cliques_Output")
+      set ("comm_strategy", COMM_ODAG)
     val odags = cliquesRes.odags
     val embeddings = cliquesRes.embeddings
-    assert (embeddings.count == 1166)
+    assert (embeddings.count == cliquesNumEmbeddings)
+    assert (embeddings.distinct.count == cliquesNumEmbeddings)
   }
-
+  test ("[cliques,embedding] arabesque API") {
+    val cliquesRes = arabGraph.cliques (3).
+      set ("comm_strategy", COMM_EMBEDDING)
+    val odags = cliquesRes.odags
+    assert (odags.count == 0)
+    val embeddings = cliquesRes.embeddings
+    assert (embeddings.count == cliquesNumEmbeddings)
+    assert (embeddings.distinct.count == cliquesNumEmbeddings)
+  }
 } 
