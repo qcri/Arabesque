@@ -8,15 +8,9 @@ import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.DataInput;
-import java.io.ObjectInput;
-import java.io.DataOutput;
-import java.io.ObjectOutput;
-import java.io.IOException;
-import java.io.Externalizable;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.util.*;
-import org.apache.log4j.Logger;
 
 public class AggregationStorage<K extends Writable, V extends Writable> implements Writable, Externalizable {
     private String name;

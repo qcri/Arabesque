@@ -8,15 +8,14 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import io.arabesque.odag.ODAGStash._
 import io.arabesque.odag.domain.DomainEntry
-import io.arabesque.odag.{ODAG, ODAGStash}
+import io.arabesque.odag.{ODAGStash, SinglePatternODAG}
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.SequenceFile
-import org.apache.hadoop.io.SequenceFile.Writer
-import org.apache.hadoop.io.{LongWritable, NullWritable, Writable}
+import org.apache.hadoop.io.{LongWritable, NullWritable, Writable, SequenceFile}
+import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.{Accumulator, Logging}
+import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.JavaConversions._
@@ -69,7 +68,7 @@ case class SparkODAGEngine[O <: Embedding](
   var aggregationStorages: Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
   // output
-  @transient var embeddingWriterOpt: Option[Writer] = None
+  @transient var embeddingWriterOpt: Option[SeqWriter] = None
   @transient var outputStreamOpt: Option[OutputStreamWriter] = None
   @transient lazy val outputPath: Path = new Path(configuration.getOutputPath)
 
@@ -145,7 +144,7 @@ case class SparkODAGEngine[O <: Embedding](
   /**
    * It does the computation of this module, i.e., expand/compute
    *
-   * @param inboundStashes iterator of ODAG stashes
+   * @param inboundStashes iterator of SinglePatternODAG stashes
    */
   def compute(inboundStashes: Iterator[ODAGStash]) = {
     expansionCompute (inboundStashes)
@@ -153,11 +152,11 @@ case class SparkODAGEngine[O <: Embedding](
   }
 
   /**
-   * Iterates over ODAG stashes and call expansion/compute procedures on them.
+   * Iterates over SinglePatternODAG stashes and call expansion/compute procedures on them.
    * It also bootstraps the cycle by requesting empty embedding from
    * configuration and expanding them.
    *
-   * @param inboundStashes iterator of ODAG stashes
+   * @param inboundStashes iterator of SinglePatternODAG stashes
    */
   private def expansionCompute(inboundStashes: Iterator[ODAGStash]): Unit = {
     if (superstep == 0) { // bootstrap
@@ -189,7 +188,7 @@ case class SparkODAGEngine[O <: Embedding](
   /**
    * Reads next embedding from previous ODAGs
    *
-   * @param remainingStashes iterator containing ODAG stashes which hold
+   * @param remainingStashes iterator containing SinglePatternODAG stashes which hold
    * compressed embeddings
    * @return some embedding or none
    */
@@ -280,7 +279,7 @@ case class SparkODAGEngine[O <: Embedding](
    *
    * @return iterator of pairs of (pattern, odag)
    */
-  def flushByPattern: Iterator[(Pattern,ODAG)]  = {
+  def flushByPattern: Iterator[(Pattern,SinglePatternODAG)]  = {
     // consume content in *nextEmbeddingStash*
     for (odag <- nextEmbeddingStash.getEzips().iterator
          if computation.aggregationFilter (odag.getPattern))
@@ -295,19 +294,19 @@ case class SparkODAGEngine[O <: Embedding](
    *
    *  @return iterator of pairs of ((pattern,domainId,wordId), odag_with_one_entry)
    */
-  def flushByEntries: Iterator[((Pattern,Int,Int), ODAG)] = {
+  def flushByEntries: Iterator[((Pattern,Int,Int), SinglePatternODAG)] = {
 
     /**
-     * Iterator that split a big ODAG into small ODAGs containing only one entry
+     * Iterator that split a big SinglePatternODAG into small ODAGs containing only one entry
      * of the original. Thus, keyed by (pattern, domainId, wordId)
      */
-    class ODAGPartsIterator(odag: ODAG) extends Iterator[((Pattern,Int,Int),ODAG)] {
+    class ODAGPartsIterator(odag: SinglePatternODAG) extends Iterator[((Pattern,Int,Int),SinglePatternODAG)] {
 
       val domainIterator = odag.getStorage().getDomainEntries().iterator
       var domainId = -1
       var currEntriesIterator: Option[Iterator[(Integer,DomainEntry)]] = None
 
-      val reusableOdag = new ODAG(odag.getPattern(), odag.getNumberOfDomains())
+      val reusableOdag = new SinglePatternODAG(odag.getPattern(), odag.getNumberOfDomains())
 
       @scala.annotation.tailrec
       private def hasNextRec: Boolean = currEntriesIterator match {
@@ -323,15 +322,15 @@ case class SparkODAGEngine[O <: Embedding](
       override def hasNext = hasNextRec
 
       @scala.annotation.tailrec
-      private def nextRec: ((Pattern,Int,Int),ODAG) = currEntriesIterator match {
+      private def nextRec: ((Pattern,Int,Int),SinglePatternODAG) = currEntriesIterator match {
 
         case None => // set next domain and recursive call
           currEntriesIterator = Some(domainIterator.next.iterator)
           domainId += 1
           nextRec
 
-        case Some(entriesIterator) => // format domain entry as new ODAG
-          val newOdag = new ODAG(odag.getPattern(), odag.getNumberOfDomains())
+        case Some(entriesIterator) => // format domain entry as new SinglePatternODAG
+          val newOdag = new SinglePatternODAG(odag.getPattern(), odag.getNumberOfDomains())
           val (wordId, entry) = entriesIterator.next
           val domainEntries = newOdag.getStorage().getDomainEntries()
 
@@ -479,9 +478,9 @@ case class SparkODAGEngine[O <: Embedding](
       val superstepPath = new Path(outputPath, s"${getSuperstep}")
       val partitionPath = new Path(superstepPath, s"${partitionId}")
       val embeddingWriter = SequenceFile.createWriter(hadoopConf.value,
-        Writer.file(partitionPath),
-        Writer.keyClass(classOf[NullWritable]),
-        Writer.valueClass(resEmbeddingClass))
+        SeqWriter.file(partitionPath),
+        SeqWriter.keyClass(classOf[NullWritable]),
+        SeqWriter.valueClass(resEmbeddingClass))
 
       embeddingWriterOpt = Some(embeddingWriter)
       

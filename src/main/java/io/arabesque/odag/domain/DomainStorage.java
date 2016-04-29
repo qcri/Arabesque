@@ -12,11 +12,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 public class DomainStorage extends Storage<DomainStorage> {
     protected boolean countsDirty;
@@ -152,7 +148,7 @@ public class DomainStorage extends Storage<DomainStorage> {
     public long getNumberOfEnumerations() {
         if (countsDirty) {
             /* ATTENTION: instead of an exception we return -1.
-             * This way we can identify whether the ODAG is ready or not for
+             * This way we can identify whether the SinglePatternODAG is ready or not for
              * reading */
             //throw new RuntimeException("Should have never been the case");
             return -1;
@@ -185,6 +181,13 @@ public class DomainStorage extends Storage<DomainStorage> {
 
     @Override
     public StorageReader getReader(Pattern pattern,
+            Computation<Embedding> computation,
+            int numPartitions, int numBlocks, int maxBlockSize) {
+        throw new RuntimeException("Shouldn't be read");
+    }
+
+    @Override
+    public StorageReader getReader(Pattern[] patterns,
             Computation<Embedding> computation,
             int numPartitions, int numBlocks, int maxBlockSize) {
         throw new RuntimeException("Shouldn't be read");

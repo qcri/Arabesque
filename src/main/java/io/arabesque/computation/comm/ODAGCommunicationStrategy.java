@@ -5,9 +5,9 @@ import io.arabesque.computation.MasterExecutionEngine;
 import io.arabesque.computation.WorkerContext;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.odag.ODAG;
 import io.arabesque.odag.ODAGPartLZ4Wrapper;
 import io.arabesque.odag.ODAGStash;
+import io.arabesque.odag.SinglePatternODAG;
 import io.arabesque.pattern.Pattern;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
@@ -94,11 +94,11 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
                 return;
             }
 
-            Collection<ODAG> ezips = nextEmbeddingStash.getEzips();
-            Iterator<ODAG> ezipsIterator = ezips.iterator();
+            Collection<SinglePatternODAG> ezips = nextEmbeddingStash.getEzips();
+            Iterator<SinglePatternODAG> ezipsIterator = ezips.iterator();
 
             while (ezipsIterator.hasNext()) {
-                ODAG ezip = ezipsIterator.next();
+                SinglePatternODAG ezip = ezipsIterator.next();
 
                 if (splitEzips) {
                     Arrays.fill(hasContent, false);
@@ -154,11 +154,11 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
                 return;
             }
 
-            Collection<ODAG> ezips = aggregatedEmbeddingStash.getEzips();
-            Iterator<ODAG> ezipsIterator = ezips.iterator();
+            Collection<SinglePatternODAG> ezips = aggregatedEmbeddingStash.getEzips();
+            Iterator<SinglePatternODAG> ezipsIterator = ezips.iterator();
 
             while (ezipsIterator.hasNext()) {
-                ODAG ezip = ezipsIterator.next();
+                SinglePatternODAG ezip = ezipsIterator.next();
 
                 // TODO: Pool this?
                 ODAGPartLZ4Wrapper nonReusableWrapper = new ODAGPartLZ4Wrapper();
@@ -189,7 +189,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
         if (getCurrentPhase() == 1) {
             aggregatedEmbeddingStash = new ODAGStash();
 
-            ODAG ezip = new ODAG(false);
+            SinglePatternODAG ezip = new SinglePatternODAG(false);
 
             for (MessageWrapper messageWrapper : messages) {
                 ODAGPartLZ4Wrapper ezipWrapper = messageWrapper.getMessage();
@@ -339,7 +339,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
                     Pattern pattern = receivedPartsEntry.getKey();
                     ArrayList<ODAGPartLZ4Wrapper> parts = receivedPartsEntry.getValue();
 
-                    ODAG finalEzip = new ODAG(true);
+                    SinglePatternODAG finalEzip = new SinglePatternODAG(true);
 
                     finalEzip.setPattern(pattern);
 
@@ -375,15 +375,15 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
         }
 
         public class MergingTask implements Runnable {
-            private ODAG tempEzip;
-            private ODAG targetEzip;
+            private SinglePatternODAG tempEzip;
+            private SinglePatternODAG targetEzip;
             private ODAGPartLZ4Wrapper part;
 
             public MergingTask() {
-                tempEzip = new ODAG(true);
+                tempEzip = new SinglePatternODAG(true);
             }
 
-            public void setTargetEzip(ODAG targetEzip) {
+            public void setTargetEzip(SinglePatternODAG targetEzip) {
                 this.targetEzip = targetEzip;
             }
 

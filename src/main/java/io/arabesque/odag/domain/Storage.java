@@ -19,5 +19,7 @@ public abstract class Storage<S extends Storage> implements Writable {
     public abstract String toStringResume();
 
     public abstract StorageReader getReader(Pattern pattern, Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize);
+    
+    public abstract StorageReader getReader(Pattern[] patterns, Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize);
 }
 

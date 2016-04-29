@@ -1,17 +1,16 @@
 package io.arabesque;
 
-import io.arabesque.conf.YamlConfiguration;
 import io.arabesque.computation.SparkODAGMasterEngine;
+import io.arabesque.conf.YamlConfiguration;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import scala.collection.JavaConversions;
 
 import java.io.IOException;
-
-import scala.collection.JavaConversions;
 
 public class ArabesqueRunner implements Tool {
     /**

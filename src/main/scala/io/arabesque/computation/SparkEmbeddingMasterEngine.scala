@@ -4,15 +4,14 @@ import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
 import io.arabesque.cache.LZ4ObjectCache
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
-import io.arabesque.odag.ODAG
 import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.{NullWritable, Writable}
+import org.apache.hadoop.io.Writable
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.{Accumulator, HashPartitioner, SparkContext}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel._
+import org.apache.spark.{Accumulator, HashPartitioner, SparkContext}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map

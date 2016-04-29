@@ -1,7 +1,6 @@
 package io.arabesque.odag;
 
 import io.arabesque.computation.Computation;
-import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.domain.DomainStorage;
 import io.arabesque.odag.domain.DomainStorageReadOnly;
@@ -9,34 +8,25 @@ import io.arabesque.odag.domain.StorageReader;
 import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
 import org.apache.hadoop.io.Writable;
-import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
 
-import java.io.DataInput;
-import java.io.ObjectInput;
-import java.io.DataOutput;
-import java.io.ObjectOutput;
-import java.io.IOException;
-import java.io.Externalizable;
+import java.io.*;
 import java.util.concurrent.ExecutorService;
 
-public class ODAG implements Writable, Externalizable {
+public class SinglePatternODAG extends BasicODAG<SinglePatternODAG> {
     private Pattern pattern;
-    private DomainStorage storage;
-
     private boolean serializeAsReadOnly;
 
-    public ODAG(Pattern pattern, int numberOfDomains) {
+    public SinglePatternODAG(Pattern pattern, int numberOfDomains) {
         this.pattern = pattern;
         serializeAsReadOnly = false;
         storage = new DomainStorage(numberOfDomains);
     }
 
-    public ODAG(boolean readOnly) {
+    public SinglePatternODAG(boolean readOnly) {
         storage = createDomainStorage(readOnly);
     }
 
-    public ODAG() {
+    public SinglePatternODAG() {
     }
 
     private DomainStorage createDomainStorage(boolean readOnly) {
@@ -44,10 +34,7 @@ public class ODAG implements Writable, Externalizable {
         else return new DomainStorage();
     }
 
-    public int getNumberOfDomains() {
-        return storage.getNumberOfDomains();
-    }
-
+    @Override
     public void addEmbedding(Embedding embedding) {
         if (pattern == null) {
             throw new RuntimeException("Tried to add an embedding without letting embedding zip know about the pattern");
@@ -56,24 +43,14 @@ public class ODAG implements Writable, Externalizable {
         storage.addEmbedding(embedding);
     }
 
-    public DomainStorage getStorage() {
-        return storage;
-    }
-
-    public long getNumberOfEnumerations() {
-        return storage.getNumberOfEnumerations();
-    }
-
-    public void aggregate(ODAG embZip) {
+    @Override
+    public void aggregate(SinglePatternODAG embZip) {
         if (embZip == null) return;
 
         storage.aggregate(embZip.storage);
     }
 
-    public void finalizeConstruction(ExecutorService pool, int numParts) {
-        storage.finalizeConstruction(pool, numParts);
-    }
-
+    @Override
     public StorageReader getReader(Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
         return storage.getReader(pattern, computation, numPartitions, numBlocks, maxBlockSize);
     }
@@ -106,20 +83,12 @@ public class ODAG implements Writable, Externalizable {
        readFields(in);
     }
 
-    public void clear() {
-        storage.clear();
-    }
-
     public boolean getSerializeasWriteOnly() {
        return serializeAsReadOnly;
     }
 
     public void setSerializeAsReadOnly (boolean serializeAsReadOnly) {
        this.serializeAsReadOnly = serializeAsReadOnly;
-    }
-
-    public StorageStats getStats() {
-        return storage.getStats();
     }
 
     public void setPattern(Pattern pattern) {
@@ -132,7 +101,8 @@ public class ODAG implements Writable, Externalizable {
 
     @Override
     public String toString() {
-       return (pattern != null ? pattern.toString() : "") +
+       return "SinglePatternODAG(" +
+          (pattern != null ? pattern.toString() : "") + ")" +
           storage.toString();
     }
 }

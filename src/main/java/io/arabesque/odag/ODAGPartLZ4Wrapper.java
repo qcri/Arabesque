@@ -27,7 +27,7 @@ public class ODAGPartLZ4Wrapper extends ODAGPartWrapper {
     }
 
     @Override
-    public void readEzip(ODAG ezip) {
+    public void readEzip(SinglePatternODAG ezip) {
         ensureDecompressed();
         super.readEzip(ezip);
     }

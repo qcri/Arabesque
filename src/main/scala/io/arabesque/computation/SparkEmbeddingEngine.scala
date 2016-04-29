@@ -8,11 +8,10 @@ import io.arabesque.conf.Configuration
 import io.arabesque.embedding._
 import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.SequenceFile
-import org.apache.hadoop.io.SequenceFile.Writer
-import org.apache.hadoop.io.{LongWritable, NullWritable, Writable}
+import org.apache.hadoop.io.{LongWritable, NullWritable, Writable, SequenceFile}
+import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.{Accumulator, Logging}
+import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.mutable.Map
@@ -59,7 +58,7 @@ case class SparkEmbeddingEngine[O <: Embedding](
     : Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
   // output
-  @transient var embeddingWriterOpt: Option[Writer] = None
+  @transient var embeddingWriterOpt: Option[SeqWriter] = None
   @transient var outputStreamOpt: Option[OutputStreamWriter] = None
   @transient lazy val outputPath: Path = new Path(configuration.getOutputPath)
 
@@ -322,9 +321,9 @@ case class SparkEmbeddingEngine[O <: Embedding](
       val superstepPath = new Path(outputPath, s"${getSuperstep}")
       val partitionPath = new Path(superstepPath, s"${partitionId}")
       val embeddingWriter = SequenceFile.createWriter(hadoopConf.value,
-        Writer.file(partitionPath),
-        Writer.keyClass(classOf[NullWritable]),
-        Writer.valueClass(resEmbeddingClass))
+        SeqWriter.file(partitionPath),
+        SeqWriter.keyClass(classOf[NullWritable]),
+        SeqWriter.valueClass(resEmbeddingClass))
 
       embeddingWriterOpt = Some(embeddingWriter)
       

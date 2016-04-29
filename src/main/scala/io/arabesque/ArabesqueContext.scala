@@ -1,9 +1,9 @@
 package io.arabesque
 
-import org.apache.spark.{Logging, SparkContext}
-import org.apache.hadoop.fs.{FileSystem, Path}
-
 import java.util.UUID
+
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.{Logging, SparkContext}
 
 /**
  * Context for creating Arabesque Applications

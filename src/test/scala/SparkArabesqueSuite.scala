@@ -1,20 +1,12 @@
 package io.arabesque
 
-import org.scalatest.FunSuite
-import org.scalatest.BeforeAndAfterAll
-
-import org.apache.spark.{SparkContext, SparkConf}
-import org.apache.spark.SparkContext._
-
-import io.arabesque.computation.SparkODAGMasterEngine$
 import io.arabesque.conf.{Configuration, SparkConfiguration}
-
-import io.arabesque._
+import org.apache.spark.{SparkConf, SparkContext}
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 // TODO: break these tests into several *suites*
 class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
 
-  import Configuration._
   import SparkConfiguration._
 
   private val master = "local[2]"
@@ -28,8 +20,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
   /** set up spark context */
   override def beforeAll: Unit = {
     // configure log levels
-    import org.apache.log4j.Logger
-    import org.apache.log4j.Level
+    import org.apache.log4j.{Level, Logger}
     Logger.getLogger("org").setLevel(Level.ERROR)
     Logger.getLogger("akka").setLevel(Level.ERROR)
     Logger.getLogger("io").setLevel(Level.ERROR)

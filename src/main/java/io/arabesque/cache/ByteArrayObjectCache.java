@@ -5,11 +5,7 @@ import io.arabesque.misc.WritableObject;
 import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 
-import java.io.DataInput;
-import java.io.ObjectInput;
-import java.io.DataOutput;
-import java.io.ObjectOutput;
-import java.io.IOException;
+import java.io.*;
 import java.util.Iterator;
 
 public class ByteArrayObjectCache implements ObjectCache {

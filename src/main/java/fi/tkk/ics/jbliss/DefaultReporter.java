@@ -2,8 +2,6 @@ package fi.tkk.ics.jbliss;
 
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 
-import java.util.Map;
-
 /**
  * The default reporter for found generator automorphisms.
  * Outputs the automorphisms in the cycle format in a

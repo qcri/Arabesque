@@ -1,7 +1,5 @@
 package io.arabesque.embedding
 
-import io.arabesque.graph.Edge
-import java.io.DataOutput
 import java.io.DataInput
 
 /**

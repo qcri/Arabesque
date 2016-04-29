@@ -5,15 +5,15 @@ import java.io.{ByteArrayInputStream, DataInputStream}
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
-import io.arabesque.odag.{ODAG, ODAGStash}
+import io.arabesque.odag.{ODAGStash, SinglePatternODAG}
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.{NullWritable, Writable}
+import org.apache.hadoop.io.Writable
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{Accumulator, AccumulatorParam, SparkContext}
+import org.apache.spark.{Accumulator, SparkContext}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map
@@ -46,7 +46,7 @@ class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
 
   private var masterComputation: MasterComputation = _
 
-  private var odags: List[RDD[ODAG]] = List()
+  private var odags: List[RDD[SinglePatternODAG]] = List()
 
   def this(_sc: SparkContext, config: SparkConfiguration[E]) {
     this (config)
@@ -123,7 +123,7 @@ class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
     // setup an RDD to simulate empty partitions and a broadcast variable to
     // communicate the global aggregated ODAGs on each step
     val superstepRDD = sc.makeRDD (Seq.empty[Any], numPartitions).cache
-    var aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,ODAG]] =
+    var aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,SinglePatternODAG]] =
       sc.broadcast (Map.empty)
 
     var previousAggregationsBc: Broadcast[_] = sc.broadcast (
@@ -265,13 +265,13 @@ class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
    * TODO
    */
   private def getExecutionEngines[E <: Embedding](
-      superstepRDD: RDD[Any],
-      superstep: Int,
-      configBc: Broadcast[SparkConfiguration[E]],
-      aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,ODAG]],
-      serHadoopConf: SerializableConfiguration,
-      aggAccums: Map[String,Accumulator[_]],
-      previousAggregationsBc: Broadcast[_]) = {
+                                                   superstepRDD: RDD[Any],
+                                                   superstep: Int,
+                                                   configBc: Broadcast[SparkConfiguration[E]],
+                                                   aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,SinglePatternODAG]],
+                                                   serHadoopConf: SerializableConfiguration,
+                                                   aggAccums: Map[String,Accumulator[_]],
+                                                   previousAggregationsBc: Broadcast[_]) = {
 
     // read embeddings from global agg. ODAGs, expand, filter and process
     val execEngines = superstepRDD.mapPartitionsWithIndex { (idx, _) =>
@@ -294,7 +294,7 @@ class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
     execEngines
   }
 
-  private def aggregatedOdagsByPattern(odags: RDD[(Pattern, ODAG)]) = {
+  private def aggregatedOdagsByPattern(odags: RDD[(Pattern, SinglePatternODAG)]) = {
 
     // (flushByPattern)
     val aggregatedOdags = odags.reduceByKey { (odag1, odag2) =>
@@ -310,7 +310,7 @@ class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
   }
 
 
-  private def aggregatedOdagsByEntries(odags: RDD[((Pattern,Int,Int), ODAG)]) = {
+  private def aggregatedOdagsByEntries(odags: RDD[((Pattern,Int,Int), SinglePatternODAG)]) = {
 
     // (flushInEntries) ODAGs' reduction by pattern as a key
     val aggregatedOdags = odags.reduceByKey { (odag1, odag2) =>
@@ -339,18 +339,18 @@ class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
     val aggregatedOdags = odags.combineByKey (
       (byteArray: Array[Byte]) => {
         val dataInput = new DataInputStream(new ByteArrayInputStream(byteArray))
-        val _odag = new ODAG(false)
+        val _odag = new SinglePatternODAG(false)
         _odag.readFields (dataInput)
         _odag
       },
-      (odag: ODAG, byteArray: Array[Byte]) => {
+      (odag: SinglePatternODAG, byteArray: Array[Byte]) => {
         val dataInput = new DataInputStream(new ByteArrayInputStream(byteArray))
-        val _odag = new ODAG(false)
+        val _odag = new SinglePatternODAG(false)
         _odag.readFields (dataInput)
         odag.aggregate (_odag)
         odag
       },
-      (odag1: ODAG, odag2: ODAG) => {
+      (odag1: SinglePatternODAG, odag2: SinglePatternODAG) => {
         odag1.aggregate (odag2)
         odag1
       }
@@ -435,7 +435,7 @@ class SparkODAGMasterEngine[E <: Embedding](config: SparkConfiguration[E])
     super.finalize()
   }
 
-  override def getOdags: RDD[ODAG] = {
+  override def getOdags: RDD[SinglePatternODAG] = {
     sc.union (odags.toSeq)
   }
 }

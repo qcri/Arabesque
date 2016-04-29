@@ -52,7 +52,7 @@ public class ODAGPartWrapper implements Writable {
         return byteArrayOutputCache;
     }
 
-    public void readEzip(ODAG ezip) {
+    public void readEzip(SinglePatternODAG ezip) {
         ExtendedByteArrayDataInput byteArrayInputCache = null;
         try {
             byteArrayInputCache = new ExtendedByteArrayDataInput(byteArrayOutputCache.getByteArray(), 0, byteArrayOutputCache.getPos());
@@ -70,7 +70,7 @@ public class ODAGPartWrapper implements Writable {
         }
     }
 
-    public void writeEzip(ODAG ezip, int partId) throws IOException {
+    public void writeEzip(SinglePatternODAG ezip, int partId) throws IOException {
         reset();
         if (byteArrayOutputCache == null) {
             byteArrayOutputCache = new ExtendedByteArrayDataOutput();

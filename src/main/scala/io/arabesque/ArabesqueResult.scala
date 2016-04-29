@@ -3,10 +3,10 @@ package io.arabesque
 import io.arabesque.computation.SparkMasterEngine
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding.{Embedding, ResultEmbedding}
-import io.arabesque.odag.ODAG
+import io.arabesque.odag.SinglePatternODAG
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.{Logging, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{Logging, SparkContext}
 
 /**
  * Results of an Arabesque computation.
@@ -57,8 +57,8 @@ case class ArabesqueResult(
   /**
    * ODAGs of all supersteps
    */
-  private var odagsOpt: Option[RDD[ODAG]] = None
-  def odags: RDD[ODAG] = odagsOpt match {
+  private var odagsOpt: Option[RDD[SinglePatternODAG]] = None
+  def odags: RDD[SinglePatternODAG] = odagsOpt match {
     case None =>
       val _odags = masterEngine.getOdags
       odagsOpt = Some(_odags)

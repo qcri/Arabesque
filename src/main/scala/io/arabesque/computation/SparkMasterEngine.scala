@@ -1,15 +1,13 @@
 package io.arabesque.computation
 
+import io.arabesque.aggregation.AggregationStorage
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
-import io.arabesque.odag.ODAG
-import io.arabesque.aggregation.AggregationStorage
-
-import org.apache.hadoop.io.{Writable, NullWritable}
+import io.arabesque.odag.SinglePatternODAG
 import org.apache.hadoop.fs.{FileSystem, Path}
-
-import org.apache.spark.{Logging, SparkContext}
+import org.apache.hadoop.io.{NullWritable, Writable}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{Logging, SparkContext}
 
 import scala.collection.mutable.Map
 
@@ -58,8 +56,8 @@ abstract class SparkMasterEngine(config: SparkConfiguration[_ <: Embedding])
    *  produced by the supersteps from external storage. We avoid memory issues
    *  by not keeping all the embeddings in memory.
    */
-  def getOdags: RDD[ODAG] = {
-    sc.makeRDD (Seq.empty[ODAG])
+  def getOdags: RDD[SinglePatternODAG] = {
+    sc.makeRDD (Seq.empty[SinglePatternODAG])
   }
   def getEmbeddings: RDD[ResultEmbedding] = {
 

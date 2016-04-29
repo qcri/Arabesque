@@ -5,8 +5,8 @@ import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.function.IntConsumer;
 
 import java.io.DataInput;
-import java.io.ObjectInput;
 import java.io.IOException;
+import java.io.ObjectInput;
 
 public class VertexInducedEmbedding extends BasicEmbedding {
     // Consumers {{

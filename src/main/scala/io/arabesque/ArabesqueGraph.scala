@@ -1,10 +1,10 @@
 package io.arabesque
 
+import java.util.UUID
+
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding.Embedding
 import org.apache.spark.Logging
-
-import java.util.UUID
 
 /**
  * Arabesque graph for calling algorithms on

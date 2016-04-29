@@ -5,8 +5,8 @@ import io.arabesque.utils.collection.IntArrayList;
 import net.openhft.koloboke.collect.IntCollection;
 
 import java.io.DataInput;
-import java.io.ObjectInput;
 import java.io.IOException;
+import java.io.ObjectInput;
 
 public class EdgeInducedEmbedding extends BasicEmbedding {
     private IntArrayList numVerticesAddedWithWord;

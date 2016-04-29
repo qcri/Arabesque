@@ -6,24 +6,20 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.domain.StorageReader;
 import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
+import io.arabesque.odag.BasicODAGStash.Reader;
 import org.apache.giraph.aggregators.BasicAggregator;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
-import java.io.DataInput;
-import java.io.ObjectInput;
-import java.io.DataOutput;
-import java.io.ObjectOutput;
-import java.io.Externalizable;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 
-public class ODAGStash implements Writable, Externalizable {
+public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
     private static final Logger LOG =
             Logger.getLogger(ODAGStash.class);
 
-    private Map<Pattern, ODAG> compressedEmbeddingsByPattern;
+    private Map<Pattern, SinglePatternODAG> compressedEmbeddingsByPattern;
     private Pattern reusablePattern;
 
     public ODAGStash() {
@@ -31,19 +27,20 @@ public class ODAGStash implements Writable, Externalizable {
         this.reusablePattern = Configuration.get().createPattern();
     }
 
-    public ODAGStash(Map<Pattern, ODAG> odagsByPattern) {
+    public ODAGStash(Map<Pattern, SinglePatternODAG> odagsByPattern) {
        compressedEmbeddingsByPattern = odagsByPattern;
        this.reusablePattern = Configuration.get().createPattern();
     }
 
+    @Override
     public void addEmbedding(Embedding embedding) {
         try {
             reusablePattern.setEmbedding(embedding);
-            ODAG embeddingsZip = compressedEmbeddingsByPattern.get(reusablePattern);
+            SinglePatternODAG embeddingsZip = compressedEmbeddingsByPattern.get(reusablePattern);
 
             if (embeddingsZip == null) {
                 Pattern patternCopy = reusablePattern.copy();
-                embeddingsZip = new ODAG(patternCopy, embedding.getNumWords());
+                embeddingsZip = new SinglePatternODAG(patternCopy, embedding.getNumWords());
                 compressedEmbeddingsByPattern.put(patternCopy, embeddingsZip);
             }
 
@@ -56,10 +53,11 @@ public class ODAGStash implements Writable, Externalizable {
         }
     }
 
-    public void aggregate(ODAG ezip) {
+    @Override
+    public void aggregate(SinglePatternODAG ezip) {
         Pattern pattern = ezip.getPattern();
 
-        ODAG existingEzip = compressedEmbeddingsByPattern.get(pattern);
+        SinglePatternODAG existingEzip = compressedEmbeddingsByPattern.get(pattern);
 
         if (existingEzip == null) {
             compressedEmbeddingsByPattern.put(pattern, ezip);
@@ -68,15 +66,16 @@ public class ODAGStash implements Writable, Externalizable {
         }
     }
 
-    public void aggregateUsingReusable(ODAG ezip) {
+    @Override
+    public void aggregateUsingReusable(SinglePatternODAG ezip) {
         Pattern pattern = ezip.getPattern();
 
-        ODAG existingEzip = compressedEmbeddingsByPattern.get(pattern);
+        SinglePatternODAG existingEzip = compressedEmbeddingsByPattern.get(pattern);
 
         if (existingEzip == null) {
             Pattern patternCopy = pattern.copy();
             ezip.setPattern(patternCopy);
-            existingEzip = new ODAG(patternCopy, ezip.getNumberOfDomains());
+            existingEzip = new SinglePatternODAG(patternCopy, ezip.getNumberOfDomains());
             compressedEmbeddingsByPattern.put(patternCopy, existingEzip);
         }
 
@@ -84,13 +83,14 @@ public class ODAGStash implements Writable, Externalizable {
     }
 
 
+    @Override
     public void aggregate(ODAGStash value) {
-        for (Map.Entry<Pattern, ODAG> otherCompressedEmbeddingsByPatternEntry :
+        for (Map.Entry<Pattern, SinglePatternODAG> otherCompressedEmbeddingsByPatternEntry :
                 value.compressedEmbeddingsByPattern.entrySet()) {
             Pattern pattern = otherCompressedEmbeddingsByPatternEntry.getKey();
-            ODAG otherCompressedEmbeddings = otherCompressedEmbeddingsByPatternEntry.getValue();
+            SinglePatternODAG otherCompressedEmbeddings = otherCompressedEmbeddingsByPatternEntry.getValue();
 
-            ODAG thisCompressedEmbeddings = compressedEmbeddingsByPattern.get(pattern);
+            SinglePatternODAG thisCompressedEmbeddings = compressedEmbeddingsByPattern.get(pattern);
 
             if (thisCompressedEmbeddings == null) {
                 compressedEmbeddingsByPattern.put(pattern, otherCompressedEmbeddings);
@@ -100,10 +100,11 @@ public class ODAGStash implements Writable, Externalizable {
         }
     }
 
+    @Override
     public void finalizeConstruction(ExecutorService pool, int parts) {
-       for (Map.Entry<Pattern, ODAG> entry : compressedEmbeddingsByPattern.entrySet()) {
+       for (Map.Entry<Pattern, SinglePatternODAG> entry : compressedEmbeddingsByPattern.entrySet()) {
           Pattern pattern = entry.getKey();
-          ODAG odag = entry.getValue();
+          SinglePatternODAG odag = entry.getValue();
           odag.setPattern (pattern);
           odag.finalizeConstruction(pool, parts);
        }
@@ -112,11 +113,11 @@ public class ODAGStash implements Writable, Externalizable {
     @Override
     public void write(DataOutput dataOutput) throws IOException {
         dataOutput.writeInt(compressedEmbeddingsByPattern.size());
-        for (Map.Entry<Pattern, ODAG> shrunkEmbeddingsByPatternEntry :
+        for (Map.Entry<Pattern, SinglePatternODAG> shrunkEmbeddingsByPatternEntry :
                 compressedEmbeddingsByPattern.entrySet()) {
             Pattern pattern = shrunkEmbeddingsByPatternEntry.getKey();
             pattern.write(dataOutput);
-            ODAG shrunkEmbeddings = shrunkEmbeddingsByPatternEntry.getValue();
+            SinglePatternODAG shrunkEmbeddings = shrunkEmbeddingsByPatternEntry.getValue();
             shrunkEmbeddings.write(dataOutput);
         }
     }
@@ -137,7 +138,7 @@ public class ODAGStash implements Writable, Externalizable {
         for (int i = 0; i < numEntries; ++i) {
             Pattern pattern = Configuration.get().createPattern();
             pattern.readFields(dataInput);
-            ODAG shrunkEmbeddings = new ODAG(false);
+            SinglePatternODAG shrunkEmbeddings = new SinglePatternODAG(false);
             shrunkEmbeddings.setPattern(pattern);
             shrunkEmbeddings.readFields(dataInput);
             compressedEmbeddingsByPattern.put(pattern, shrunkEmbeddings);
@@ -149,19 +150,22 @@ public class ODAGStash implements Writable, Externalizable {
        readFields (objInput);
     }
 
+    @Override
     public boolean isEmpty() {
         return compressedEmbeddingsByPattern.isEmpty();
     }
 
+    @Override
     public int getNumZips() {
         return compressedEmbeddingsByPattern.size();
     }
 
+    @Override
     public void clear() {
         compressedEmbeddingsByPattern.clear();
     }
 
-    public ODAG getEzip(Pattern pattern) {
+    public SinglePatternODAG getEzip(Pattern pattern) {
         return compressedEmbeddingsByPattern.get(pattern);
     }
 
@@ -177,7 +181,7 @@ public class ODAGStash implements Writable, Externalizable {
         }
     }
 
-    public Collection<ODAG> getEzips() {
+    public Collection<SinglePatternODAG> getEzips() {
         return compressedEmbeddingsByPattern.values();
     }
 
@@ -193,7 +197,7 @@ public class ODAGStash implements Writable, Externalizable {
 
         long numDomainsEnumerations = 0;
 
-        for (ODAG ezip : compressedEmbeddingsByPattern.values()) {
+        for (SinglePatternODAG ezip : compressedEmbeddingsByPattern.values()) {
             ++numDomainsZips;
             numDomainsEnumerations += ezip.getNumberOfEnumerations();
         }
@@ -208,10 +212,10 @@ public class ODAGStash implements Writable, Externalizable {
         StringBuilder sb = new StringBuilder();
 
         //TreeMap<String, EmbeddingsZip> orderedMap = new TreeMap<>();
-        TreeMap<String, ODAG> orderedMap = new TreeMap<>();
+        TreeMap<String, SinglePatternODAG> orderedMap = new TreeMap<>();
 
         //for (Map.Entry<Pattern, EmbeddingsZip> entry : compressedEmbeddingsByPattern.entrySet()) {
-        for (Map.Entry<Pattern, ODAG> entry : compressedEmbeddingsByPattern.entrySet()) {
+        for (Map.Entry<Pattern, SinglePatternODAG> entry : compressedEmbeddingsByPattern.entrySet()) {
             orderedMap.put(entry.getKey().toString(), entry.getValue());
         }
 
@@ -220,7 +224,7 @@ public class ODAGStash implements Writable, Externalizable {
         int totalSum = 0;
 
         //for (Map.Entry<String, EmbeddingsZip> entry : orderedMap.entrySet()) {
-        for (Map.Entry<String, ODAG> entry : orderedMap.entrySet()) {
+        for (Map.Entry<String, SinglePatternODAG> entry : orderedMap.entrySet()) {
             sb.append("=====\n");
             sb.append(entry.getKey());
             sb.append('\n');
@@ -240,15 +244,11 @@ public class ODAGStash implements Writable, Externalizable {
     public String getDomainStorageStatsString() {
         StorageStats domainStorageStats = new StorageStats();
 
-        for (ODAG ezip : compressedEmbeddingsByPattern.values()) {
+        for (SinglePatternODAG ezip : compressedEmbeddingsByPattern.values()) {
             domainStorageStats.aggregate(ezip.getStats());
         }
 
         return domainStorageStats.toString() + "\n" + domainStorageStats.getSizeEstimations();
-    }
-
-    public interface Reader<O extends Embedding> extends Iterator<O> {
-
     }
 
     public static class EfficientReader<O extends Embedding> implements Reader<O> {
@@ -258,7 +258,7 @@ public class ODAGStash implements Writable, Externalizable {
         private final int numBlocks;
         private final int maxBlockSize;
 
-        private Iterator<Map.Entry<Pattern, ODAG>> stashIterator;
+        private Iterator<Map.Entry<Pattern, SinglePatternODAG>> stashIterator;
         private StorageReader currentReader;
         private boolean currentPositionConsumed = true;
 
@@ -278,7 +278,7 @@ public class ODAGStash implements Writable, Externalizable {
             while (true) {
                 if (currentReader == null) {
                     if (stashIterator.hasNext()) {
-                        Map.Entry<Pattern, ODAG> nextEntry = stashIterator.next();
+                        Map.Entry<Pattern, SinglePatternODAG> nextEntry = stashIterator.next();
                         currentReader = nextEntry.getValue().getReader(computation, numPartitions, numBlocks, maxBlockSize);
                     }
                 }

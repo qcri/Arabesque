@@ -16,12 +16,7 @@ import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
 import org.apache.hadoop.io.Writable;
 
-import java.io.DataInput;
-import java.io.ObjectInput;
-import java.io.DataOutput;
-import java.io.ObjectOutput;
-import java.io.IOException;
-import java.io.Externalizable;
+import java.io.*;
 import java.util.Arrays;
 
 public class DomainSupport implements Writable, Externalizable, PatternAggregationAwareValue {

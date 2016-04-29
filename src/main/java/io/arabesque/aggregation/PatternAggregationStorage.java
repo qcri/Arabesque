@@ -6,11 +6,7 @@ import net.openhft.koloboke.collect.map.hash.HashObjByteMaps;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
-import java.io.DataInput;
-import java.io.ObjectInput;
-import java.io.DataOutput;
-import java.io.ObjectOutput;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.util.Iterator;
 import java.util.Map;

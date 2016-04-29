@@ -14,8 +14,8 @@ import net.openhft.koloboke.function.IntConsumer;
 import net.openhft.koloboke.function.IntPredicate;
 
 import java.io.DataOutput;
-import java.io.ObjectOutput;
 import java.io.IOException;
+import java.io.ObjectOutput;
 import java.util.Objects;
 
 public abstract class BasicEmbedding implements Embedding {

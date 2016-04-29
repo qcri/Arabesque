@@ -2,8 +2,6 @@ package fi.tkk.ics.jbliss;
 
 import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
 
-import java.util.Map;
-
 /**
  * An interface for reporting the found generator automorphisms.
  */

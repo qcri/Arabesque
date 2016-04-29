@@ -8,11 +8,7 @@ import net.jpountz.lz4.LZ4FastDecompressor;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.log4j.Logger;
 
-import java.io.DataInput;
-import java.io.ObjectInput;
-import java.io.DataOutput;
-import java.io.ObjectOutput;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 
 public class LZ4ObjectCache extends ByteArrayObjectCache {

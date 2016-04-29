@@ -3,8 +3,7 @@ package io.arabesque.utils
 import java.io._
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.io.ObjectWritable
-import org.apache.hadoop.io.Writable
+import org.apache.hadoop.io.{ObjectWritable, Writable}
 
 class SerializableWritable[T <: Writable](@transient var t: T) extends Serializable {
 
