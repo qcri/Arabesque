@@ -6,28 +6,26 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.domain.StorageReader;
 import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
-import io.arabesque.odag.BasicODAGStash.Reader;
 import org.apache.giraph.aggregators.BasicAggregator;
-import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 
-public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
+public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, SinglePatternODAGStash> {
     private static final Logger LOG =
-            Logger.getLogger(ODAGStash.class);
+            Logger.getLogger(SinglePatternODAGStash.class);
 
     private Map<Pattern, SinglePatternODAG> compressedEmbeddingsByPattern;
     private Pattern reusablePattern;
 
-    public ODAGStash() {
+    public SinglePatternODAGStash() {
         compressedEmbeddingsByPattern = new HashMap<>();
         this.reusablePattern = Configuration.get().createPattern();
     }
 
-    public ODAGStash(Map<Pattern, SinglePatternODAG> odagsByPattern) {
+    public SinglePatternODAGStash(Map<Pattern, SinglePatternODAG> odagsByPattern) {
        compressedEmbeddingsByPattern = odagsByPattern;
        this.reusablePattern = Configuration.get().createPattern();
     }
@@ -84,7 +82,7 @@ public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
 
 
     @Override
-    public void aggregate(ODAGStash value) {
+    public void aggregate(SinglePatternODAGStash value) {
         for (Map.Entry<Pattern, SinglePatternODAG> otherCompressedEmbeddingsByPatternEntry :
                 value.compressedEmbeddingsByPattern.entrySet()) {
             Pattern pattern = otherCompressedEmbeddingsByPatternEntry.getKey();
@@ -169,15 +167,15 @@ public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
         return compressedEmbeddingsByPattern.get(pattern);
     }
 
-    public static class Aggregator extends BasicAggregator<ODAGStash> {
+    public static class Aggregator extends BasicAggregator<SinglePatternODAGStash> {
         @Override
-        public void aggregate(ODAGStash value) {
+        public void aggregate(SinglePatternODAGStash value) {
             getAggregatedValue().aggregate(value);
         }
 
         @Override
-        public ODAGStash createInitialValue() {
-            return new ODAGStash();
+        public SinglePatternODAGStash createInitialValue() {
+            return new SinglePatternODAGStash();
         }
     }
 
@@ -187,7 +185,7 @@ public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
 
     @Override
     public String toString() {
-        return "ODAGStash{" +
+        return "SinglePatternODAGStash{" +
                 "compressedEmbeddingsByPattern=" + compressedEmbeddingsByPattern +
                 '}';
     }
@@ -202,7 +200,7 @@ public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
             numDomainsEnumerations += ezip.getNumberOfEnumerations();
         }
 
-        return "ODAGStash{" +
+        return "SinglePatternODAGStash{" +
                 "numZips=" + numDomainsZips + ", " +
                 "numEnumerations=" + numDomainsEnumerations + ", " +
                 "}";
@@ -219,7 +217,7 @@ public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
             orderedMap.put(entry.getKey().toString(), entry.getValue());
         }
 
-        sb.append("ODAGStash{\n");
+        sb.append("SinglePatternODAGStash{\n");
 
         int totalSum = 0;
 
@@ -253,7 +251,7 @@ public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
 
     public static class EfficientReader<O extends Embedding> implements Reader<O> {
         private final int numPartitions;
-        private final ODAGStash stash;
+        private final SinglePatternODAGStash stash;
         private final Computation<Embedding> computation;
         private final int numBlocks;
         private final int maxBlockSize;
@@ -262,7 +260,7 @@ public class ODAGStash extends BasicODAGStash<SinglePatternODAG, ODAGStash> {
         private StorageReader currentReader;
         private boolean currentPositionConsumed = true;
 
-        public EfficientReader(ODAGStash stash, Computation<? extends Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
+        public EfficientReader(SinglePatternODAGStash stash, Computation<? extends Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
             this.stash = stash;
             this.numPartitions = numPartitions;
             this.computation = (Computation<Embedding>) computation;

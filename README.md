@@ -139,3 +139,17 @@ which deploy Spark in Jupyter notebook environment. Follow these steps:
 
    6. The last step will open jupyter's web interface. Just click on
       ```arabesque-demo.ipynb``` and try some concepts/snippets.
+
+## Embedding communication strategies for Spark
+
+The system supports the following communication strategies in Spark mode:
+
+* `odag`: the produced embeddings from each superstep are distributed in a
+  compressed structure called ODAG (refer to the paper for details). This mode
+  is activated with the following property (included in yaml files or Scala API):
+  * key: `comm_strategy`; value: `odag`
+* `embedding`: the produced embeddings are packed together and distributed over
+  the network. In this mode we do not leverage graph properties for compressing,
+  however we gain in access time if memory is not an issue. This mode is
+  activated with the following property (included in yaml files or Scala API):
+  * key: `comm_strategy`; value: `embedding`
