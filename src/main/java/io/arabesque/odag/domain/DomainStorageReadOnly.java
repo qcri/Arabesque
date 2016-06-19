@@ -6,6 +6,7 @@ import io.arabesque.embedding.EdgeInducedEmbedding;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.embedding.VertexInducedEmbedding;
 import io.arabesque.graph.Edge;
+import io.arabesque.graph.Vertex;
 import io.arabesque.graph.LabelledEdge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.pattern.LabelledPatternEdge;
@@ -17,6 +18,8 @@ import io.arabesque.utils.collection.IntCollectionAddConsumer;
 import net.openhft.koloboke.collect.IntCollection;
 import net.openhft.koloboke.collect.set.hash.HashIntSet;
 import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -25,11 +28,13 @@ import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DomainStorageReadOnly extends DomainStorage {
+    private static final Logger LOG = Logger.getLogger(DomainEntryReadOnly.class);
 
     @Override
-    public void readFields(DataInput dataInput) throws IOException {
+    public void readFields(DataInput dataInput) throws IOException { 
         this.clear();
 
+        numEmbeddings = dataInput.readLong();
         setNumberOfDomains(dataInput.readInt());
 
         for (int i = 0; i < numberOfDomains; ++i) {
@@ -524,9 +529,18 @@ public class DomainStorageReadOnly extends DomainStorage {
         }
     }
 
+    /**
+     * @Experimental
+     * This reader is meant to work with single and multi-pattern odags. In the
+     * former case, we provide and array of patterns with the single pattern.
+     * TODO: we could spend some time refactoring this class, its logic is
+     * crucial to the system and yet it is very complicated.
+     */
     public class MultiPatternReader implements StorageReader {
+
         private final MainGraph mainGraph;
         private final Embedding reusableEmbedding;
+        private final Pattern reusablePattern;
         private final long numberOfEnumerations;
 
         private final long blockSize;
@@ -534,7 +548,6 @@ public class DomainStorageReadOnly extends DomainStorage {
 
         private final Deque<EnumerationStep> enumerationStack;
         private final HashIntSet singletonExtensionSet;
-        private final Pattern pattern;
         private final Pattern[] patterns;
         private final Computation<Embedding> computation;
         private final int numPartitions;
@@ -544,13 +557,18 @@ public class DomainStorageReadOnly extends DomainStorage {
         private EdgesConsumer edgesConsumer;
         private IntArrayList edgeIds;
 
+        private long validEmbeddings;
+        private long prunedByTheEnd;
+        private long localEnumerations;
+        private long numberOfEmbeddingsRead;
+
         public MultiPatternReader(Pattern[] patterns, Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
             this.patterns = patterns;
-            this.pattern = patterns[0];
             this.computation = computation;
             this.numPartitions = numPartitions;
             mainGraph = Configuration.get().getMainGraph();
             reusableEmbedding = Configuration.get().createEmbedding();
+            reusablePattern = Configuration.get().createPattern();
 
             this.numberOfEnumerations = getNumberOfEnumerations();
 
@@ -567,6 +585,11 @@ public class DomainStorageReadOnly extends DomainStorage {
 
             edgeIds = new IntArrayList();
 
+            localEnumerations = 0;
+            validEmbeddings = 0;
+            prunedByTheEnd = 0;
+            numberOfEmbeddingsRead = 0;
+
             edgesConsumer = new EdgesConsumer(Configuration.get().isGraphEdgeLabelled());
             edgesConsumer.setCollection(edgeIds);
         }
@@ -578,7 +601,8 @@ public class DomainStorageReadOnly extends DomainStorage {
 
         @Override
         public Embedding next() {
-            return reusableEmbedding;
+           numberOfEmbeddingsRead += 1; 
+           return reusableEmbedding;
         }
 
         @Override
@@ -610,12 +634,32 @@ public class DomainStorageReadOnly extends DomainStorage {
                 if (singletonExtensionSet.size() == 0) {
                     return false;
                 }
-
+                
                 if (!computation.filter(reusableVertexEmbedding, wordId)) {
                     return false;
                 }
 
+                // incremental validation
                 reusableVertexEmbedding.addWord(wordId);
+                reusablePattern.setEmbedding (reusableVertexEmbedding);
+                boolean validForSomePattern = false;
+                for (Pattern pattern: patterns) {
+                   if (!reusablePattern.equals(pattern, reusablePattern.getNumberOfEdges()))
+                      continue;
+
+                   validForSomePattern = true;
+                   break;
+                }
+
+                if (!validForSomePattern){
+                   reusableVertexEmbedding.removeLastWord();
+                   return false;
+                }
+
+
+                // final add word
+                //reusableVertexEmbedding.addWord(wordId);
+
             } else if (reusableEmbedding instanceof EdgeInducedEmbedding) {
                 EdgeInducedEmbedding reusableEdgeEmbedding = (EdgeInducedEmbedding) reusableEmbedding;
 
@@ -638,7 +682,7 @@ public class DomainStorageReadOnly extends DomainStorage {
                    IntArrayList embeddingVertices = reusableEdgeEmbedding.getVertices();
                    int numEmbeddingVertices = reusableEdgeEmbedding.getNumVertices();
                    reusableEdgeEmbedding.removeLastWord();
-
+                   
                    // If pattern has more vertices than embedding with this word, quit,
                    // expansion not valid
                    if (equivalentPatternEdgeSrcIndex >= numEmbeddingVertices ||
@@ -669,7 +713,6 @@ public class DomainStorageReadOnly extends DomainStorage {
                 }
 
                 if (!validForSomePattern) return false;
-
                 reusableEdgeEmbedding.addWord(wordId);
             } else {
                 throw new RuntimeException("Incompatible embedding class: " + reusableEmbedding.getClass());
@@ -716,14 +759,34 @@ public class DomainStorageReadOnly extends DomainStorage {
         }
 
         private boolean testCompleteEmbedding() {
-            if (reusableEmbedding.getNumVertices() != pattern.getNumberOfVertices()) {
-                return false;
+            // NOTE: the following check is required when running in
+            // multi-pattern odag mode. The issue is that althought
+            // *aggregationFilter* was already performed at this point we may
+            // have chose there that the odag must be kept for other pattern but
+            // the ones being filtered. Thus some odags will carry invalid
+            // pointers with vertice labels that lead to invalid patterns.
+            if (!computation.aggregationFilter(reusableEmbedding.getPattern()))
+               return false;
+
+            boolean validForSomePattern = false;
+            for (Pattern pattern: patterns) {
+               if (reusableEmbedding.getNumVertices() != pattern.getNumberOfVertices()) {
+                  continue;
+               } else {
+                  reusablePattern.setEmbedding (reusableEmbedding);
+                  if (!reusablePattern.equals(pattern))
+                     continue;
+                   validForSomePattern = true;
+                   break;
+               }
             }
+
+            if (!validForSomePattern) return false;
 
             if (reusableEmbedding instanceof VertexInducedEmbedding) {
                 VertexInducedEmbedding reusableVertexEmbedding = (VertexInducedEmbedding) reusableEmbedding;
 
-                boolean validForSomePattern = false;
+                validForSomePattern = false;
                 for (Pattern pattern: patterns) {
                    // Test if constructed embedding matches the pattern.
                    // TODO: Perhaps we can do this incrementally in an efficient manner?
@@ -733,30 +796,69 @@ public class DomainStorageReadOnly extends DomainStorage {
                    if (numEdgesEmbedding != numEdgesPattern) {
                       continue;
                    }
+                   
+                   reusablePattern.setEmbedding (reusableEmbedding);
+                   if (!reusablePattern.equals(pattern))
+                      continue;
 
-                   PatternEdgeArrayList edgesPattern = pattern.getEdges();
-                   IntArrayList edgesEmbedding = reusableVertexEmbedding.getEdges();
-                   IntArrayList verticesEmbedding = reusableVertexEmbedding.getVertices();
-
-                   for (int i = 0; i < numEdgesPattern; ++i) {
-                      PatternEdge edgePattern = edgesPattern.get(i);
-                      Edge edgeEmbedding = mainGraph.getEdge(edgesEmbedding.getUnchecked(i));
-
-                      if (!edgeEmbedding.hasVertex(verticesEmbedding.getUnchecked(edgePattern.getSrcPos())) ||
-                            !edgeEmbedding.hasVertex(verticesEmbedding.getUnchecked(edgePattern.getDestPos()))) {
-                         continue;
-                      }
-                   }
                    validForSomePattern = true;
                    break;
+
+                   //PatternEdgeArrayList edgesPattern = pattern.getEdges();
+                   //IntArrayList edgesEmbedding = reusableVertexEmbedding.getEdges();
+                   //IntArrayList verticesEmbedding = reusableVertexEmbedding.getVertices();
+
+                   //int i;
+                   //validForSomePattern = true;
+                   //for (i = 0; i < numEdgesPattern; ++i) {
+                   //   PatternEdge edgePattern = edgesPattern.get(i);
+                   //   Edge edgeEmbedding = mainGraph.getEdge(edgesEmbedding.getUnchecked(i));
+
+                   //   int v1 = verticesEmbedding.getUnchecked(edgePattern.getSrcPos());
+                   //   int v2 = verticesEmbedding.getUnchecked(edgePattern.getDestPos());
+
+                   //   if (!edgeEmbedding.hasVertex(v1) || !edgeEmbedding.hasVertex(v2)) {
+                   //      validForSomePattern = false;
+                   //      break;
+                   //   }
+
+                   //   //Vertex vertex1 = mainGraph.getVertex(v1);
+                   //   //Vertex vertex2 = mainGraph.getVertex(v2);
+
+                   //   //if (!(vertex1.getVertexLabel() == edgePattern.getSrcLabel()
+                   //   //      && vertex2.getVertexLabel() == edgePattern.getDestLabel()) &&
+                   //   //    !(vertex1.getVertexLabel() == edgePattern.getDestLabel()
+                   //   //      && vertex2.getVertexLabel() == edgePattern.getSrcLabel())) {
+                   //   //   validForSomePattern = false;
+                   //   //   break;
+                   //   //}
+                   //}
+                   //if (!validForSomePattern)
+                   //   continue;
+                   //else {
+                   //   //System.out.println ("patterns " + StringUtils.join(patterns,";") +
+                   //   //      " targetEnumId " + targetEnumId +
+                   //   //      " npatterns " + patterns.length + " pattern-embedding " +
+                   //   //      pattern + " " + reusableEmbedding);
+                   //   break;
+                   //}
                 }
-                if (!validForSomePattern) return false;
+                if (!validForSomePattern) {
+                   return false;
+                }
             }
 
-            return computation.filter(reusableEmbedding) && computation.shouldExpand(reusableEmbedding);
+            boolean valid = computation.filter(reusableEmbedding) && 
+               computation.shouldExpand(reusableEmbedding);
+
+            if (!valid)
+               prunedByTheEnd += 1;
+
+            return valid;
         }
 
         public boolean getEnumerationWithStack(int targetSize) {
+            localEnumerations += 1;
             long currentId = 0;
 
             while (!enumerationStack.isEmpty() && targetEnumId >= currentId) {
@@ -794,6 +896,15 @@ public class DomainStorageReadOnly extends DomainStorage {
                             // so skip everything and return false since enumId was associated
                             // with an invalid embedding.
                             if (!tryAddWord(wordId)) {
+                               System.out.println (Configuration.get().getCommStrategy() +
+                                      " filtered " + currentId +
+                                      " targetSize " + targetSize +
+                                      " reachedSize " + (reusableEmbedding.getNumWords()+1) +
+                                      " niceness " + (targetSize - reusableEmbedding.getNumWords() - 1) +
+                                      " pruned " + Math.min (
+                                         targetEnumId - currentId,
+                                         newPossibilityForDomain0.getCounter())
+                               );
                                 targetEnumId = currentId + newPossibilityForDomain0.getCounter() - 1;
                                 invalid = true;
                                 // Add word anyway. Embedding will be invalid with this word but it will be
@@ -834,18 +945,28 @@ public class DomainStorageReadOnly extends DomainStorage {
                         int newWordId = pointers[i];
 
                         DomainEntry newPossibilityForLastDomain = possibilitiesLastDomain.get(newWordId);
-
+                        
                         assert newPossibilityForLastDomain != null;
 
                         if ((domainOfLastEnumerationStep < targetSize - 1 && currentId + newPossibilityForLastDomain.getCounter() > targetEnumId)
                                 || (domainOfLastEnumerationStep == targetSize - 1 && currentId == targetEnumId)) {
                             boolean invalid = false;
-
+                           
                             // If we couldn't add this word this means that the
                             // current partial embedding and all extensions are invalid
                             // so skip everything and return false since enumId was associated
                             // with an invalid embedding.
                             if (!tryAddWord(newWordId)) {
+                               System.out.println (Configuration.get().getCommStrategy() +
+                                      " filtered " + currentId +
+                                      " targetSize " + targetSize +
+                                      " reachedSize " + (reusableEmbedding.getNumWords()+1) +
+                                      " niceness " + (targetSize - reusableEmbedding.getNumWords() - 1) +
+                                      " pruned " + Math.min (
+                                         targetEnumId - currentId,
+                                         newPossibilityForLastDomain.getCounter())
+                               );
+
                                 targetEnumId = currentId + newPossibilityForLastDomain.getCounter() - 1;
                                 invalid = true;
                                 // Add word anyway. Embedding will be invalid with this word but it will be
@@ -883,8 +1004,24 @@ public class DomainStorageReadOnly extends DomainStorage {
                     }
                 }
             }
+            
 
-            return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
+            boolean valid = reusableEmbedding.getNumWords() == targetSize &&
+               testCompleteEmbedding();
+
+            if (valid) {
+               validEmbeddings += reusableEmbedding.getNumWords();
+            } else {
+               System.out.println (Configuration.get().getCommStrategy() +
+                     " filtered " + currentId +
+                     " targetSize " + targetSize +
+                     " reachedSize " + reusableEmbedding.getNumWords() +
+                     " niceness " + (targetSize - reusableEmbedding.getNumWords()) +
+                     " pruned " + 0
+                     );
+            }
+
+            return valid;
         }
 
         public String toStringResume() {
@@ -896,10 +1033,11 @@ public class DomainStorageReadOnly extends DomainStorage {
 
         public boolean moveNext() {
             while (true) {
+                
                 targetEnumId = getNextEnumerationId(targetEnumId);
 
                 if (targetEnumId == -1) {
-                    return false;
+                   return false;
                 }
 
                 if (getEnumerationWithStack(domainEntries.size())) {
@@ -946,7 +1084,14 @@ public class DomainStorageReadOnly extends DomainStorage {
 
         @Override
         public void close() {
-            // Do nothing by default
+            if (LOG.isDebugEnabled()) {
+               LOG.debug ("numberOfEmbeddingsRead " + numberOfEmbeddingsRead);
+               LOG.debug (Configuration.get().getCommStrategy() +
+                  " prunedByTheEnd: " + prunedByTheEnd +
+                  " validEmbeddings: " +
+                  validEmbeddings/domainEntries.size() +
+                  " enumerations: " + localEnumerations);
+            }
         }
 
         public abstract class EnumerationStep {
