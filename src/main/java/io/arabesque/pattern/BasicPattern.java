@@ -17,6 +17,9 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 
+// TODO: use murmur hash to do pattern hashing
+//import com.google.common.hash.Hashing;
+
 public abstract class BasicPattern implements Pattern {
     private static final Logger LOG = Logger.getLogger(BasicPattern.class);
 
@@ -30,7 +33,7 @@ public abstract class BasicPattern implements Pattern {
     // }}
 
     // Incremental building {{
-    private IntArrayList previousWords;
+    private IntArrayList previousWords; // TODO: is it previous or current ?
     private int numVerticesAddedFromPrevious;
     private int numAddedEdgesFromPrevious;
     // }}
@@ -528,8 +531,24 @@ public abstract class BasicPattern implements Pattern {
         BasicPattern that = (BasicPattern) o;
 
         return edges.equals(that.edges);
-        //return this.hashCode() == that.hashCode();
 
+    }
+
+    public boolean equals(Object o, int upTo) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BasicPattern that = (BasicPattern) o;
+
+        if (this.getNumberOfEdges() < upTo || that.getNumberOfEdges() < upTo)
+           return false;
+        
+        PatternEdgeArrayList otherEdges = that.getEdges();
+        for (int i = 0; i < upTo; i++) {
+           if (!edges.getUnchecked(i).equals (otherEdges.getUnchecked(i)))
+              return false;
+        }
+
+        return true;
     }
 
     @Override

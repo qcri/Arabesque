@@ -33,4 +33,8 @@ public interface Pattern extends Writable, Externalizable {
     IntIntMap getCanonicalLabeling();
 
     String toOutputString();
+   
+    ////////
+    boolean equals(Object o, int upTo);
+    
 }
