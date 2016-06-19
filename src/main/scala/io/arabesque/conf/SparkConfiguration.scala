@@ -95,6 +95,9 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 
     // aggregation
     updateIfExists ("incremental_aggregation", CONF_INCREMENTAL_AGGREGATION)
+   
+    // max number of odags in case of odag communication strategy
+    updateIfExists ("max_odags", CONF_COMM_STRATEGY_ODAGMP_MAX)
 
   }
 
@@ -173,6 +176,7 @@ object SparkConfiguration {
   val FLUSH_BY_PATTERN = "flush_by_pattern" // good for regular distributions
   val FLUSH_BY_ENTRIES = "flush_by_entries" // good for irregular distributions but small embedding domains
   val FLUSH_BY_PARTS   = "flush_by_parts"   // good for irregular distributions, period
-  val COMM_ODAG = "odag"                    // pack embeddings with odags
+  val COMM_ODAG_SP = "odag_sp"              // pack embeddings with single-pattern odags
+  val COMM_ODAG_MP = "odag_mp"              // pack embeddings with multi-pattern odags
   val COMM_EMBEDDING = "embedding"          // pack embeddings with compressed caches (e.g., LZ4)
 }

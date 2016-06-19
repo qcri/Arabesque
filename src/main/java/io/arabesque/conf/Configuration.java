@@ -80,7 +80,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String CONF_MASTER_COMPUTATION_CLASS_DEFAULT = "io.arabesque.computation.MasterComputation";
 
     public static final String CONF_COMM_STRATEGY = "arabesque.comm.strategy";
-    public static final String CONF_COMM_STRATEGY_DEFAULT = "odag";
+    public static final String CONF_COMM_STRATEGY_DEFAULT = "odag_sp";
+
+    public static final String CONF_COMM_STRATEGY_ODAGMP_MAX = "arabesque.comm.strategy.odagmp.max";
+    public static final int CONF_COMM_STRATEGY_ODAGMP_MAX_DEFAULT = 100;
 
     public static final String CONF_COMM_STRATEGY_FACTORY_CLASS = "arabesque.comm.factory.class";
     public static final String CONF_COMM_STRATEGY_FACTORY_CLASS_DEFAULT = "io.arabesque.computation.comm.ODAGCommunicationStrategyFactory";
@@ -471,6 +474,14 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public boolean isAggregationIncremental() {
        return getBoolean (CONF_INCREMENTAL_AGGREGATION, CONF_INCREMENTAL_AGGREGATION_DEFAULT);
+    }
+
+    public int getMaxOdags() {
+       return getInteger (CONF_COMM_STRATEGY_ODAGMP_MAX, CONF_COMM_STRATEGY_ODAGMP_MAX_DEFAULT);
+    }
+
+    public String getCommStrategy() {
+       return getString (CONF_COMM_STRATEGY, CONF_COMM_STRATEGY_DEFAULT);
     }
 
 }
