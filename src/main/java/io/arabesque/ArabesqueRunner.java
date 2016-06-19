@@ -1,7 +1,8 @@
 package io.arabesque;
 
-import io.arabesque.computation.SparkODAGMasterEngine;
+import io.arabesque.computation.*;
 import io.arabesque.conf.YamlConfiguration;
+import io.arabesque.conf.SparkConfiguration;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -9,6 +10,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import scala.collection.JavaConversions;
+
+import org.apache.spark.SparkContext;
 
 import java.io.IOException;
 
@@ -47,8 +50,13 @@ public class ArabesqueRunner implements Tool {
     }
 
     private int runSpark(YamlConfiguration yamlConfig) throws Exception {
-       SparkODAGMasterEngine masterEngine = new SparkODAGMasterEngine(
+       SparkConfiguration config = new SparkConfiguration (
              JavaConversions.mapAsScalaMap(yamlConfig.getProperties())
+       );
+       SparkContext sc = new SparkContext(config.sparkConf());
+
+       SparkMasterEngine masterEngine = SparkMasterEngine$.MODULE$.apply (
+             sc, config
        );
 
        masterEngine.compute();
