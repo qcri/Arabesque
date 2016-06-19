@@ -91,7 +91,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
   val motifsNumEmbeddings = 24546
   test ("[motifs,odag] arabesque API") {
     val motifsRes = arabGraph.motifs (3).
-      set ("comm_strategy", COMM_ODAG).
+      set ("comm_strategy", COMM_ODAG_SP).
       set ("log_level", "debug")
     val odags = motifsRes.odags
     assert (odags.count != 0)
@@ -113,7 +113,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
   val fsmNumEmbeddings = 31414
   test ("[fsm,odag] arabesque API") {
     val fsmRes = arabGraph.fsm (100, 3).
-      set ("comm_strategy", COMM_ODAG)
+      set ("comm_strategy", COMM_ODAG_SP)
     val odags = fsmRes.odags
     val embeddings = fsmRes.embeddings
     assert (embeddings.count == fsmNumEmbeddings)
@@ -132,7 +132,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
   val trianglesNumEmbeddings = 0
   test ("[triangles,odag] arabesque API") {
     val trianglesRes = arabGraph.triangles().
-      set ("comm_strategy", COMM_ODAG)
+      set ("comm_strategy", COMM_ODAG_SP)
     val odags = trianglesRes.odags
     val embeddings = trianglesRes.embeddings
     assert (embeddings.count == trianglesNumEmbeddings)
@@ -151,7 +151,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
   val cliquesNumEmbeddings = 1166
   test ("[cliques,odag] arabesque API") {
     val cliquesRes = arabGraph.cliques (3).
-      set ("comm_strategy", COMM_ODAG)
+      set ("comm_strategy", COMM_ODAG_SP)
     val odags = cliquesRes.odags
     val embeddings = cliquesRes.embeddings
     assert (embeddings.count == cliquesNumEmbeddings)

@@ -4,9 +4,13 @@ import io.arabesque.computation.SparkMasterEngine
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding.{Embedding, ResultEmbedding}
 import io.arabesque.odag.{SinglePatternODAG, BasicODAG}
+import io.arabesque.aggregation.AggregationStorage
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.io.Writable
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Logging, SparkContext}
+import scala.collection.JavaConversions._
+import scala.collection.mutable.Map
 
 /**
  * Results of an Arabesque computation.
@@ -66,6 +70,34 @@ case class ArabesqueResult [E <: Embedding] (
     case Some(_odags) =>
       _odags
   }
+
+  /**
+   * Registered aggregations
+   */
+  def registeredAggregations: Array[String] = {
+    config.getAggregationsMetadata.map (_._1).toArray
+  }
+
+  /**
+   * Get aggregations defined by the user or empty if it does not exist
+   */
+  def aggregation [K <: Writable, V <: Writable] (name: String): Map[K,V] = {
+    val aggValue = masterEngine.
+      getAggregatedValue [AggregationStorage[K,V]] (name)
+    if (aggValue == null) Map.empty[K,V]
+    else aggValue.getMapping
+  }
+
+  /**
+   * Get all aggregations defined by the user
+   */
+  def aggregations
+      : Map[String,Map[_ <: Writable, _ <: Writable]] = {
+    Map (
+      registeredAggregations.map (name => (name,aggregation(name))).toSeq: _*
+    )
+  }
+  
 
   /**
    * Saves embeddings as sequence files (HDFS): [NullWritable,ResultEmbedding]
