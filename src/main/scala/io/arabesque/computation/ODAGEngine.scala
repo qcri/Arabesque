@@ -1,102 +1,97 @@
 package io.arabesque.computation
 
-import java.io.OutputStreamWriter
+import java.io._
+import java.util.concurrent.{ExecutorService, Executors}
 
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
-import io.arabesque.cache.LZ4ObjectCache
-import io.arabesque.conf.Configuration
+import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
+import io.arabesque.odag.domain.DomainEntry
+import io.arabesque.odag._
+import io.arabesque.odag.BasicODAGStash.EfficientReader
+import io.arabesque.pattern.Pattern
 import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.{LongWritable, NullWritable, Writable, SequenceFile}
+import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
-import scala.collection.mutable.Map
+import scala.collection.JavaConversions._
+import scala.collection.mutable.{ListBuffer, Map}
 import scala.reflect.ClassTag
 
-/**
- * Spark engine that works with raw embedding representation
- */
-case class SparkEmbeddingEngine[O <: Embedding](
-    partitionId: Int,
-    superstep: Int,
-    hadoopConf: SerializableConfiguration,
-    accums: Map[String,Accumulator[_]],
-    // TODO do not broadcast if user's code does not requires it
-    previousAggregationsBc: Broadcast[_])
-  extends SparkEngine[O] {
+trait ODAGEngine[
+    E <: Embedding,           
+    O <: BasicODAG,
+    S <: BasicODAGStash[O,S],
+    C <: ODAGEngine[E,O,S,C]
+  ] extends SparkEngine[E] {
+
+  // set log level (from spark logging)
+  Logger.getLogger(logName).
+    setLevel (Level.toLevel (configuration.getLogLevel))
+
+  // superstep arguments
+  val partitionId: Int
+  val superstep: Int
+  val hadoopConf: SerializableConfiguration
+  val accums: Map[String,Accumulator[_]]
+  val previousAggregationsBc: Broadcast[_]
+ 
+  // update aggregations before flush
+  def withNewAggregations(aggregationsBc: Broadcast[_]): C
+
+  // flush odags
+  def flush: Iterator[(_,_)]
+
+  // stashes: it is dependent of odag and stash implementation
+  var currentEmbeddingStashOpt: Option[S] = None
+  var nextEmbeddingStash: S = _
+  @transient var odagStashReader: EfficientReader[E] = _
 
   // configuration has input parameters, computation knows how to ensure
   // arabesque's computational model
-  @transient lazy val configuration: Configuration[O] = Configuration.get[Configuration[O]]
-  @transient lazy val computation: Computation[O] = {
-    val computation = configuration.createComputation [O]
+  @transient lazy val configuration: Configuration[E] = {
+    val configuration = Configuration.get [Configuration[E]]
+    configuration
+  }
+  @transient lazy val computation: Computation[E] = {
+    val computation = configuration.createComputation [E]
     computation.setUnderlyingExecutionEngine (this)
     computation.init()
     computation.initAggregations()
     computation
   }
 
-  // embedding caches
-  var embeddingCaches: Array[LZ4ObjectCache] = _
-  var currentCache: LZ4ObjectCache = _
-
-  // round robin id
-  var _nextGlobalId: Long = _
-  def nextGlobalId: Long = {
-    val id = _nextGlobalId
-    _nextGlobalId += 1
-    id
-  }
+  // reader parameters
+  lazy val numBlocks: Int =
+    configuration.getInteger ("numBlocks", getNumberPartitions() * getNumberPartitions())
+  lazy val maxBlockSize: Int =
+    configuration.getInteger ("maxBlockSize", 10000) // TODO: magic number ??
+ 
+  // pool related vals
+  lazy val numPartitionsPerWorker = configuration.getInteger ("num_odag_parts", getNumberPartitions())
+  @transient lazy val pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
   // aggregation storages
   @transient lazy val aggregationStorageFactory = new AggregationStorageFactory
-  var aggregationStorages
-    : Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
+  lazy val aggregationStorages
+    : Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = Map.empty
+
+  // accumulators
+  var numEmbeddingsProcessed: Long = 0
+  var numEmbeddingsGenerated: Long = 0
+  var numEmbeddingsOutput: Long = 0
+
+  // TODO: tirar isso !!!
+  def init(): Unit = {}
 
   // output
   @transient var embeddingWriterOpt: Option[SeqWriter] = None
   @transient var outputStreamOpt: Option[OutputStreamWriter] = None
   @transient lazy val outputPath: Path = new Path(configuration.getOutputPath)
-
-  // to feed accumulators
-  private var numEmbeddingsProcessed: Long = _
-  private var numEmbeddingsGenerated: Long = _
-  private var numEmbeddingsOutput: Long = _
-
-  /**
-   * Instantiates the computation, parameters and resources required to execute
-   * the superstep in this partition
-   */
-  def init() = {
-    //configuration = Configuration.get()
-
-    // set log level (from spark logging)
-    val logLevel = Level.toLevel (configuration.getLogLevel)
-    Logger.getLogger(logName).setLevel (logLevel)
-
-    if (configuration.getEmbeddingClass() == null)
-      configuration.setEmbeddingClass (computation.getEmbeddingClass())
-
-    // embedding caches
-    embeddingCaches = Array.fill (getNumberPartitions) (new LZ4ObjectCache)
-    currentCache = null
-
-    // global round-robin id
-    val countersPerPartition = Long.MaxValue / getNumberPartitions
-    _nextGlobalId = countersPerPartition * partitionId
-
-    // aggregation storage
-    aggregationStorages = Map.empty
-
-    // accumulators
-    numEmbeddingsProcessed = 0
-    numEmbeddingsGenerated = 0
-    numEmbeddingsOutput = 0
-  }
 
   /**
    * Releases resources allocated for this instance
@@ -106,41 +101,47 @@ case class SparkEmbeddingEngine[O <: Embedding](
     // make sure we close writers
     if (outputStreamOpt.isDefined) outputStreamOpt.get.close
     if (embeddingWriterOpt.isDefined) embeddingWriterOpt.get.close
+    pool.shutdown()
   }
 
   /**
    * It does the computation of this module, i.e., expand/compute
    *
-   * @param inboundCaches
+   * @param inboundStashes iterator of BasicODAG stashes
    */
-  def compute(inboundCaches: Iterator[LZ4ObjectCache]) = {
-    expansionCompute (inboundCaches)
+  def compute(inboundStashes: Iterator[S]) = {
+    logInfo (s"Computing partition(${partitionId}) of superstep ${superstep}")
+    if (computed)
+      throw new RuntimeException ("computation must be atomic")
+    if (configuration.getEmbeddingClass() == null)
+      configuration.setEmbeddingClass (computation.getEmbeddingClass())
+    expansionCompute (inboundStashes)
     flushStatsAccumulators
+    computed = true
   }
 
   /**
-   * Iterates over embedding caches and call expansion/compute procedures on them.
+   * Iterates over BasicODAG stashes and call expansion/compute procedures on them.
    * It also bootstraps the cycle by requesting empty embedding from
    * configuration and expanding them.
    *
-   * @param inboundCaches iterator of embedding caches
+   * @param inboundStashes iterator of BasicODAG stashes
    */
-  private def expansionCompute(inboundCaches: Iterator[LZ4ObjectCache]): Unit = {
+  private def expansionCompute(inboundStashes: Iterator[S]): Unit = {
     if (superstep == 0) { // bootstrap
 
-      val initialEmbedd: O = configuration.createEmbedding()
+      val initialEmbedd: E = configuration.createEmbedding()
       computation.expand (initialEmbedd)
 
     } else {
       var hasNext = true
-      while (hasNext) getNextInboundEmbedding (inboundCaches) match {
+      while (hasNext) getNextInboundEmbedding (inboundStashes) match {
         case None =>
           hasNext = false
 
         case Some(embedding) =>
           internalCompute (embedding)
           numEmbeddingsProcessed += 1
-
       }
     }
   }
@@ -150,35 +151,44 @@ case class SparkEmbeddingEngine[O <: Embedding](
    *
    * @param embedding embedding to be expanded
    */
-  def internalCompute(embedding: O) = computation.expand (embedding)
+  def internalCompute(embedding: E) = computation.expand (embedding)
 
   /**
-   * Reads next embedding from previous caches
+   * Reads next embedding from previous ODAGs
    *
-   * @param remainingCaches 
+   * @param remainingStashes iterator containing SinglePatternODAG stashes which hold
+   * compressed embeddings
    * @return some embedding or none
    */
-  @scala.annotation.tailrec
-  private def getNextInboundEmbedding(
-      remainingCaches: Iterator[LZ4ObjectCache]): Option[O] = {
-    if (currentCache == null) {
-      if (remainingCaches.hasNext) {
-        currentCache = remainingCaches.next
-        currentCache.prepareForIteration
-        getNextInboundEmbedding (remainingCaches)
-      } else None
+  def getNextInboundEmbedding(
+      remainingStashes: Iterator[S]): Option[E] = {
+    if (!currentEmbeddingStashOpt.isDefined) {
+      if (remainingStashes.hasNext) {
+
+        val currentEmbeddingStash = remainingStashes.next
+        currentEmbeddingStash.finalizeConstruction (pool,
+          numPartitionsPerWorker)
+
+        // odag stashes have an efficient reader for compressed embeddings
+        odagStashReader = new EfficientReader [E] (currentEmbeddingStash,
+          computation,
+          getNumberPartitions(),
+          numBlocks,
+          maxBlockSize)
+
+        currentEmbeddingStashOpt = Some(currentEmbeddingStash)
+
+      } else return None
+    }
+
+    // new embedding was found
+    if (odagStashReader.hasNext) {
+      Some(odagStashReader.next)
+    // no more embeddings to be read from current stash, try to get another
+    // stash by recursive call
     } else {
-      if (currentCache.hasNext) {
-        val embedding = currentCache.next.asInstanceOf[O]
-        println ("pattern-embedding " + embedding.getPattern + " " + embedding)
-        if (computation.aggregationFilter(embedding.getPattern))
-          Some(embedding)
-        else
-          getNextInboundEmbedding (remainingCaches)
-      } else {
-        currentCache = null
-        getNextInboundEmbedding (remainingCaches)
-      }
+      currentEmbeddingStashOpt = None
+      getNextInboundEmbedding(remainingStashes)
     }
   }
 
@@ -205,7 +215,6 @@ case class SparkEmbeddingEngine[O <: Embedding](
    * Flushes a given aggregation.
    *
    * @param name name of the aggregation
-   *
    * @return iterator of aggregation storages
    * TODO: split aggregations before flush them and review the return type
    */
@@ -229,25 +238,16 @@ case class SparkEmbeddingEngine[O <: Embedding](
    *
    * @param embedding embedding that must be processed
    */
-  def addOutboundEmbedding(embedding: O) = processExpansion (embedding)
+  def addOutboundEmbedding(embedding: E) = processExpansion (embedding)
 
   /**
    * Adds an expansion (embedding) to the outbound odags.
    *
    * @param expansion embedding to be added to the stash of outbound odags
    */
-  override def processExpansion(expansion: O) = {
-    val destId = (nextGlobalId % getNumberPartitions).toInt
-    val cache = embeddingCaches(destId)
-    cache.addObject (expansion)
+  override def processExpansion(expansion: E) = {
+    nextEmbeddingStash.addEmbedding (expansion)
     numEmbeddingsGenerated += 1
-  }
-
-  def flush: Iterator[(Int,LZ4ObjectCache)] = {
-    if (numEmbeddingsGenerated > 0)
-      (0 until embeddingCaches.size).iterator.
-        map (i => (i, embeddingCaches(i)))
-    else Iterator.empty
   }
 
   /**
@@ -255,7 +255,6 @@ case class SparkEmbeddingEngine[O <: Embedding](
    * engine.
    *
    * @param name name of the aggregation
-   *
    * @return the aggregated value or null if no aggregation was found
    */
   override def getAggregatedValue[A <: Writable](name: String): A =
@@ -295,7 +294,7 @@ case class SparkEmbeddingEngine[O <: Embedding](
       aggregationStorages.update (name, aggregationStorage)
       aggregationStorage.asInstanceOf[AggregationStorage[K,V]]
     case Some(aggregationStorage) =>
-      val e = new RuntimeException (s"Unexpected type for aggregation ${aggregationStorage}")      
+      val e = new RuntimeException (s"Unexpected type for aggregation ${aggregationStorage}")
       logError (s"Wrong type of aggregation storage: ${e.getMessage}")
       throw e
   }
@@ -310,7 +309,6 @@ case class SparkEmbeddingEngine[O <: Embedding](
       numEmbeddingsOutput += 1
 
     case None =>
-
       // we must decide at runtime the concrete Writable to be used
       val resEmbeddingClass = if (embedding.isInstanceOf[EdgeInducedEmbedding])
         classOf[EEmbedding]
@@ -365,8 +363,7 @@ case class SparkEmbeddingEngine[O <: Embedding](
   // other functions
   override def getPartitionId() = partitionId
 
-  override def getNumberPartitions() =
-    configuration.getInteger ("num_partitions", 10)
+  override def getNumberPartitions() = configuration.getInteger ("num_partitions", 10)
 
   override def getSuperstep() = superstep
 
@@ -375,5 +372,26 @@ case class SparkEmbeddingEngine[O <: Embedding](
       accum.asInstanceOf[Accumulator[Long]] += value.get
     case None => 
       logWarning (s"Aggregator/Accumulator $name not found")
+  }
+}
+
+object ODAGEngine {
+  import Configuration._
+  import SparkConfiguration._
+
+  def apply [E <: Embedding, O <: BasicODAG, S <: BasicODAGStash[O,S], C <: ODAGEngine[E,O,S,C]] (
+      config: Configuration[E],
+      partitionId: Int,
+      superstep: Int,
+      hadoopConf: SerializableConfiguration,
+      accums: Map[String,Accumulator[_]],
+      previousAggregationsBc: Broadcast[_]): C = 
+    config.getString(CONF_COMM_STRATEGY, CONF_COMM_STRATEGY_DEFAULT) match {
+      case COMM_ODAG_SP =>
+        new ODAGEngineSP [E] (partitionId, superstep,
+          hadoopConf, accums, previousAggregationsBc).asInstanceOf[C]
+      case COMM_ODAG_MP =>
+        new ODAGEngineMP [E] (partitionId, superstep,
+          hadoopConf, accums, previousAggregationsBc).asInstanceOf[C]
   }
 }

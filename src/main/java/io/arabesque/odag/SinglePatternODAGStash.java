@@ -6,6 +6,7 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.domain.StorageReader;
 import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
+import io.arabesque.odag.BasicODAGStash.EfficientReader;
 import org.apache.giraph.aggregators.BasicAggregator;
 import org.apache.log4j.Logger;
 
@@ -13,7 +14,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 
-public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, SinglePatternODAGStash> {
+public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG,SinglePatternODAGStash> implements Externalizable {
     private static final Logger LOG =
             Logger.getLogger(SinglePatternODAGStash.class);
 
@@ -21,13 +22,12 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, Si
     private Pattern reusablePattern;
 
     public SinglePatternODAGStash() {
-        compressedEmbeddingsByPattern = new HashMap<>();
-        this.reusablePattern = Configuration.get().createPattern();
+        this (new HashMap<Pattern,SinglePatternODAG>());
     }
 
-    public SinglePatternODAGStash(Map<Pattern, SinglePatternODAG> odagsByPattern) {
-       compressedEmbeddingsByPattern = odagsByPattern;
-       this.reusablePattern = Configuration.get().createPattern();
+    public SinglePatternODAGStash (Map<Pattern,SinglePatternODAG> odagsByPattern) {
+        this.compressedEmbeddingsByPattern = odagsByPattern;
+        this.reusablePattern = Configuration.get().createPattern();
     }
 
     @Override
@@ -82,7 +82,7 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, Si
 
 
     @Override
-    public void aggregate(SinglePatternODAGStash value) {
+    public void aggregateStash(SinglePatternODAGStash value) {
         for (Map.Entry<Pattern, SinglePatternODAG> otherCompressedEmbeddingsByPatternEntry :
                 value.compressedEmbeddingsByPattern.entrySet()) {
             Pattern pattern = otherCompressedEmbeddingsByPatternEntry.getKey();
@@ -128,9 +128,9 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, Si
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
-        if (true) {
-            throw new RuntimeException("Shouldn't be used any more");
-        }
+        //if (true) {
+        //    throw new RuntimeException("Shouldn't be used any more");
+        //}
         compressedEmbeddingsByPattern.clear();
         int numEntries = dataInput.readInt();
         for (int i = 0; i < numEntries; ++i) {
@@ -170,7 +170,7 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, Si
     public static class Aggregator extends BasicAggregator<SinglePatternODAGStash> {
         @Override
         public void aggregate(SinglePatternODAGStash value) {
-            getAggregatedValue().aggregate(value);
+            getAggregatedValue().aggregateStash(value);
         }
 
         @Override
@@ -179,6 +179,7 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, Si
         }
     }
 
+    @Override
     public Collection<SinglePatternODAG> getEzips() {
         return compressedEmbeddingsByPattern.values();
     }
@@ -247,78 +248,5 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG, Si
         }
 
         return domainStorageStats.toString() + "\n" + domainStorageStats.getSizeEstimations();
-    }
-
-    public static class EfficientReader<O extends Embedding> implements Reader<O> {
-        private final int numPartitions;
-        private final SinglePatternODAGStash stash;
-        private final Computation<Embedding> computation;
-        private final int numBlocks;
-        private final int maxBlockSize;
-
-        private Iterator<Map.Entry<Pattern, SinglePatternODAG>> stashIterator;
-        private StorageReader currentReader;
-        private boolean currentPositionConsumed = true;
-
-        public EfficientReader(SinglePatternODAGStash stash, Computation<? extends Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
-            this.stash = stash;
-            this.numPartitions = numPartitions;
-            this.computation = (Computation<Embedding>) computation;
-            this.numBlocks = numBlocks;
-            this.maxBlockSize = maxBlockSize;
-
-            stashIterator = stash.compressedEmbeddingsByPattern.entrySet().iterator();
-            currentReader = null;
-        }
-
-        @Override
-        public boolean hasNext() {
-            while (true) {
-                if (currentReader == null) {
-                    if (stashIterator.hasNext()) {
-                        Map.Entry<Pattern, SinglePatternODAG> nextEntry = stashIterator.next();
-                        currentReader = nextEntry.getValue().getReader(computation, numPartitions, numBlocks, maxBlockSize);
-                    }
-                }
-
-                // No more zips, for sure nothing else to do
-                if (currentReader == null) {
-                    currentPositionConsumed = true;
-                    return false;
-                }
-
-                // If we consumed the current embedding (called next after a previous hasNext),
-                // we need to actually advance to the next one.
-                if (currentPositionConsumed && currentReader.hasNext()) {
-                    currentPositionConsumed = false;
-                    return true;
-                }
-                // If we still haven't consumed the current embedding (called hasNext but haven't
-                // called next), return the same result as before (which is necessarily true).
-                else if (!currentPositionConsumed) {
-                    return true;
-                }
-                // If we have consumed the current embedding and the current reader doesn't have
-                // more embeddings, we need to advance to the next reader so set currentReader to
-                // null and let the while begin again (simulate recursive call without the stack
-                // building overhead).
-                else {
-                    currentReader.close();
-                    currentReader = null;
-                }
-            }
-        }
-
-        @Override
-        public O next() {
-            currentPositionConsumed = true;
-
-            return (O) currentReader.next();
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
     }
 }

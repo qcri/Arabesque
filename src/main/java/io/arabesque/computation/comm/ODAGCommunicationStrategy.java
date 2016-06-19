@@ -6,7 +6,7 @@ import io.arabesque.computation.WorkerContext;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.ODAGPartLZ4Wrapper;
-import io.arabesque.odag.ODAGStash;
+import io.arabesque.odag.SinglePatternODAGStash;
 import io.arabesque.odag.SinglePatternODAG;
 import io.arabesque.pattern.Pattern;
 import org.apache.giraph.graph.Vertex;
@@ -34,10 +34,10 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
     private ExtendedByteArrayDataOutput[] dataOutputs;
     private boolean[] hasContent;
 
-    private ODAGStash currentEmbeddingStash;
-    private ODAGStash nextEmbeddingStash;
-    private ODAGStash aggregatedEmbeddingStash;
-    private ODAGStash.EfficientReader<O> odagStashReader;
+    private SinglePatternODAGStash currentEmbeddingStash;
+    private SinglePatternODAGStash nextEmbeddingStash;
+    private SinglePatternODAGStash aggregatedEmbeddingStash;
+    private SinglePatternODAGStash.EfficientReader<O> odagStashReader;
 
     private ODAGLocalCoordinationObjectFactory coordinationObjectFactory;
     private long totalSizeODAGs;
@@ -55,7 +55,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
     public void initialize(int phase) {
         super.initialize(phase);
 
-        nextEmbeddingStash = new ODAGStash();
+        nextEmbeddingStash = new SinglePatternODAGStash();
 
         splitEzips = Configuration.get().getBoolean("splitEzips", true);
 
@@ -187,7 +187,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
         super.startComputation(vertex, messages);
 
         if (getCurrentPhase() == 1) {
-            aggregatedEmbeddingStash = new ODAGStash();
+            aggregatedEmbeddingStash = new SinglePatternODAGStash();
 
             SinglePatternODAG ezip = new SinglePatternODAG(false);
 
@@ -223,7 +223,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
                 return null;
             }
 
-            odagStashReader = new ODAGStash.EfficientReader<>(
+            odagStashReader = new SinglePatternODAGStash.EfficientReader<>(
                     currentEmbeddingStash, getExecutionEngine().getComputation(),
                     getWorkerContext().getNumberPartitions(), numBlocks, maxBlockSize);
         }
@@ -247,7 +247,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
         private WorkerContext workerContext;
         private int numEzipAggregators;
         private int numPartitionsPerWorker;
-        private ODAGStash currentUnserializedStash;
+        private SinglePatternODAGStash currentUnserializedStash;
         private LinkedHashMap<Pattern, ArrayList<ODAGPartLZ4Wrapper>> receivedParts;
         private Iterator<Map.Entry<Pattern, ArrayList<ODAGPartLZ4Wrapper>>> receivedPartsIterator;
         private ExecutorService mergingPool;
@@ -273,7 +273,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
             futures = new ArrayList<>(reusableMergingTasks.length);
         }
 
-        public ODAGStash getCurrentUnserializedStash() {
+        public SinglePatternODAGStash getCurrentUnserializedStash() {
             return currentUnserializedStash;
         }
 
@@ -327,7 +327,7 @@ public class ODAGCommunicationStrategy<O extends Embedding> extends Communicatio
                 long currentEnumerationsInNextMicroStep = 0;
 
                 if (currentUnserializedStash == null) {
-                    currentUnserializedStash = new ODAGStash();
+                    currentUnserializedStash = new SinglePatternODAGStash();
                 } else {
                     currentUnserializedStash.clear();
                 }

@@ -3,19 +3,21 @@ package io.arabesque.computation
 import io.arabesque.aggregation.AggregationStorage
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
-import io.arabesque.odag.SinglePatternODAG
+import io.arabesque.odag._
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{NullWritable, Writable}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Logging, SparkContext}
+import scala.reflect.ClassTag
 
 import scala.collection.mutable.Map
 
-abstract class SparkMasterEngine(config: SparkConfiguration[_ <: Embedding])
+trait SparkMasterEngine [E <: Embedding]
     extends CommonMasterExecutionEngine with Logging {
   
   var sc: SparkContext = _
 
+  def config: SparkConfiguration[E]
   def init(): Unit
   def compute(): Unit
   def finalizeComputation(): Unit
@@ -50,14 +52,13 @@ abstract class SparkMasterEngine(config: SparkConfiguration[_ <: Embedding])
   /**
    * Functions that retrieve the results of this computation.
    * Current fields:
-   *  - Odags of each superstep. ATENTION: always empty here because of the
-   *  execution engine being used (i.e. embedding caches)
+   *  - Odags of each superstep. By default always empty
    *  - Embeddings if the output is enabled. Our choice is to read the results
    *  produced by the supersteps from external storage. We avoid memory issues
    *  by not keeping all the embeddings in memory.
    */
-  def getOdags: RDD[SinglePatternODAG] = {
-    sc.makeRDD (Seq.empty[SinglePatternODAG])
+  def getOdags: RDD[_ <: BasicODAG] = {
+    sc.makeRDD (Seq.empty[BasicODAG])
   }
   def getEmbeddings: RDD[ResultEmbedding] = {
 
@@ -91,11 +92,13 @@ abstract class SparkMasterEngine(config: SparkConfiguration[_ <: Embedding])
 object SparkMasterEngine {
   import Configuration._
   import SparkConfiguration._
-  def apply(sc: SparkContext, config: SparkConfiguration[_ <: Embedding]) =
+  def apply[E <: Embedding] (sc: SparkContext, config: SparkConfiguration[E]) =
       config.getString(CONF_COMM_STRATEGY, CONF_COMM_STRATEGY_DEFAULT) match {
-    case COMM_ODAG =>
-      new SparkODAGMasterEngine (sc, config)
+    case COMM_ODAG_SP =>
+      new ODAGMasterEngineSP [E] (sc, config)
+    case COMM_ODAG_MP =>
+      new ODAGMasterEngineMP [E] (sc, config)
     case COMM_EMBEDDING =>
-      new SparkEmbeddingMasterEngine (sc, config)
+      new SparkEmbeddingMasterEngine [E] (sc, config)
   }
 }

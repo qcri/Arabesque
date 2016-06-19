@@ -27,7 +27,7 @@ public class ODAGStashWrapper implements Writable {
         byteArrayOutputCache = new ExtendedByteArrayDataOutput();
     }
 
-    public void readStash(ODAGStash stashToReadTo) {
+    public void readStash(SinglePatternODAGStash stashToReadTo) {
         ExtendedByteArrayDataInput byteArrayInputCache = null;
         try {
             byteArrayInputCache = new ExtendedByteArrayDataInput(byteArrayOutputCache.getByteArray(), 0, byteArrayOutputCache.getPos());
@@ -42,7 +42,7 @@ public class ODAGStashWrapper implements Writable {
         }
     }
 
-    public void writeStash(ODAGStash stashToWrite) throws IOException {
+    public void writeStash(SinglePatternODAGStash stashToWrite) throws IOException {
         reset();
         stashToWrite.write(byteArrayOutputCache);
     }

@@ -25,7 +25,7 @@ public class ODAGStashLZ4Wrapper extends ODAGStashWrapper {
     }
 
     @Override
-    public void readStash(ODAGStash stashToReadTo) {
+    public void readStash(SinglePatternODAGStash stashToReadTo) {
         ensureDecompressed();
         super.readStash(stashToReadTo);
     }

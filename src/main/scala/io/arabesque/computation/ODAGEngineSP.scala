@@ -79,10 +79,6 @@ case class ODAGEngineSP [E <: Embedding](
    */
   private def flushByPattern: Iterator[(Pattern,SinglePatternODAG)]  = {
     // consume content in *nextEmbeddingStash*
-    //nextEmbeddingStash.getEzips().iterator.foreach { odag =>
-    //  if (!computation.aggregationFilter (odag.getPattern))
-    //    println ("odag_sp filtering pattern " + odag.getPattern)
-    //}
     for (odag <- nextEmbeddingStash.getEzips().iterator
          if computation.aggregationFilter (odag.getPattern)
            )

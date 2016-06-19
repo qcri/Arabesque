@@ -1,6 +1,7 @@
 package io.arabesque.odag.domain;
 
 import io.arabesque.computation.Computation;
+import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.WriterSetConsumer;
@@ -22,11 +23,15 @@ public class DomainStorage extends Storage<DomainStorage> {
     protected int numberOfDomains;
     protected WriterSetConsumer writerSetConsumer;
 
+    // how many valid embeddings this storage actually have ?
+    protected long numEmbeddings;
+
     public DomainStorage(int numberOfDomains) {
         setNumberOfDomains(numberOfDomains);
         countsDirty = false;
         keysOrdered = false;
         writerSetConsumer = new WriterSetConsumer();
+        numEmbeddings = 0;
     }
 
     public DomainStorage() {
@@ -34,6 +39,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         countsDirty = false;
         keysOrdered = false;
         writerSetConsumer = new WriterSetConsumer();
+        numEmbeddings = 0;
     }
 
     protected synchronized void setNumberOfDomains(int numberOfDomains) {
@@ -103,6 +109,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         }
 
         countsDirty = true;
+        numEmbeddings++;
     }
 
     /**
@@ -142,14 +149,15 @@ public class DomainStorage extends Storage<DomainStorage> {
         }
 
         countsDirty = true;
+        numEmbeddings += otherDomainStorage.numEmbeddings;
     }
 
     @Override
     public long getNumberOfEnumerations() {
         if (countsDirty) {
             /* ATTENTION: instead of an exception we return -1.
-             * This way we can identify whether the SinglePatternODAG is ready or not for
-             * reading */
+             * This way we can identify whether the odags are ready or not to be
+             * read */
             //throw new RuntimeException("Should have never been the case");
             return -1;
         }
@@ -282,6 +290,7 @@ public class DomainStorage extends Storage<DomainStorage> {
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
+        dataOutput.writeLong(numEmbeddings);
         dataOutput.writeInt(numberOfDomains);
 
         for (ConcurrentHashMap<Integer, DomainEntry> domainEntryMap : domainEntries) {
@@ -300,6 +309,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         int[] numEntriesOfPartsInDomain = new int[numParts];
 
         for (int i = 0; i < numParts; ++i) {
+            outputs[i].writeLong(numEmbeddings);
             outputs[i].writeInt(numberOfDomains);
         }
 
@@ -345,6 +355,7 @@ public class DomainStorage extends Storage<DomainStorage> {
     public void readFields(DataInput dataInput) throws IOException {
         this.clear();
 
+        numEmbeddings = dataInput.readLong();
         setNumberOfDomains(dataInput.readInt());
         for (int i = 0; i < numberOfDomains; ++i) {
             int domainEntryMapSize = dataInput.readInt();
@@ -411,7 +422,9 @@ public class DomainStorage extends Storage<DomainStorage> {
     public String toStringResume() {
         StringBuilder sb = new StringBuilder();
         sb.append("DomainStorage{");
-        sb.append("enumerations=");
+        sb.append("numEmbeddings=");
+        sb.append(numEmbeddings);
+        sb.append(",enumerations=");
         sb.append(getNumberOfEnumerations());
         sb.append(", ");
 

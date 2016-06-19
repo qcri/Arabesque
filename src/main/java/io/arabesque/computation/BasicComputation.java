@@ -110,6 +110,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
         if (embedding.getNumWords() > 0) {
             return embedding.getExtensibleWordIds();
         } else {
+            // TODO: put getInitialExtensions into embedding class
             return getInitialExtensions();
         }
     }

@@ -12,16 +12,23 @@ import org.apache.hadoop.io.Writable;
 import java.io.*;
 import java.util.concurrent.ExecutorService;
 
-public abstract class BasicODAG<O extends BasicODAG> implements Writable, Externalizable {
+public abstract class BasicODAG implements Writable, Externalizable {
     protected DomainStorage storage;
+    protected boolean serializeAsReadOnly;
+
+    protected DomainStorage createDomainStorage(boolean readOnly) {
+        if (readOnly) return new DomainStorageReadOnly();
+        else return new DomainStorage();
+    }
 
     public abstract void addEmbedding(Embedding embedding);
+    public abstract Pattern getPattern();
     public abstract StorageReader getReader(
           Computation<Embedding> computation,
           int numPartitions,
           int numBlocks,
           int maxBlockSize);
-    public abstract void aggregate(O embZip);
+    public abstract void aggregate(BasicODAG embZip);
 
     public int getNumberOfDomains() {
         return storage.getNumberOfDomains();
@@ -46,4 +53,17 @@ public abstract class BasicODAG<O extends BasicODAG> implements Writable, Extern
     public StorageStats getStats() {
         return storage.getStats();
     }
+
+    public boolean getSerializeasWriteOnly() {
+        return serializeAsReadOnly;
+    }
+
+    public void setSerializeAsReadOnly (boolean serializeAsReadOnly) {
+        this.serializeAsReadOnly = serializeAsReadOnly;
+    }
+
+    public void writeInParts(DataOutput[] outputs, boolean[] hasContent) throws IOException {
+        storage.write(outputs, hasContent);
+    }
+
 }

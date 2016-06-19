@@ -27,9 +27,11 @@ import scala.util.{Failure, Success}
  * SparkContext.
  */
 class SparkEmbeddingMasterEngine[E <: Embedding]
-    (config: SparkConfiguration[E]) extends SparkMasterEngine(config) {
+    (_config: SparkConfiguration[E]) extends SparkMasterEngine [E] {
 
   import SparkEmbeddingMasterEngine._
+
+  def config: SparkConfiguration[E] = _config
 
   // testing
   config.initialize()

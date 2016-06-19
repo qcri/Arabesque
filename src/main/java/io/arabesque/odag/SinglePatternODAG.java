@@ -12,9 +12,8 @@ import org.apache.hadoop.io.Writable;
 import java.io.*;
 import java.util.concurrent.ExecutorService;
 
-public class SinglePatternODAG extends BasicODAG<SinglePatternODAG> {
+public class SinglePatternODAG extends BasicODAG {
     private Pattern pattern;
-    private boolean serializeAsReadOnly;
 
     public SinglePatternODAG(Pattern pattern, int numberOfDomains) {
         this.pattern = pattern;
@@ -23,15 +22,12 @@ public class SinglePatternODAG extends BasicODAG<SinglePatternODAG> {
     }
 
     public SinglePatternODAG(boolean readOnly) {
+        this();
+        serializeAsReadOnly = false;
         storage = createDomainStorage(readOnly);
     }
 
     public SinglePatternODAG() {
-    }
-
-    private DomainStorage createDomainStorage(boolean readOnly) {
-        if (readOnly) return new DomainStorageReadOnly();
-        else return new DomainStorage();
     }
 
     @Override
@@ -44,7 +40,7 @@ public class SinglePatternODAG extends BasicODAG<SinglePatternODAG> {
     }
 
     @Override
-    public void aggregate(SinglePatternODAG embZip) {
+    public void aggregate(BasicODAG embZip) {
         if (embZip == null) return;
 
         storage.aggregate(embZip.storage);
@@ -66,10 +62,6 @@ public class SinglePatternODAG extends BasicODAG<SinglePatternODAG> {
        write(out);
     }
 
-    public void writeInParts(DataOutput[] outputs, boolean[] hasContent) throws IOException {
-        storage.write(outputs, hasContent);
-    }
-
     @Override
     public void readFields(DataInput in) throws IOException {
         this.clear();
@@ -83,18 +75,11 @@ public class SinglePatternODAG extends BasicODAG<SinglePatternODAG> {
        readFields(in);
     }
 
-    public boolean getSerializeasWriteOnly() {
-       return serializeAsReadOnly;
-    }
-
-    public void setSerializeAsReadOnly (boolean serializeAsReadOnly) {
-       this.serializeAsReadOnly = serializeAsReadOnly;
-    }
-
     public void setPattern(Pattern pattern) {
         this.pattern = pattern;
     }
 
+    @Override
     public Pattern getPattern() {
         return pattern;
     }
