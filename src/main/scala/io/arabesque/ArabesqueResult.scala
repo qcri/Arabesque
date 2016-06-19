@@ -3,7 +3,7 @@ package io.arabesque
 import io.arabesque.computation.SparkMasterEngine
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding.{Embedding, ResultEmbedding}
-import io.arabesque.odag.SinglePatternODAG
+import io.arabesque.odag.{SinglePatternODAG, BasicODAG}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Logging, SparkContext}
@@ -15,18 +15,18 @@ import org.apache.spark.{Logging, SparkContext}
  * same as retrieve the output embeddings, as we would have the embeddings
  * produced by every iteration, including the output ones.
  */
-case class ArabesqueResult(
+case class ArabesqueResult [E <: Embedding] (
     sc: SparkContext,
-    config: SparkConfiguration[_ <: Embedding]) extends Logging {
+    config: SparkConfiguration[E]) extends Logging {
 
   /**
    * Lazy evaluation for the results
    */
-  private var masterEngineOpt: Option[SparkMasterEngine] = None
-  def masterEngine: SparkMasterEngine = masterEngineOpt match {
+  private var masterEngineOpt: Option[SparkMasterEngine[E]] = None
+  def masterEngine: SparkMasterEngine[E] = masterEngineOpt match {
     case None =>
       logInfo (s"starting/computing master execution engine")
-      val _masterEngine = SparkMasterEngine(sc, config)
+      val _masterEngine = SparkMasterEngine [E] (sc, config)
       _masterEngine.compute
       _masterEngine.finalizeComputation
       masterEngineOpt = Some(_masterEngine)
@@ -57,8 +57,8 @@ case class ArabesqueResult(
   /**
    * ODAGs of all supersteps
    */
-  private var odagsOpt: Option[RDD[SinglePatternODAG]] = None
-  def odags: RDD[SinglePatternODAG] = odagsOpt match {
+  private var odagsOpt: Option[RDD[_ <: BasicODAG]] = None
+  def odags: RDD[_ <: BasicODAG] = odagsOpt match {
     case None =>
       val _odags = masterEngine.getOdags
       odagsOpt = Some(_odags)
@@ -112,7 +112,7 @@ case class ArabesqueResult(
    *
    * @return new result
    */
-  def set(key: String, value: Any): ArabesqueResult = {
+  def set(key: String, value: Any): ArabesqueResult[E] = {
     this.copy (sc = sc, config = config.withNewConfig (key,value))
   }
 }

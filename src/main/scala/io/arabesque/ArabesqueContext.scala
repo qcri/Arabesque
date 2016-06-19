@@ -11,7 +11,7 @@ import org.apache.spark.{Logging, SparkContext}
 class ArabesqueContext(sc: SparkContext) extends Logging {
 
   private val uuid: UUID = UUID.randomUUID
-  def tmpPath: String = s"/tmp/arabesque-${uuid}"
+  def tmpPath: String = s"/tmp/arabesque-${uuid}" // TODO: base dir as config
 
   def sparkContext: SparkContext = sc
 

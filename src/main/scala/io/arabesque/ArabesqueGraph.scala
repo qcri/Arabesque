@@ -3,7 +3,7 @@ package io.arabesque
 import java.util.UUID
 
 import io.arabesque.conf.{Configuration, SparkConfiguration}
-import io.arabesque.embedding.Embedding
+import io.arabesque.embedding._
 import org.apache.spark.Logging
 
 /**
@@ -21,14 +21,14 @@ class ArabesqueGraph(
     this (path, false, arab)
   }
 
-  private def resultHandler(
-      config: SparkConfiguration[_ <: Embedding]): ArabesqueResult = {
-    new ArabesqueResult(arab.sparkContext, config)
+  private def resultHandler [E <: Embedding] (
+      config: SparkConfiguration[E]): ArabesqueResult[E] = {
+    new ArabesqueResult [E] (arab.sparkContext, config)
   }
 
   /** motifs */
-  def motifs(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult = {
-    resultHandler (config)
+  def motifs [E <: Embedding] (config: SparkConfiguration[E]): ArabesqueResult[E] = {
+    resultHandler [E] (config)
   }
 
   /**
@@ -38,9 +38,9 @@ class ArabesqueGraph(
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */
-  def motifs(maxSize: Int): ArabesqueResult = {
+  def motifs(maxSize: Int): ArabesqueResult[_] = {
     Configuration.unset
-    val config = new SparkConfiguration
+    val config = new SparkConfiguration [VertexInducedEmbedding]
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
     config.set ("output_path", s"${tmpPath}/motifs-${config.getUUID}")
@@ -50,7 +50,7 @@ class ArabesqueGraph(
   }
 
   /** fsm */
-  def fsm(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult = {
+  def fsm(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult[_] = {
     resultHandler (config)
   }
 
@@ -62,19 +62,20 @@ class ArabesqueGraph(
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */
-  def fsm(support: Int, maxSize: Int = Int.MaxValue): ArabesqueResult = {
-    val config = new SparkConfiguration
+  def fsm(support: Int, maxSize: Int = Int.MaxValue): ArabesqueResult[_] = {
+    val config = new SparkConfiguration [EdgeInducedEmbedding]
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
     config.set ("output_path", s"${tmpPath}/fsm-${config.getUUID}")
     config.set ("arabesque.fsm.maxsize", maxSize)
     config.set ("arabesque.fsm.support", support)
     config.set ("computation", "io.arabesque.gmlib.fsm.FSMComputation")
+    config.set ("master_computation", "io.arabesque.gmlib.fsm.FSMMasterComputation")
     fsm (config)
   }
 
   /** triangles */
-  def triangles(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult = {
+  def triangles(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult[_] = {
     resultHandler (config)
   }
 
@@ -83,8 +84,8 @@ class ArabesqueGraph(
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */
-  def triangles(): ArabesqueResult = {
-    val config = new SparkConfiguration
+  def triangles(): ArabesqueResult[_] = {
+    val config = new SparkConfiguration [VertexInducedEmbedding]
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
     config.set ("output_path", s"${tmpPath}/triangles-${config.getUUID}")
@@ -93,7 +94,7 @@ class ArabesqueGraph(
   }
 
   /** cliques */
-  def cliques(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult = {
+  def cliques(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult[_] = {
     resultHandler (config)
   }
 
@@ -104,8 +105,8 @@ class ArabesqueGraph(
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */
-  def cliques(maxSize: Int): ArabesqueResult = {
-    val config = new SparkConfiguration
+  def cliques(maxSize: Int): ArabesqueResult[_] = {
+    val config = new SparkConfiguration [VertexInducedEmbedding]
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
     config.set ("output_path", s"${tmpPath}/cliques-${config.getUUID}")
