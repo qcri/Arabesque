@@ -804,44 +804,6 @@ public class DomainStorageReadOnly extends DomainStorage {
                    validForSomePattern = true;
                    break;
 
-                   //PatternEdgeArrayList edgesPattern = pattern.getEdges();
-                   //IntArrayList edgesEmbedding = reusableVertexEmbedding.getEdges();
-                   //IntArrayList verticesEmbedding = reusableVertexEmbedding.getVertices();
-
-                   //int i;
-                   //validForSomePattern = true;
-                   //for (i = 0; i < numEdgesPattern; ++i) {
-                   //   PatternEdge edgePattern = edgesPattern.get(i);
-                   //   Edge edgeEmbedding = mainGraph.getEdge(edgesEmbedding.getUnchecked(i));
-
-                   //   int v1 = verticesEmbedding.getUnchecked(edgePattern.getSrcPos());
-                   //   int v2 = verticesEmbedding.getUnchecked(edgePattern.getDestPos());
-
-                   //   if (!edgeEmbedding.hasVertex(v1) || !edgeEmbedding.hasVertex(v2)) {
-                   //      validForSomePattern = false;
-                   //      break;
-                   //   }
-
-                   //   //Vertex vertex1 = mainGraph.getVertex(v1);
-                   //   //Vertex vertex2 = mainGraph.getVertex(v2);
-
-                   //   //if (!(vertex1.getVertexLabel() == edgePattern.getSrcLabel()
-                   //   //      && vertex2.getVertexLabel() == edgePattern.getDestLabel()) &&
-                   //   //    !(vertex1.getVertexLabel() == edgePattern.getDestLabel()
-                   //   //      && vertex2.getVertexLabel() == edgePattern.getSrcLabel())) {
-                   //   //   validForSomePattern = false;
-                   //   //   break;
-                   //   //}
-                   //}
-                   //if (!validForSomePattern)
-                   //   continue;
-                   //else {
-                   //   //System.out.println ("patterns " + StringUtils.join(patterns,";") +
-                   //   //      " targetEnumId " + targetEnumId +
-                   //   //      " npatterns " + patterns.length + " pattern-embedding " +
-                   //   //      pattern + " " + reusableEmbedding);
-                   //   break;
-                   //}
                 }
                 if (!validForSomePattern) {
                    return false;
@@ -896,15 +858,6 @@ public class DomainStorageReadOnly extends DomainStorage {
                             // so skip everything and return false since enumId was associated
                             // with an invalid embedding.
                             if (!tryAddWord(wordId)) {
-                               System.out.println (Configuration.get().getCommStrategy() +
-                                      " filtered " + currentId +
-                                      " targetSize " + targetSize +
-                                      " reachedSize " + (reusableEmbedding.getNumWords()+1) +
-                                      " niceness " + (targetSize - reusableEmbedding.getNumWords() - 1) +
-                                      " pruned " + Math.min (
-                                         targetEnumId - currentId,
-                                         newPossibilityForDomain0.getCounter())
-                               );
                                 targetEnumId = currentId + newPossibilityForDomain0.getCounter() - 1;
                                 invalid = true;
                                 // Add word anyway. Embedding will be invalid with this word but it will be
@@ -957,16 +910,6 @@ public class DomainStorageReadOnly extends DomainStorage {
                             // so skip everything and return false since enumId was associated
                             // with an invalid embedding.
                             if (!tryAddWord(newWordId)) {
-                               System.out.println (Configuration.get().getCommStrategy() +
-                                      " filtered " + currentId +
-                                      " targetSize " + targetSize +
-                                      " reachedSize " + (reusableEmbedding.getNumWords()+1) +
-                                      " niceness " + (targetSize - reusableEmbedding.getNumWords() - 1) +
-                                      " pruned " + Math.min (
-                                         targetEnumId - currentId,
-                                         newPossibilityForLastDomain.getCounter())
-                               );
-
                                 targetEnumId = currentId + newPossibilityForLastDomain.getCounter() - 1;
                                 invalid = true;
                                 // Add word anyway. Embedding will be invalid with this word but it will be
@@ -1011,14 +954,6 @@ public class DomainStorageReadOnly extends DomainStorage {
 
             if (valid) {
                validEmbeddings += reusableEmbedding.getNumWords();
-            } else {
-               System.out.println (Configuration.get().getCommStrategy() +
-                     " filtered " + currentId +
-                     " targetSize " + targetSize +
-                     " reachedSize " + reusableEmbedding.getNumWords() +
-                     " niceness " + (targetSize - reusableEmbedding.getNumWords()) +
-                     " pruned " + 0
-                     );
             }
 
             return valid;

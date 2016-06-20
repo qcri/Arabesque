@@ -45,46 +45,6 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
     }
   }
 
-  test("configurations") {
-    // TODO: make this test more simple
-    import scala.collection.mutable.Map
-    val confs: Map[String,Any] = Map(
-      "spark_master" -> "local[2]",
-      "input_graph_path" -> sampleGraphPath,
-      "input_graph_local" -> true,
-      "computation" -> "io.arabesque.computation.BasicComputation"
-      )
-    val sparkConfig = new SparkConfiguration (confs)
-
-    assert (!sparkConfig.isInitialized)
-
-    sparkConfig.initialize
-    assert (sparkConfig.getComputationClass ==
-      Class.forName("io.arabesque.computation.BasicComputation"))
-    assert (!Configuration.isUnset)
-
-    val sparkConfBc = sc.broadcast (sparkConfig)
-    val testingRDD = sc.parallelize (Seq.empty, 1)
-    
-    val conds = testingRDD.mapPartitions { _ =>
-      var bools = List[Boolean]()
-      val sparkConfig = sparkConfBc.value
-
-      bools = sparkConfig.isInitialized :: bools
-
-      sparkConfig.initialize
-      bools = (sparkConfig.getMainGraph != null) :: bools
-
-      bools = (!Configuration.isUnset) :: bools
-
-      bools.iterator
-    }
-
-    assert (conds.reduce (_ && _))
-    
-  }
-
-
   test ("[motifs] arabesque API") {
     // Test output for motifs for embedding with size 0 to 3
 

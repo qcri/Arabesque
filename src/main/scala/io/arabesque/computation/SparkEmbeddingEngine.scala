@@ -170,7 +170,6 @@ case class SparkEmbeddingEngine[O <: Embedding](
     } else {
       if (currentCache.hasNext) {
         val embedding = currentCache.next.asInstanceOf[O]
-        println ("pattern-embedding " + embedding.getPattern + " " + embedding)
         if (computation.aggregationFilter(embedding.getPattern))
           Some(embedding)
         else
