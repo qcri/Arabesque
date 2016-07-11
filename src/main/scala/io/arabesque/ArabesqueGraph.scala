@@ -6,9 +6,14 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import org.apache.spark.Logging
 
+
 /**
- * Arabesque graph for calling algorithms on
- */
+  *  Creates an [[io.arabesque.ArabesqueGraph]] used for calling arabesque graph algorithms
+  *
+  * @param path  a string indicating the path for input graph
+  * @param local TODO
+  * @param arab  an [[io.arabesque.ArabesqueContext]] instance
+  */
 class ArabesqueGraph(
     path: String,
     local: Boolean,
@@ -80,7 +85,7 @@ class ArabesqueGraph(
   }
 
   /**
-   * Counts triangles
+   * Counts triangles on a graph
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */

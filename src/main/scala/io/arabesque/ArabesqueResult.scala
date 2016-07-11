@@ -12,13 +12,21 @@ import org.apache.spark.{Logging, SparkContext}
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map
 
-/**
+/*
  * Results of an Arabesque computation.
  * TODO: create a function which extract the embeddings from the ODAGs. We must
  * be cautious of load imbalance when implementing this. That would not be the
  * same as retrieve the output embeddings, as we would have the embeddings
  * produced by every iteration, including the output ones.
  */
+
+/** Returns the result of an Arabesque computation
+  *
+  * @param sc a [[SparkContext]] instance
+  * @param config spark configuration
+  * @tparam E an embedding.
+  */
+
 case class ArabesqueResult [E <: Embedding] (
     sc: SparkContext,
     config: SparkConfiguration[E]) extends Logging {
