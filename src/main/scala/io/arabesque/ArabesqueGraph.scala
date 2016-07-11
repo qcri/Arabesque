@@ -85,7 +85,7 @@ class ArabesqueGraph(
   }
 
   /**
-   * Counts triangles on a graph
+   * Counts triangles
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */
