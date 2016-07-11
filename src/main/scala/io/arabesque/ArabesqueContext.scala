@@ -34,7 +34,7 @@ class ArabesqueContext(sc: SparkContext) extends Logging {
   }
 
   /**
-    * Stops a [[io.arabesque.ArabesqueContext]] application
+    * Stops an [[io.arabesque.ArabesqueContext]] application
     *
     */
   def stop() = {
