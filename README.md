@@ -4,8 +4,6 @@
 
 *Current Version:* 1.0.2-BETA
 
-[![Build Status](https://travis-ci.org/tcriscuolo/Arabesque.svg?branch=documentation)](https://travis-ci.org/tcriscuolo/Arabesque)
-
 Arabesque is a distributed graph mining system that enables quick and easy
 development of graph mining algorithms, while providing a scalable and efficient
 execution engine running on top of Hadoop.
