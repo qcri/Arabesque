@@ -12,7 +12,7 @@ import org.apache.spark.{Logging, SparkContext}
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map
 
-/*
+/**
  * Results of an Arabesque computation.
  * TODO: create a function which extract the embeddings from the ODAGs. We must
  * be cautious of load imbalance when implementing this. That would not be the
