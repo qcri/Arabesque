@@ -2,9 +2,15 @@ package io.arabesque.embedding
 
 import java.io.DataInput
 
+
 /**
- * Current semantics: Array(a, b, c, d) vertices: [a, b, c, d]
- */
+  * A vertex induced embedding
+  *
+  * Current semantics: Array(a, b, c, d) returns the
+  * embedding induced by the vertices {a, b, c, d}
+  *
+  * @param words integer array indicating the embedding vertices
+  */
 case class VEmbedding(var words: Array[Int]) extends ResultEmbedding {
 
   // must have because we are messing around with Writables
@@ -24,6 +30,10 @@ case class VEmbedding(var words: Array[Int]) extends ResultEmbedding {
 
 }
 
+/**
+  * A vertex induced embedding
+  *
+  */
 object VEmbedding {
   def apply (strEmbedding: String) = {
     val vertices = (strEmbedding split "\\s+").

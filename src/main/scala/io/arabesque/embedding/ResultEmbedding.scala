@@ -4,6 +4,10 @@ import java.io.DataOutput
 
 import org.apache.hadoop.io.Writable
 
+
+/**
+  *
+  */
 trait ResultEmbedding extends Writable {
   def words: Array[Int]
 

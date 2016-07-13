@@ -48,7 +48,7 @@ case class ArabesqueResult [E <: Embedding] (
   }
 
   /**
-   * Output embeddings
+   * Output: embeddings
    */
   private var embeddingsOpt: Option[RDD[ResultEmbedding]] = None
   def embeddings: RDD[ResultEmbedding] = embeddingsOpt match {
@@ -108,7 +108,7 @@ case class ArabesqueResult [E <: Embedding] (
   
 
   /**
-   * Saves embeddings as sequence files (HDFS): [NullWritable,ResultEmbedding]
+   * Saves embeddings as sequence files (HDFS): [[org.apache.hadoop.io.NullWritable, ResultEmbedding]]
    * Behavior:
    *  - If at this point no computation was performed we just configure
    *  the execution engine and force the computation(count action)

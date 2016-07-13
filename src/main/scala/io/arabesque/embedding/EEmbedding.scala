@@ -2,8 +2,13 @@ package io.arabesque.embedding
 
 import java.io.DataInput
 
-/**
-  * Current semantic: Array(a, b, c, d) -> edges: (a,b) (c,d)
+
+/** An edge induced embedding
+  *
+  * Current semantics: Array(a, b, c, d) returns
+  * the embedding induced by the edges (a, b) (c, d)
+  *
+  * @param words integer array indicating the embedding edges
   */
 case class EEmbedding(var words: Array[Int]) extends ResultEmbedding {
 
@@ -23,6 +28,9 @@ case class EEmbedding(var words: Array[Int]) extends ResultEmbedding {
   }
 }
 
+/**
+  * An edge induced embedding
+  */
 object EEmbedding {
   def apply (strEmbedding: String) = {
     val edgesStr = strEmbedding split "\\s+"

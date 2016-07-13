@@ -38,7 +38,20 @@ class ArabesqueGraph(
 
   /**
    * Computes all the motifs of a given size
-   *
+   * {{{
+    * import io.arabesque.ArabesqueContext
+    *
+    * val input_graph = "ArabesqueDir/data/cube.graph"
+    * val max_size = 3
+    *
+    * val arab = new ArabesqueContext(sc)
+    *
+    * val graph = arab.textFile(input_graph)
+    * val res = graph.motif(4)
+    *
+    * res.embeddings.count
+    * res.embeddings.collect
+    * }}}
    * @param maxSize number of vertices of the target motifs
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
@@ -60,13 +73,29 @@ class ArabesqueGraph(
   }
 
   /**
-   * Computes the frequent subgraphs according to a support
-   *
-   * @param support threshold of frequency
-   * @param maxSize upper bound for embedding exploration
-   *
-   * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
-   */
+    * Computes all the frequent subgraphs for the given support
+    *
+    * {{{
+    * import io.arabesque.ArabesqueContext
+    *
+    * val input_graph = "ArabesqueDir/data/cube.graph"
+    * val max_size = 2
+    * val support = 3
+    *
+    * val graph = arab.textFile(input_graph)
+    * val res = graph.fsm(support, max_size)
+    *
+    * res.embedding.count
+    * res.embedding.collect
+    *
+    * }}}
+    *
+    *
+    * @param support frequency threshold
+    * @param maxSize upper bound for embedding exploration
+    *
+    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
+    */
   def fsm(support: Int, maxSize: Int = Int.MaxValue): ArabesqueResult[_] = {
     val config = new SparkConfiguration [EdgeInducedEmbedding]
     config.set ("input_graph_path", path)
@@ -86,6 +115,17 @@ class ArabesqueGraph(
 
   /**
    * Counts triangles
+    * {{{
+    *   import io.arabesque.ArabesqueContext
+    *   val input_graph = "ArabesqueDir/data/cube.graph"
+    *
+    *   val graph = arab.textFile(input_graph)
+    *   val res = graph.triangles()
+    *
+    *   // The cube graph has no triangle
+    *   res.embedding.count()
+    *   res.embedding.collect()
+    * }}}
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */
@@ -106,6 +146,18 @@ class ArabesqueGraph(
   /**
    * Computes graph cliques of a given size
    *
+    * {{{
+    *   import io.arabesque.ArabesqueContext
+    *   val input_graph = "ArabesqueDir/data/cube.graph"
+    *
+    *   val graph = arab.textFile(input_graph)
+    *   val res = graph.fsm()
+    *
+    *   res.embedding.count()
+    *   res.embedding.collect()
+    * }}}
+    *
+    *
    * @param maxSize target clique size
    *
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
