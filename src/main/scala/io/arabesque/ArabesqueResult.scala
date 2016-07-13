@@ -19,6 +19,14 @@ import scala.collection.mutable.Map
  * same as retrieve the output embeddings, as we would have the embeddings
  * produced by every iteration, including the output ones.
  */
+
+/** Returns the result of an Arabesque computation
+  *
+  * @param sc a [[SparkContext]] instance
+  * @param config spark configuration
+  * @tparam E an embedding.
+  */
+
 case class ArabesqueResult [E <: Embedding] (
     sc: SparkContext,
     config: SparkConfiguration[E]) extends Logging {
@@ -40,7 +48,7 @@ case class ArabesqueResult [E <: Embedding] (
   }
 
   /**
-   * Output embeddings
+   * Output: embeddings
    */
   private var embeddingsOpt: Option[RDD[ResultEmbedding]] = None
   def embeddings: RDD[ResultEmbedding] = embeddingsOpt match {
@@ -100,7 +108,7 @@ case class ArabesqueResult [E <: Embedding] (
   
 
   /**
-   * Saves embeddings as sequence files (HDFS): [NullWritable,ResultEmbedding]
+   * Saves embeddings as sequence files (HDFS): [[org.apache.hadoop.io.NullWritable, ResultEmbedding]]
    * Behavior:
    *  - If at this point no computation was performed we just configure
    *  the execution engine and force the computation(count action)
