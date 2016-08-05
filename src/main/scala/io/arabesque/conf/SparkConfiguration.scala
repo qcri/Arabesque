@@ -42,7 +42,9 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    * ATENTION: This is highly spark-dependent
    */
   def sparkConf = {
-    assert (isInitialized)
+    if (!isInitialized) {
+      initialize()
+    }
     val sparkMaster = getString ("spark_master", "local[*]")
     val conf = new SparkConf().
       setAppName ("Arabesque Master Execution Engine").
