@@ -87,6 +87,10 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     // communication strategy
     updateIfExists ("comm_strategy", CONF_COMM_STRATEGY)
 
+    // odag flush method
+    updateIfExists ("flush_method", CONF_ODAG_FLUSH_METHOD)
+    updateIfExists ("num_odag_parts", CONF_EZIP_AGGREGATORS)
+
     // input
     updateIfExists ("input_graph_path", CONF_MAINGRAPH_PATH)
     updateIfExists ("input_graph_local", CONF_MAINGRAPH_LOCAL)

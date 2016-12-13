@@ -130,8 +130,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
        */
 
       // we choose the flush method for ODAGs: load-balancing vs. overhead
-      val aggregatedOdags = config.
-        getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
+      val aggregatedOdags = config.getOdagFlushMethod match {
         case SparkConfiguration.FLUSH_BY_PATTERN =>
           val odags = execEngines.
             map (_.withNewAggregations (previousAggregationsBc)). // update previousAggregations

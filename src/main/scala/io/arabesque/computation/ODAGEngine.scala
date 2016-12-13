@@ -72,7 +72,8 @@ trait ODAGEngine[
     configuration.getInteger ("maxBlockSize", 10000) // TODO: magic number ??
  
   // pool related vals
-  lazy val numPartitionsPerWorker = configuration.getInteger ("num_odag_parts", getNumberPartitions())
+  lazy val numPartitionsPerWorker = configuration.getInteger ("arabesque.odag.aggregators",
+    getNumberPartitions())
   @transient lazy val pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
   // aggregation storages

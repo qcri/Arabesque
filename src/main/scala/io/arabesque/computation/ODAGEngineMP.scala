@@ -63,14 +63,11 @@ case class ODAGEngineMP [E <: Embedding] (
     execEngine
   }
 
-  override def flush: Iterator[(_,_)] = flushByPattern
-    
-  //configuration.
-  //    getString ("flush_method", SparkConfiguration.FLUSH_BY_PATTERN) match {
-  //  case SparkConfiguration.FLUSH_BY_PATTERN => flushByPattern
-  //  case SparkConfiguration.FLUSH_BY_ENTRIES => flushByEntries
-  //  case SparkConfiguration.FLUSH_BY_PARTS =>   flushByParts
-  //}
+  override def flush: Iterator[(_,_)] = configuration.getOdagFlushMethod match {
+    case SparkConfiguration.FLUSH_BY_PATTERN => flushByPattern
+    //case SparkConfiguration.FLUSH_BY_ENTRIES => flushByEntries
+    //case SparkConfiguration.FLUSH_BY_PARTS =>   flushByParts
+  }
 
   /**
    * Naively flushes outbound odags.

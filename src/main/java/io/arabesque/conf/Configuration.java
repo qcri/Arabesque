@@ -91,8 +91,11 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String CONF_PATTERN_CLASS = "arabesque.pattern.class";
     public static final String CONF_PATTERN_CLASS_DEFAULT = "io.arabesque.pattern.JBlissPattern";
 
-    private static final String CONF_EZIP_AGGREGATORS = "arabesque.odag.aggregators";
-    private static final int CONF_EZIP_AGGREGATORS_DEFAULT = -1;
+    public static final String CONF_EZIP_AGGREGATORS = "arabesque.odag.aggregators";
+    public static final int CONF_EZIP_AGGREGATORS_DEFAULT = -1;
+
+    public static final String CONF_ODAG_FLUSH_METHOD = "arabesque.odag.flush.method";
+    public static final String CONF_ODAG_FLUSH_METHOD_DEFAULT = "flush_by_parts";
 
     private static final String CONF_2LEVELAGG_ENABLED = "arabesque.2levelagg.enabled";
     private static final boolean CONF_2LEVELAGG_ENABLED_DEFAULT = true;
@@ -365,6 +368,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public int getODAGNumAggregators() {
         return odagNumAggregators;
+    }
+
+    public String getOdagFlushMethod() {
+       return getString(CONF_ODAG_FLUSH_METHOD, CONF_ODAG_FLUSH_METHOD_DEFAULT);
     }
 
     public int getMaxEnumerationsPerMicroStep() {
