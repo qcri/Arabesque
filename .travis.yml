@@ -37,7 +37,3 @@ notifications:
 install:
   - export MAVEN_SKIP_RC=1
   - mvn package
-
-# 6. Run lint-java.
-script:
-  - dev/lint-java
