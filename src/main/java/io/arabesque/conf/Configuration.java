@@ -91,6 +91,8 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String CONF_PATTERN_CLASS = "arabesque.pattern.class";
     public static final String CONF_PATTERN_CLASS_DEFAULT = "io.arabesque.pattern.JBlissPattern";
 
+    // TODO: maybe we should the name of this configuration in the future, use
+    // odag instead of ezip ?
     public static final String CONF_EZIP_AGGREGATORS = "arabesque.odag.aggregators";
     public static final int CONF_EZIP_AGGREGATORS_DEFAULT = -1;
 
