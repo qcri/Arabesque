@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/dccspeed/Arabesque.svg?branch=master)](https://travis-ci.org/dccspeed/Arabesque)
+
 # Arabesque: Distributed graph mining made simple
 
 [http://arabesque.io](http://arabesque.io)
