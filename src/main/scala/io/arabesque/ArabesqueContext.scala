@@ -1,9 +1,11 @@
 package io.arabesque
 
+import io.arabesque.utils.Logging
+
 import java.util.UUID
 
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.{Logging, SparkContext}
+import org.apache.spark.SparkContext
 
 /**
   * Creates an Arabesque Context from a Spark Context

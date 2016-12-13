@@ -1,10 +1,11 @@
 package io.arabesque
 
+import io.arabesque.utils.Logging
+
 import java.util.UUID
 
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
-import org.apache.spark.Logging
 
 
 /**

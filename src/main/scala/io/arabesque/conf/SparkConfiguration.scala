@@ -5,7 +5,8 @@ import io.arabesque.conf.Configuration._
 import io.arabesque.embedding.Embedding
 import io.arabesque.graph.MainGraph
 import io.arabesque.pattern.Pattern
-import org.apache.spark.{Logging, SparkConf}
+import io.arabesque.utils.Logging
+import org.apache.spark.SparkConf
 
 import scala.collection.mutable.Map
 

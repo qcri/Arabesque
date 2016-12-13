@@ -5,10 +5,11 @@ import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding.{Embedding, ResultEmbedding}
 import io.arabesque.odag.{SinglePatternODAG, BasicODAG}
 import io.arabesque.aggregation.AggregationStorage
+import io.arabesque.utils.Logging
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.Writable
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{Logging, SparkContext}
+import org.apache.spark.SparkContext
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map
 

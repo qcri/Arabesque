@@ -63,9 +63,9 @@
    <properties>
       <giraph.version>1.2.0-ARABESQUE</giraph.version>
       <hadoop.version>2.6.0</hadoop.version>
-      <spark.version>1.6.0</spark.version>
-      <scala.version>2.10.6</scala.version>
-      <scala.binary.version>2.10</scala.binary.version>
+      <spark.version>2.0.0</spark.version>
+      <scala.version>2.11.8</scala.version>
+      <scala.binary.version>2.11</scala.binary.version>
       <giraph.scope>compile</giraph.scope>
       <hadoop.scope>provided</hadoop.scope>
       <spark.scope>provided</spark.scope>
@@ -260,7 +260,7 @@
       <!-- Spark dependencies -->
       <dependency>
          <groupId>org.apache.spark</groupId>
-         <artifactId>spark-core_2.10</artifactId>
+         <artifactId>spark-core_2.11</artifactId>
          <version>${spark.version}</version>
          <scope>${spark.scope}</scope>
       </dependency>

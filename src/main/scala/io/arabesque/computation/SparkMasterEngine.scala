@@ -4,10 +4,11 @@ import io.arabesque.aggregation.AggregationStorage
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import io.arabesque.odag._
+import io.arabesque.utils.Logging
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{NullWritable, Writable}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{Logging, SparkContext}
+import org.apache.spark.SparkContext
 import scala.reflect.ClassTag
 
 import scala.collection.mutable.Map

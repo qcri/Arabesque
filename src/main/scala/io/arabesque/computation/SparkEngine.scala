@@ -1,7 +1,7 @@
 package io.arabesque.computation
 
 import io.arabesque.embedding.Embedding
-import org.apache.spark.Logging
+import io.arabesque.utils.Logging
 
 trait SparkEngine [O <: Embedding] 
     extends CommonExecutionEngine[O] with Serializable with Logging {
