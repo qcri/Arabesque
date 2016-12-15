@@ -19,9 +19,19 @@ trait SparkMasterEngine [E <: Embedding]
   var sc: SparkContext = _
 
   def config: SparkConfiguration[E]
-  def init(): Unit
+  def init(): Unit = {
+    // set log level
+    setLogLevel (config.getLogLevel)
+    sc.setLogLevel (config.getLogLevel.toUpperCase)
+    config.setIfUnset ("num_partitions", sc.defaultParallelism)
+  }
   def compute(): Unit
   def finalizeComputation(): Unit
+
+  def numPartitions: Int = config.numPartitions
+  
+  // for compatibility with the previous version (Giraph)
+  def getNumberPartitions: Int = numPartitions
 
   /**
    * Merges or replaces the aggregations for the next superstep. We can have one

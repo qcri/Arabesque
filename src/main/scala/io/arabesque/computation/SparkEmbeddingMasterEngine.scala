@@ -56,10 +56,6 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
   def arabConfig: SparkConfiguration[_ <: Embedding] = config
 
   override def init() = {
-
-    val logLevel = Level.toLevel (config.getLogLevel)
-    Logger.getLogger(logName).setLevel (logLevel)
-
     // garantees that outputPath does not exist
     if (config.isOutputActive) {
       val fs = FileSystem.get(sc.hadoopConfiguration)
@@ -88,6 +84,7 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
     aggAccums.update (AGG_EMBEDDINGS_OUTPUT,
       sc.accumulator [Long] (0L, AGG_EMBEDDINGS_OUTPUT))
 
+    super.init()
   }
 
   override def haltComputation() = {
@@ -101,8 +98,6 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
    * Master's computation takes place here, superstep by superstep
    */
   override def compute() = {
-    val numPartitions = config.getInteger ("num_partitions", 10)
-
     // accumulatores and spark configuration w.r.t. Spark
     // TODO: ship serHaddopConf with SparkConfiguration
     val configBc = sc.broadcast(config)

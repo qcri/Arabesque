@@ -57,8 +57,6 @@ class ODAGMasterEngineMP [E <: Embedding] (_config: SparkConfiguration[E])
    * Master's computation takes place here, superstep by superstep
    */
   override def compute() = {
-    val numPartitions = config.getInteger ("num_partitions", 10)
-
     // accumulatores and spark configuration w.r.t. Spark
     // TODO: ship serHaddopConf with SparkConfiguration
     val configBc = sc.broadcast(config)

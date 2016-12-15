@@ -40,7 +40,6 @@ trait ODAGMasterEngine [
 
   // sub-classes must implement
   def config: SparkConfiguration[E]
-      // from SparkMasterEngine: def compute() = ???
 
   import ODAGMasterEngine._
 
@@ -63,11 +62,6 @@ trait ODAGMasterEngine [
   def arabConfig: SparkConfiguration[_ <: Embedding] = config
 
   override def init() = {
-
-    val logLevel = Level.toLevel (config.getLogLevel)
-    Logger.getLogger(logName).setLevel (logLevel)
-    Logger.getLogger("io").setLevel(logLevel)
-
     // garantees that outputPath does not exist
     if (config.isOutputActive) {
       val fs = FileSystem.get(sc.hadoopConfiguration)
@@ -95,6 +89,8 @@ trait ODAGMasterEngine [
       sc.accumulator [Long] (0L, AGG_EMBEDDINGS_GENERATED))
     aggAccums.update (AGG_EMBEDDINGS_OUTPUT,
       sc.accumulator [Long] (0L, AGG_EMBEDDINGS_OUTPUT))
+
+    super.init()
   }
 
   override def haltComputation() = {

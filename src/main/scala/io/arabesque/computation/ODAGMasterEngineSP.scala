@@ -45,11 +45,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
 
   def this(confs: Map[String,Any]) {
     this (new SparkConfiguration [E] (confs))
-
     sc = new SparkContext(config.sparkConf)
-    val logLevel = config.getString ("log_level", "INFO").toUpperCase
-    sc.setLogLevel (logLevel)
-
     init()
   }
 
@@ -57,8 +53,6 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
    * Master's computation takes place here, superstep by superstep
    */
   override def compute() = {
-    val numPartitions = config.getInteger ("num_partitions", 10)
-
     // accumulatores and spark configuration w.r.t. Spark
     // TODO: ship serHaddopConf with SparkConfiguration
     val configBc = sc.broadcast(config)

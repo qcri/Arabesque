@@ -30,6 +30,16 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
   }
 
   /**
+   * Sets a configuration (mutable) if this configuration has not been set yet
+   */
+  def setIfUnset(key: String, value: Any): SparkConfiguration[O] = confs.get(key) match {
+    case Some(_) =>
+      this
+    case None =>
+      set (key, value)
+  }
+
+  /**
    * Sets a configuration (immutable)
    */
   def withNewConfig(key: String, value: Any): SparkConfiguration[O] = {
@@ -55,7 +65,7 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     conf.set ("spark.driver.memory", getString("worker_memory", "1g"))
 
     sparkMaster match {
-      case "yarn-client" | "yarn-cluster" =>
+      case "yarn-client" | "yarn-cluster" | "yarn" =>
         conf.set ("spark.executor.instances", getInteger("num_workers", 1).toString)
         conf.set ("spark.executor.cores", getInteger("num_compute_threads", 1).toString)
         conf.set ("spark.driver.cores", getInteger("num_compute_threads", 1).toString)
@@ -69,6 +79,16 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     logInfo (s"Spark configurations:\n${conf.getAll.mkString("\n")}")
     conf
   }
+
+  /**
+   * We assume the number of requested executor cores as an alternative number of
+   * partitions. However, by the time we call this function, the config *num_partitions*
+   * should be already set by the user, or by the execution master engine which
+   * has SparkContext.defaultParallelism as default
+   */
+  def numPartitions: Int = getInteger("num_partitions",
+    getInteger("num_workers", 1) *
+      getInteger("num_compute_threads", Runtime.getRuntime.availableProcessors))
 
   /**
    * Update assign internal names to user defined properties
@@ -180,9 +200,12 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 }
 
 object SparkConfiguration {
+  // odag flush methods
   val FLUSH_BY_PATTERN = "flush_by_pattern" // good for regular distributions
   val FLUSH_BY_ENTRIES = "flush_by_entries" // good for irregular distributions but small embedding domains
   val FLUSH_BY_PARTS   = "flush_by_parts"   // good for irregular distributions, period
+
+  // communication strategies
   val COMM_ODAG_SP = "odag_sp"              // pack embeddings with single-pattern odags
   val COMM_ODAG_MP = "odag_mp"              // pack embeddings with multi-pattern odags
   val COMM_EMBEDDING = "embedding"          // pack embeddings with compressed caches (e.g., LZ4)

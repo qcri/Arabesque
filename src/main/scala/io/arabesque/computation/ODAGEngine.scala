@@ -29,10 +29,6 @@ trait ODAGEngine[
     C <: ODAGEngine[E,O,S,C]
   ] extends SparkEngine[E] {
 
-  // set log level (from spark logging)
-  Logger.getLogger(logName).
-    setLevel (Level.toLevel (configuration.getLogLevel))
-
   // superstep arguments
   val partitionId: Int
   val superstep: Int
@@ -51,12 +47,7 @@ trait ODAGEngine[
   var nextEmbeddingStash: S = _
   @transient var odagStashReader: EfficientReader[E] = _
 
-  // configuration has input parameters, computation knows how to ensure
-  // arabesque's computational model
-  @transient lazy val configuration: Configuration[E] = {
-    val configuration = Configuration.get [Configuration[E]]
-    configuration
-  }
+  
   @transient lazy val computation: Computation[E] = {
     val computation = configuration.createComputation [E]
     computation.setUnderlyingExecutionEngine (this)
@@ -363,8 +354,6 @@ trait ODAGEngine[
   
   // other functions
   override def getPartitionId() = partitionId
-
-  override def getNumberPartitions() = configuration.getInteger ("num_partitions", 10)
 
   override def getSuperstep() = superstep
 

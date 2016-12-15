@@ -29,9 +29,6 @@ case class SparkEmbeddingEngine[O <: Embedding](
     previousAggregationsBc: Broadcast[_])
   extends SparkEngine[O] {
 
-  // configuration has input parameters, computation knows how to ensure
-  // arabesque's computational model
-  @transient lazy val configuration: Configuration[O] = Configuration.get[Configuration[O]]
   @transient lazy val computation: Computation[O] = {
     val computation = configuration.createComputation [O]
     computation.setUnderlyingExecutionEngine (this)
@@ -72,12 +69,6 @@ case class SparkEmbeddingEngine[O <: Embedding](
    * the superstep in this partition
    */
   def init() = {
-    //configuration = Configuration.get()
-
-    // set log level (from spark logging)
-    val logLevel = Level.toLevel (configuration.getLogLevel)
-    Logger.getLogger(logName).setLevel (logLevel)
-
     if (configuration.getEmbeddingClass() == null)
       configuration.setEmbeddingClass (computation.getEmbeddingClass())
 
@@ -363,9 +354,6 @@ case class SparkEmbeddingEngine[O <: Embedding](
   
   // other functions
   override def getPartitionId() = partitionId
-
-  override def getNumberPartitions() =
-    configuration.getInteger ("num_partitions", 10)
 
   override def getSuperstep() = superstep
 
