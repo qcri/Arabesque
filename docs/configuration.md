@@ -3,7 +3,7 @@
 The following properties assume that the execution engine selected for the application is Spark, i.e., the property `execution_engine` is `spark`.
 
 | Property Name | Meaning | Default |
-|:-|:-|:-|
+| :------------ | :------ | :------ |
 | `spark_master` | This property determines the deploy mode of the application. [Allowed values](https://spark.apache.org/docs/latest/submitting-applications.html#master-urls) are the same as in any Spark application. | `local[*]` |
 | `num_workers` | Number of Spark executors requested by the application. | 1 |
 | `num_compute_threads` | Number of cores per executor requested by the application | 1 |
