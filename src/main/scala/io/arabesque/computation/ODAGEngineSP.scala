@@ -31,7 +31,6 @@ import scala.reflect.ClassTag
 case class ODAGEngineSP [E <: Embedding](
     partitionId: Int,
     superstep: Int,
-    hadoopConf: SerializableConfiguration,
     accums: Map[String,Accumulator[_]],
     // TODO do not broadcast if user's code does not requires it
     previousAggregationsBc: Broadcast[_])
@@ -157,34 +156,31 @@ case class ODAGEngineSP [E <: Embedding](
    */
   private def flushByParts: Iterator[((Pattern,Int),Array[Byte])] = {
 
-    val outputs = Array.fill[ByteArrayOutputStream](numPartitionsPerWorker)(new ByteArrayOutputStream())
+    val numPartitions = getNumberPartitions()
+    val outputs = Array.fill[ByteArrayOutputStream](numPartitions)(new ByteArrayOutputStream())
     def createDataOutput(output: OutputStream): DataOutput = new DataOutputStream(output)
     val dataOutputs = outputs.map (output => createDataOutput(output))
-    val hasContent = new Array[Boolean](numPartitionsPerWorker)
+    val hasContent = new Array[Boolean](numPartitions)
 
-    val parts = ListBuffer.empty[((Pattern,Int),Array[Byte])]
+    nextEmbeddingStash.getEzips().iterator.
+      filter (odag => computation.aggregationFilter(odag.getPattern)).
+      flatMap { odag =>
 
-    for (odag <- nextEmbeddingStash.getEzips().iterator
-         if computation.aggregationFilter (odag.getPattern)) {
-      // reset to reuse write streams
-      for (i <- 0 until numPartitionsPerWorker) {
-        outputs(i).reset
-        hasContent(i) = false
-      }
-
-      // this method writes odag content into DataOutputs in parts
-      odag.writeInParts (dataOutputs, hasContent)
-
-      // attach to each byte array the corresponding key, i.e., (pattern, partId)
-      (0 until numPartitionsPerWorker).foreach {partId =>
-        if (hasContent(partId)) {
-          val part = ((odag.getPattern(), partId), outputs(partId).toByteArray)
-          parts += part
+        // reset aux structures
+        var i = 0
+        while (i < numPartitions) {
+          outputs(i).reset
+          hasContent(i) = false
+          i += 1
         }
-      }
-    }
+        
+        // this method writes odag content into DataOutputs in parts
+        odag.writeInParts (dataOutputs, hasContent)
 
-    parts.iterator
+        // attach to each byte array the corresponding key, i.e., (pattern, partId)
+        for (partId <- 0 until numPartitions if hasContent(partId))
+          yield ((odag.getPattern(), partId), outputs(partId).toByteArray)
+      }
   }
   
 }

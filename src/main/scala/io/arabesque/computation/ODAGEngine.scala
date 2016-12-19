@@ -32,7 +32,6 @@ trait ODAGEngine[
   // superstep arguments
   val partitionId: Int
   val superstep: Int
-  val hadoopConf: SerializableConfiguration
   val accums: Map[String,Accumulator[_]]
   val previousAggregationsBc: Broadcast[_]
  
@@ -61,12 +60,10 @@ trait ODAGEngine[
     configuration.getInteger ("numBlocks", getNumberPartitions() * getNumberPartitions())
   lazy val maxBlockSize: Int =
     configuration.getInteger ("maxBlockSize", 10000) // TODO: magic number ??
- 
-  // pool related vals
-  lazy val numPartitionsPerWorker = configuration.getInteger ("arabesque.odag.aggregators",
-    getNumberPartitions())
-  @transient lazy val pool = Executors.newFixedThreadPool (numPartitionsPerWorker)
 
+  lazy val numPartitionsPerWorker = 
+    configuration.getInteger ("arabesque.odag.aggregators", getNumberPartitions())
+ 
   // aggregation storages
   @transient lazy val aggregationStorageFactory = new AggregationStorageFactory
   lazy val aggregationStorages
@@ -93,7 +90,6 @@ trait ODAGEngine[
     // make sure we close writers
     if (outputStreamOpt.isDefined) outputStreamOpt.get.close
     if (embeddingWriterOpt.isDefined) embeddingWriterOpt.get.close
-    pool.shutdown()
   }
 
   /**
@@ -158,7 +154,7 @@ trait ODAGEngine[
       if (remainingStashes.hasNext) {
 
         val currentEmbeddingStash = remainingStashes.next
-        currentEmbeddingStash.finalizeConstruction (pool,
+        currentEmbeddingStash.finalizeConstruction (ODAGEngine.pool(numPartitionsPerWorker),
           numPartitionsPerWorker)
 
         // odag stashes have an efficient reader for compressed embeddings
@@ -312,7 +308,7 @@ trait ODAGEngine[
       // instantiate the embedding writer (sequence file)
       val superstepPath = new Path(outputPath, s"${getSuperstep}")
       val partitionPath = new Path(superstepPath, s"${partitionId}")
-      val embeddingWriter = SequenceFile.createWriter(hadoopConf.value,
+      val embeddingWriter = SequenceFile.createWriter(configuration.hadoopConf,
         SeqWriter.file(partitionPath),
         SeqWriter.keyClass(classOf[NullWritable]),
         SeqWriter.valueClass(resEmbeddingClass))
@@ -343,7 +339,7 @@ trait ODAGEngine[
 
     case None =>
       logInfo (s"[partitionId=${getPartitionId}] Creating output stream")
-      val fs = FileSystem.get(hadoopConf.value)
+      val fs = FileSystem.get(configuration.hadoopConf)
       val superstepPath = new Path(outputPath, s"${getSuperstep}")
       val partitionPath = new Path(superstepPath, s"${partitionId}")
       val outputStream = new OutputStreamWriter(fs.create(partitionPath))
@@ -373,15 +369,32 @@ object ODAGEngine {
       config: Configuration[E],
       partitionId: Int,
       superstep: Int,
-      hadoopConf: SerializableConfiguration,
       accums: Map[String,Accumulator[_]],
       previousAggregationsBc: Broadcast[_]): C = 
     config.getString(CONF_COMM_STRATEGY, CONF_COMM_STRATEGY_DEFAULT) match {
       case COMM_ODAG_SP =>
         new ODAGEngineSP [E] (partitionId, superstep,
-          hadoopConf, accums, previousAggregationsBc).asInstanceOf[C]
+          accums, previousAggregationsBc).asInstanceOf[C]
       case COMM_ODAG_MP =>
         new ODAGEngineMP [E] (partitionId, superstep,
-          hadoopConf, accums, previousAggregationsBc).asInstanceOf[C]
+          accums, previousAggregationsBc).asInstanceOf[C]
   }
+
+  // pool related vals
+  private var poolOpt: Option[ExecutorService] = None
+  
+  def pool(poolSize: Int) = poolOpt match {
+    case Some(pool) => pool
+    case None =>
+      val pool = Executors.newFixedThreadPool (poolSize)
+      poolOpt = Some(pool)
+      pool
+  }
+
+  def shutdownPool: Unit = poolOpt match {
+    case Some(pool) => pool.shutdown()
+    case None =>
+  }
+
+  override def finalize: Unit = shutdownPool
 }

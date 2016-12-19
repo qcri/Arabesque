@@ -54,9 +54,9 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
    */
   override def compute() = {
     // accumulatores and spark configuration w.r.t. Spark
-    // TODO: ship serHaddopConf with SparkConfiguration
     val configBc = sc.broadcast(config)
-    val serHadoopConf = new SerializableConfiguration(sc.hadoopConfiguration)
+    logInfo (s"SparkConfiguration estimated size = ${SizeEstimator.estimate(config)} bytes")
+    logInfo (s"HadoopConfiguration estimated size = ${SizeEstimator.estimate(config.hadoopConf)} bytes")
 
     // setup an RDD to simulate empty partitions and a broadcast variable to
     // communicate the global aggregated ODAGs on each step
@@ -80,7 +80,6 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
         superstep = superstep,
         configBc = configBc,
         aggregatedOdagsBc = aggregatedOdagsBc,
-        serHadoopConf = serHadoopConf,
         aggAccums = _aggAccums,
         previousAggregationsBc = previousAggregationsBc)
 
@@ -215,7 +214,6 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       superstep: Int,
       configBc: Broadcast[SparkConfiguration[E]],
       aggregatedOdagsBc: Broadcast[scala.collection.Map[Pattern,SinglePatternODAG]],
-      serHadoopConf: SerializableConfiguration,
       aggAccums: Map[String,Accumulator[_]],
       previousAggregationsBc: Broadcast[_]) = {
 
@@ -227,7 +225,6 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       val execEngine = new ODAGEngineSP [E] (
         partitionId = idx,
         superstep = superstep,
-        hadoopConf = serHadoopConf,
         accums = aggAccums,
         previousAggregationsBc = previousAggregationsBc
       )

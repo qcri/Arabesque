@@ -5,8 +5,11 @@ import io.arabesque.conf.Configuration._
 import io.arabesque.embedding.Embedding
 import io.arabesque.graph.MainGraph
 import io.arabesque.pattern.Pattern
-import io.arabesque.utils.Logging
+import io.arabesque.utils.{Logging, SerializableConfiguration}
+
 import org.apache.spark.SparkConf
+
+import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
 
 import scala.collection.mutable.Map
 
@@ -46,6 +49,35 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     val newConfig = this.copy [O] (confs = confs ++ Map(key -> value))
     newConfig.fixAssignments
     newConfig
+  }
+
+  /**
+   * Sets a default hadoop configuration for this arabesque configuration. That
+   * way both can be shipped together to the workers.
+   * This function mutates the object.
+   */
+  def setHadoopConfig(conf: HadoopConfiguration): SparkConfiguration[O] = {
+    val serHadoopConf = new SerializableConfiguration(conf)
+    // we store the hadoop configuration as a common configuration
+    this.confs.update (SparkConfiguration.HADOOP_CONF, serHadoopConf)
+    this
+  }
+
+  /**
+   * Returns a hadoop configuration assigned to this configuration, or throw an
+   * exception otherwise.
+   */
+  def hadoopConf: HadoopConfiguration = confs.get(SparkConfiguration.HADOOP_CONF) match {
+    case Some(serHadoopConf: SerializableConfiguration) =>
+      serHadoopConf.value
+
+    case Some(value) =>
+      logError (s"The hadoop configuration type is invalid: ${value}")
+      throw new RuntimeException(s"Invalid hadoop configuration type")
+
+    case None =>
+      logError ("The hadoop configuration type is not set")
+      throw new RuntimeException(s"Hadoop configuration is not set")
   }
 
   /**
@@ -203,10 +235,13 @@ object SparkConfiguration {
   // odag flush methods
   val FLUSH_BY_PATTERN = "flush_by_pattern" // good for regular distributions
   val FLUSH_BY_ENTRIES = "flush_by_entries" // good for irregular distributions but small embedding domains
-  val FLUSH_BY_PARTS   = "flush_by_parts"   // good for irregular distributions, period
+  val FLUSH_BY_PARTS = "flush_by_parts"     // good for irregular distributions, period
 
   // communication strategies
   val COMM_ODAG_SP = "odag_sp"              // pack embeddings with single-pattern odags
   val COMM_ODAG_MP = "odag_mp"              // pack embeddings with multi-pattern odags
   val COMM_EMBEDDING = "embedding"          // pack embeddings with compressed caches (e.g., LZ4)
+
+  // hadoop conf
+  val HADOOP_CONF = "hadoop_conf"
 }

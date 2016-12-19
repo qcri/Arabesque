@@ -31,7 +31,6 @@ import scala.reflect.ClassTag
 case class ODAGEngineMP [E <: Embedding] (
     partitionId: Int,
     superstep: Int,
-    hadoopConf: SerializableConfiguration,
     accums: Map[String,Accumulator[_]],
     // TODO do not broadcast if user's code does not requires it
     previousAggregationsBc: Broadcast[_])

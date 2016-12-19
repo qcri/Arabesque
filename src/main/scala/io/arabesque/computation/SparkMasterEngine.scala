@@ -24,6 +24,7 @@ trait SparkMasterEngine [E <: Embedding]
     setLogLevel (config.getLogLevel)
     sc.setLogLevel (config.getLogLevel.toUpperCase)
     config.setIfUnset ("num_partitions", sc.defaultParallelism)
+    config.setHadoopConfig (sc.hadoopConfiguration)
   }
   def compute(): Unit
   def finalizeComputation(): Unit
