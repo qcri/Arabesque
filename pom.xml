@@ -5,7 +5,7 @@
 
    <groupId>io.arabesque</groupId>
    <artifactId>arabesque</artifactId>
-   <version>1.0.2-BETA</version>
+   <version>1.0.0-SPARK</version>
    <name>Arabesque</name>
    <description>A system for distributed graph mining</description>
    <url>http://arabesque.io</url>
@@ -294,14 +294,14 @@
          <version>4.0</version>
       </dependency>
       <dependency>
-         <groupId>net.openhft</groupId>
+         <groupId>com.koloboke</groupId>
          <artifactId>koloboke-api-jdk6-7</artifactId>
-         <version>0.6.6</version>
+         <version>1.0.0</version>
       </dependency>
       <dependency>
-         <groupId>net.openhft</groupId>
+         <groupId>com.koloboke</groupId>
          <artifactId>koloboke-impl-jdk6-7</artifactId>
-         <version>0.6.6</version>
+         <version>1.0.0</version>
          <scope>runtime</scope>
       </dependency>
       <dependency>

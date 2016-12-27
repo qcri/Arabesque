@@ -12,8 +12,8 @@ import io.arabesque.testutils.graphs.LabelledTestGraph
 import io.arabesque.testutils.graphs.TestGraph
 import io.arabesque.testutils.graphs.UnlabelledTestGraph
 import io.arabesque.utils.collection.IntArrayList
-import net.openhft.koloboke.collect.map.IntIntMap
-import net.openhft.koloboke.collect.map.hash.HashIntIntMaps
+import com.koloboke.collect.map.IntIntMap
+import com.koloboke.collect.map.hash.HashIntIntMaps
 import org.apache.giraph.conf.GiraphConfiguration
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration
 import org.apache.giraph.utils.io.ExtendedDataInputOutput

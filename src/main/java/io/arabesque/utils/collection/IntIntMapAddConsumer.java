@@ -1,7 +1,7 @@
 package io.arabesque.utils.collection;
 
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.function.IntIntConsumer;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.function.IntIntConsumer;
 
 public class IntIntMapAddConsumer implements IntIntConsumer {
     private IntIntMap map;

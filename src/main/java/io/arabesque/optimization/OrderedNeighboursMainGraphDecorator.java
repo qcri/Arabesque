@@ -6,8 +6,8 @@ import io.arabesque.graph.Vertex;
 import io.arabesque.graph.VertexNeighbourhood;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.ReclaimableIntCollection;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.function.IntConsumer;
 
 public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMainGraph {
     protected MainGraph underlyingMainGraph;

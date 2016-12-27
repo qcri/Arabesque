@@ -1,6 +1,6 @@
 package fi.tkk.ics.jbliss;
 
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
+import com.koloboke.collect.map.hash.HashIntIntMap;
 
 /**
  * An interface for reporting the found generator automorphisms.

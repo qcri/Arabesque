@@ -16,12 +16,6 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
 
   /** set up spark context */
   override def beforeAll: Unit = {
-    // configure log levels
-    import org.apache.log4j.{Level, Logger}
-    Logger.getLogger("org").setLevel(Level.ERROR)
-    Logger.getLogger("akka").setLevel(Level.ERROR)
-    Logger.getLogger("io").setLevel(Level.ERROR)
-
     // spark conf and context
     val conf = new SparkConf().
       setMaster(master).
@@ -53,7 +47,8 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
 
     for(k <- 0 to (numEmbedding.size - 1)) {
       val motifsRes = arabGraph.motifs(k).
-        set ("log_level", "debug")
+        set ("num_partitions", 10).
+        set ("log_level", "info")
       val odags = motifsRes.odags
       val embeddings = motifsRes.embeddings
 
@@ -62,55 +57,55 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
 
   }
 
-  test ("[clique] arabesque API") {
-    // Test output for clique for embeddings with size 1 to 3
-    // Expected output
-    val numEmbedding = List(0, 8, 12, 0)
+  //test ("[clique] arabesque API") {
+  //  // Test output for clique for embeddings with size 1 to 3
+  //  // Expected output
+  //  val numEmbedding = List(0, 8, 12, 0)
 
-    for(k <- 0 to (numEmbedding.size - 1)) {
-      val cliqueRes = arabGraph.cliques(k).
-        set ("log_level", "debug")
+  //  for(k <- 0 to (numEmbedding.size - 1)) {
+  //    val cliqueRes = arabGraph.cliques(k).
+  //      set ("log_level", "info")
 
-      val embeddings = cliqueRes.embeddings
+  //    val embeddings = cliqueRes.embeddings
 
-      assert(embeddings.count == numEmbedding(k))
-    }
+  //    assert(embeddings.count == numEmbedding(k))
+  //  }
 
-  }
-
-
-  test ("[fsm] arabesque API") {
-    // Critical test
-    // Test output for fsm with support 2 for embeddings with size 2 to 3
-    val support = 2
-
-    // Expected output
-    val numEmbedding = List(0, 0, 9, 24)
-
-    for(k <- 0 to (numEmbedding.size -1)) {
-      val motifsRes = arabGraph.fsm(support, k).
-        set ("log_level", "debug")
-
-      val embeddings = motifsRes.embeddings
-
-      assert(embeddings.count == numEmbedding(k))
-    }
-
-  }
+  //}
 
 
-  test ("[triangles] arabesque API") {
-    // Test output for triangles
+  //test ("[fsm] arabesque API") {
+  //  // Critical test
+  //  // Test output for fsm with support 2 for embeddings with size 2 to 3
+  //  val support = 2
 
-    // Expected output
-    val numTriangles = 0
+  //  // Expected output
+  //  val numEmbedding = List(0, 0, 9, 24)
 
-    val trianglesRes = arabGraph.triangles().
-      set ("log_level", "debug")
+  //  for(k <- 0 to (numEmbedding.size -1)) {
+  //    val motifsRes = arabGraph.fsm(support, k).
+  //      set ("log_level", "info")
 
-    val embeddings = trianglesRes.embeddings
+  //    val embeddings = motifsRes.embeddings
 
-    assert(embeddings.count == numTriangles)
-  }
+  //    assert(embeddings.count == numEmbedding(k))
+  //  }
+
+  //}
+
+
+  //test ("[triangles] arabesque API") {
+  //  // Test output for triangles
+
+  //  // Expected output
+  //  val numTriangles = 0
+
+  //  val trianglesRes = arabGraph.triangles().
+  //    set ("log_level", "info")
+
+  //  val embeddings = trianglesRes.embeddings
+
+  //  assert(embeddings.count == numTriangles)
+  //}
 
 }

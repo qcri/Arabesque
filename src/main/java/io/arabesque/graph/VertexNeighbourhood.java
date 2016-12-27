@@ -1,8 +1,8 @@
 package io.arabesque.graph;
 
 import io.arabesque.utils.collection.ReclaimableIntCollection;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.function.IntConsumer;
 
 public interface VertexNeighbourhood {
     IntCollection getNeighbourVertices();

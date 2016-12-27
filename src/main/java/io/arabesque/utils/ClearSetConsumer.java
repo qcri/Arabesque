@@ -1,7 +1,7 @@
 package io.arabesque.utils;
 
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.function.IntConsumer;
 
 public class ClearSetConsumer implements IntConsumer {
     private HashIntSet[] supportMatrix;

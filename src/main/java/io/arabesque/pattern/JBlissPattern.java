@@ -2,9 +2,9 @@ package io.arabesque.pattern;
 
 import fi.tkk.ics.jbliss.Graph;
 import fi.tkk.ics.jbliss.Reporter;
-import net.openhft.koloboke.collect.map.IntIntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
+import com.koloboke.collect.map.IntIntCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.map.hash.HashIntIntMap;
 import org.apache.log4j.Logger;
 
 public class JBlissPattern extends BasicPattern {

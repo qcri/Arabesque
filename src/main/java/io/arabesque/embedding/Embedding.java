@@ -3,7 +3,7 @@ package io.arabesque.embedding;
 import io.arabesque.misc.WritableObject;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCollection;
+import com.koloboke.collect.IntCollection;
 
 import java.io.Externalizable;
 

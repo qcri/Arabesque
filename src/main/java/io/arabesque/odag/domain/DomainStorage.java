@@ -6,7 +6,7 @@ import io.arabesque.embedding.Embedding;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.WriterSetConsumer;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCursor;
+import com.koloboke.collect.IntCursor;
 import org.weakref.jmx.com.google.common.primitives.Ints;
 
 import java.io.DataInput;

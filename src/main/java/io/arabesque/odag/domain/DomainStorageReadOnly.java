@@ -15,9 +15,9 @@ import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 

@@ -1,12 +1,12 @@
 package io.arabesque.pattern;
 
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.map.IntIntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.set.IntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.map.IntIntCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.set.IntSet;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 
 import java.util.Arrays;
 import java.util.Map;

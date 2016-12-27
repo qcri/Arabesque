@@ -3,7 +3,7 @@ package io.arabesque.utils.pool;
 import io.arabesque.utils.Factory;
 import io.arabesque.utils.collection.ObjArrayList;
 import io.arabesque.utils.collection.ReclaimableObjCollection;
-import net.openhft.koloboke.function.Consumer;
+import com.koloboke.function.Consumer;
 
 public class Pool<O> {
     private final static int MAX_SIZE_DEFAULT = 1000;

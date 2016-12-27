@@ -2,7 +2,7 @@ package io.arabesque.embedding;
 
 import io.arabesque.graph.Edge;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCollection;
+import com.koloboke.collect.IntCollection;
 
 import java.io.DataInput;
 import java.io.IOException;

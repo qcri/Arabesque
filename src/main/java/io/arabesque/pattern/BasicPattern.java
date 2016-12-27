@@ -8,10 +8,10 @@ import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
-import net.openhft.koloboke.collect.map.IntIntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMapFactory;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
+import com.koloboke.collect.map.IntIntCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.map.hash.HashIntIntMapFactory;
+import com.koloboke.collect.map.hash.HashIntIntMaps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 

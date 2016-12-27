@@ -1,8 +1,8 @@
 package io.arabesque.embedding;
 
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.function.IntConsumer;
 
 import java.io.DataInput;
 import java.io.IOException;

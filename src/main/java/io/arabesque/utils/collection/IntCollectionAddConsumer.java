@@ -1,7 +1,7 @@
 package io.arabesque.utils.collection;
 
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.function.IntConsumer;
 
 public class IntCollectionAddConsumer implements IntConsumer {
     private IntCollection collection;

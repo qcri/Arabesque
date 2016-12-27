@@ -2,10 +2,10 @@ package io.arabesque.graph;
 
 import io.arabesque.utils.collection.ReclaimableIntCollection;
 import io.arabesque.utils.pool.IntSingletonPool;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.map.hash.HashIntIntMaps;
+import com.koloboke.function.IntConsumer;
 
 public class BasicVertexNeighbourhood implements VertexNeighbourhood, java.io.Serializable {
     // Key = neighbour vertex id, Value = edge id that connects owner of neighbourhood with Key

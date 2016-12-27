@@ -2,7 +2,7 @@ package io.arabesque.optimization;
 
 import io.arabesque.embedding.VertexInducedEmbedding;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCollection;
+import com.koloboke.collect.IntCollection;
 
 public class CliqueVertexInducedEmbedding extends VertexInducedEmbedding {
     @Override

@@ -1,11 +1,11 @@
 package io.arabesque.utils.collection;
 
-import net.openhft.koloboke.collect.Equivalence;
-import net.openhft.koloboke.collect.ObjCollection;
-import net.openhft.koloboke.collect.ObjCursor;
-import net.openhft.koloboke.collect.ObjIterator;
-import net.openhft.koloboke.function.Consumer;
-import net.openhft.koloboke.function.Predicate;
+import com.koloboke.collect.Equivalence;
+import com.koloboke.collect.ObjCollection;
+import com.koloboke.collect.ObjCursor;
+import com.koloboke.collect.ObjIterator;
+import com.koloboke.function.Consumer;
+import com.koloboke.function.Predicate;
 
 import javax.annotation.Nonnull;
 import java.util.*;

@@ -1,6 +1,6 @@
 package io.arabesque.utils;
 
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.function.IntConsumer;
 
 import java.io.DataOutput;
 import java.io.IOException;

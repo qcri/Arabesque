@@ -1,9 +1,9 @@
 package io.arabesque.odag.domain;
 
 import io.arabesque.utils.WriterSetConsumer;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 
 import java.io.DataInput;
 import java.io.DataOutput;

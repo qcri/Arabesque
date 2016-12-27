@@ -15,11 +15,11 @@ import io.arabesque.pattern.JBlissPattern;
 import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.ObjCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.ObjCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.map.hash.HashIntIntMap;
+import com.koloboke.collect.map.hash.HashIntIntMaps;
 import org.apache.commons.lang3.SystemUtils;
 import sun.misc.Unsafe;
 

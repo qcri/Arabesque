@@ -12,11 +12,11 @@ import io.arabesque.utils.collection.ObjArrayList;
 import io.arabesque.utils.pool.IntArrayListPool;
 import io.arabesque.utils.pool.IntSetPool;
 import io.arabesque.utils.pool.Pool;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.map.IntIntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.set.IntSet;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.map.IntIntCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.set.IntSet;
+import com.koloboke.function.IntConsumer;
 import org.apache.log4j.Logger;
 
 public class VICPattern extends BasicPattern {

@@ -1,8 +1,8 @@
 package io.arabesque.aggregation;
 
 import io.arabesque.pattern.Pattern;
-import net.openhft.koloboke.collect.map.hash.HashObjByteMap;
-import net.openhft.koloboke.collect.map.hash.HashObjByteMaps;
+import com.koloboke.collect.map.hash.HashObjByteMap;
+import com.koloboke.collect.map.hash.HashObjByteMaps;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 

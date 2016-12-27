@@ -1,13 +1,13 @@
 package io.arabesque.data;
 
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.map.IntIntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.map.IntObjMap;
-import net.openhft.koloboke.collect.map.hash.HashIntIntMaps;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
-import net.openhft.koloboke.collect.set.IntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.map.IntIntCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.map.IntObjMap;
+import com.koloboke.collect.map.hash.HashIntIntMaps;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
+import com.koloboke.collect.set.IntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

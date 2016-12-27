@@ -1,11 +1,11 @@
 package io.arabesque.utils.collection;
 
 import io.arabesque.utils.pool.IntArrayListPool;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.IntIterator;
-import net.openhft.koloboke.function.IntConsumer;
-import net.openhft.koloboke.function.IntPredicate;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.IntIterator;
+import com.koloboke.function.IntConsumer;
+import com.koloboke.function.IntPredicate;
 import org.apache.hadoop.io.Writable;
 
 import javax.annotation.Nonnull;

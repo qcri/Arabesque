@@ -1,10 +1,10 @@
 package io.arabesque.utils.collection;
 
 import io.arabesque.utils.pool.IntSingletonPool;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.IntIterator;
-import net.openhft.koloboke.function.IntConsumer;
-import net.openhft.koloboke.function.IntPredicate;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.IntIterator;
+import com.koloboke.function.IntConsumer;
+import com.koloboke.function.IntPredicate;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;

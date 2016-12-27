@@ -8,12 +8,12 @@ import io.arabesque.utils.ClearSetConsumer;
 import io.arabesque.utils.IntWriterConsumer;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.set.IntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.set.IntSet;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 import org.apache.hadoop.io.Writable;
 
 import java.io.*;

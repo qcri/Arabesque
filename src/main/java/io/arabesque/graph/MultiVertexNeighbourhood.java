@@ -3,11 +3,11 @@ package io.arabesque.graph;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionMultiplexer;
 import io.arabesque.utils.collection.ReclaimableIntCollection;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.map.IntObjMap;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
-import net.openhft.koloboke.function.IntConsumer;
-import net.openhft.koloboke.function.IntFunction;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.map.IntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
+import com.koloboke.function.IntConsumer;
+import com.koloboke.function.IntFunction;
 
 public class MultiVertexNeighbourhood extends BasicVertexNeighbourhood {
     private static final IntFunction<IntArrayList> INTARRAYLIST_FACTORY = new IntFunction<IntArrayList>() {

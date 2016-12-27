@@ -7,11 +7,11 @@ import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
 import io.arabesque.utils.collection.ObjArrayList;
 import io.arabesque.utils.pool.IntArrayListPool;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
-import net.openhft.koloboke.function.IntConsumer;
-import net.openhft.koloboke.function.IntPredicate;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.function.IntConsumer;
+import com.koloboke.function.IntPredicate;
 
 import java.io.DataOutput;
 import java.io.IOException;

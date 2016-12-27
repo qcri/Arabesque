@@ -2,8 +2,8 @@ package io.arabesque.utils.pool;
 
 import io.arabesque.utils.BasicFactory;
 import io.arabesque.utils.Factory;
-import net.openhft.koloboke.collect.set.IntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.collect.set.IntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 
 public class IntSetPool extends CollectionPool<IntSet> {
     private static final Factory<IntSet> factory = new BasicFactory<IntSet>() {

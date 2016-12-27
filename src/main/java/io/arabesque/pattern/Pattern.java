@@ -2,7 +2,7 @@ package io.arabesque.pattern;
 
 import io.arabesque.embedding.Embedding;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.map.IntIntMap;
 import org.apache.hadoop.io.Writable;
 
 import java.io.Externalizable;

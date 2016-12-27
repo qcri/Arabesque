@@ -1,7 +1,7 @@
 package io.arabesque.odag.domain;
 
 import io.arabesque.utils.WriterSetConsumer;
-import net.openhft.koloboke.collect.IntCursor;
+import com.koloboke.collect.IntCursor;
 
 import java.io.DataOutput;
 import java.io.IOException;

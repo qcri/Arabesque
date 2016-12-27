@@ -8,11 +8,11 @@ import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.VICPattern;
 import io.arabesque.pattern.VertexPositionEquivalences;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntCollection;
-import net.openhft.koloboke.collect.IntCursor;
-import net.openhft.koloboke.collect.map.IntIntMap;
-import net.openhft.koloboke.collect.set.hash.HashIntSet;
-import net.openhft.koloboke.collect.set.hash.HashIntSets;
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.collect.map.IntIntMap;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 
 import java.util.ArrayList;
