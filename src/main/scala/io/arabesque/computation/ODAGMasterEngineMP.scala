@@ -58,7 +58,6 @@ class ODAGMasterEngineMP [E <: Embedding] (_config: SparkConfiguration[E])
    */
   override def compute() = {
     // accumulatores and spark configuration w.r.t. Spark
-    // TODO: ship serHaddopConf with SparkConfiguration
     val configBc = sc.broadcast(config)
 
     // setup an RDD to simulate empty partitions and a broadcast variable to
@@ -88,7 +87,7 @@ class ODAGMasterEngineMP [E <: Embedding] (_config: SparkConfiguration[E])
 
       // keep engines (filled with expansions and aggregations) for the rest of
       // the superstep
-      execEngines.persist (MEMORY_ONLY_SER)
+      execEngines.persist (MEMORY_ONLY)
 
       // Materialize execEngines
       execEngines.foreachPartition (_ => {})

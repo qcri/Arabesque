@@ -85,7 +85,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
 
       // keep engines (filled with expansions and aggregations) for the rest of
       // the superstep
-      execEngines.persist (MEMORY_ONLY_SER)
+      execEngines.persist (MEMORY_ONLY)
 
       // Materialize execEngines
       execEngines.foreachPartition (_ => {})

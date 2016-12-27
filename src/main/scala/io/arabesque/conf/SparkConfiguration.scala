@@ -122,6 +122,8 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     getInteger("num_workers", 1) *
       getInteger("num_compute_threads", Runtime.getRuntime.availableProcessors))
 
+  def numPartitionsPerWorker: Int = numPartitions / getInteger("num_workers", 1)
+
   /**
    * Update assign internal names to user defined properties
    */

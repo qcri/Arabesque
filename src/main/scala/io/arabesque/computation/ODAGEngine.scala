@@ -61,8 +61,7 @@ trait ODAGEngine[
   lazy val maxBlockSize: Int =
     configuration.getInteger ("maxBlockSize", 10000) // TODO: magic number ??
 
-  lazy val numPartitionsPerWorker = 
-    configuration.getInteger ("arabesque.odag.aggregators", getNumberPartitions())
+  lazy val numPartitionsPerWorker = configuration.numPartitionsPerWorker
  
   // aggregation storages
   @transient lazy val aggregationStorageFactory = new AggregationStorageFactory
@@ -154,9 +153,11 @@ trait ODAGEngine[
       if (remainingStashes.hasNext) {
 
         val currentEmbeddingStash = remainingStashes.next
-        currentEmbeddingStash.finalizeConstruction (ODAGEngine.pool(numPartitionsPerWorker),
-          numPartitionsPerWorker)
 
+        currentEmbeddingStash.finalizeConstruction (
+          ODAGEngine.pool(numPartitionsPerWorker),
+          numPartitionsPerWorker)
+        
         // odag stashes have an efficient reader for compressed embeddings
         odagStashReader = new EfficientReader [E] (currentEmbeddingStash,
           computation,

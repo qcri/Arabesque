@@ -99,9 +99,7 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
    */
   override def compute() = {
     // accumulatores and spark configuration w.r.t. Spark
-    // TODO: ship serHaddopConf with SparkConfiguration
     val configBc = sc.broadcast(config)
-    val serHadoopConf = new SerializableConfiguration(sc.hadoopConfiguration)
 
     // superstepRDD in this engine represents an RDD of compressed caches, which
     // contain embeddings from the previous superstep.
@@ -126,13 +124,12 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
         superstepRDD = superstepRDD,
         superstep = superstep,
         configBc = configBc,
-        serHadoopConf = serHadoopConf,
         aggAccums = _aggAccums,
         previousAggregationsBc = previousAggregationsBc)
 
       // keep engines (filled with expansions and aggregations) for the rest of
       // the superstep
-      execEngines.persist (MEMORY_AND_DISK_SER)
+      execEngines.persist (MEMORY_ONLY)
 
       /** [1] We extract and aggregate the *aggregations* globally.
        */
@@ -200,7 +197,6 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
       superstepRDD: RDD[LZ4ObjectCache],
       superstep: Int,
       configBc: Broadcast[SparkConfiguration[E]],
-      serHadoopConf: SerializableConfiguration,
       aggAccums: Map[String,Accumulator[_]],
       previousAggregationsBc: Broadcast[_]) = {
 
@@ -212,7 +208,6 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
       val execEngine = new SparkEmbeddingEngine [E] (
         partitionId = idx,
         superstep = superstep,
-        hadoopConf = serHadoopConf,
         accums = aggAccums,
         previousAggregationsBc = previousAggregationsBc
       )
