@@ -48,7 +48,7 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 }
 
 # original data
-data <- read.table(header=T, file="motifs.dat")
+data <- read.table(header=T, file="fsm.dat")
 datac <- summarySE(data, measurevar="runtime", groupvars=c("engine", "threads"))
 
 require(ggplot2)
@@ -64,7 +64,7 @@ ggplot(datac, aes(x=threads, y=runtime/1000, colour=engine)) +
     geom_line(size=1) +
     geom_errorbar(aes(ymin=(runtime-se)/1000, ymax=(runtime+se)/1000),
                   colour="black", width=.005) +
-    labs(x="# Threads", y="Runtime", fill="", title="Motifs/MiCo/depth=4") +
+    labs(x="# Threads", y="Runtime", fill="", title="FSM/CiteSeer/depth=7") +
     scale_colour_manual(values=cbPalette, labels=lgLabels, breaks=lgBreaks) +
     scale_x_continuous(breaks=c(4,8,16,32,64,96)) +
     theme_minimal(base_size = 20) +
@@ -72,4 +72,4 @@ ggplot(datac, aes(x=threads, y=runtime/1000, colour=engine)) +
     theme(legend.position=c(0.9,0.2),
          text=element_text(family="Times"))
 
-ggsave(file="motifs.pdf", heigh=4, width=6)
+ggsave(file="fsm.pdf", heigh=4, width=6)
