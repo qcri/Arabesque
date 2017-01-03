@@ -12,6 +12,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel._
 import org.apache.spark.{Accumulator, HashPartitioner, SparkContext}
+import org.apache.spark.util.SizeEstimator
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map
@@ -100,6 +101,8 @@ class SparkEmbeddingMasterEngine[E <: Embedding]
   override def compute() = {
     // accumulatores and spark configuration w.r.t. Spark
     val configBc = sc.broadcast(config)
+    logInfo (s"SparkConfiguration estimated size = ${SizeEstimator.estimate(config)} bytes")
+    logInfo (s"HadoopConfiguration estimated size = ${SizeEstimator.estimate(config.hadoopConf)} bytes")
 
     // superstepRDD in this engine represents an RDD of compressed caches, which
     // contain embeddings from the previous superstep.

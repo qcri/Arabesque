@@ -74,7 +74,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final long INFO_PERIOD_DEFAULT = 60000;
 
     public static final String CONF_COMPUTATION_CLASS = "arabesque.computation.class";
-    public static final String CONF_COMPUTATION_CLASS_DEFAULT = "";
+    public static final String CONF_COMPUTATION_CLASS_DEFAULT = "io.arabesque.computation.ComputationContainer";
 
     public static final String CONF_MASTER_COMPUTATION_CLASS = "arabesque.master_computation.class";
     public static final String CONF_MASTER_COMPUTATION_CLASS_DEFAULT = "io.arabesque.computation.MasterComputation";
@@ -152,6 +152,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         if (instance == null) {
            LOG.error ("instance is null");
             throw new RuntimeException("Oh-oh, Null configuration");
+        }
+
+        if (!instance.isInitialized()) {
+           instance.initialize();
         }
 
         return (C) instance;

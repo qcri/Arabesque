@@ -1,6 +1,6 @@
 package io.arabesque.conf
 
-import io.arabesque.computation.{Computation, MasterComputation}
+import io.arabesque.computation._
 import io.arabesque.conf.Configuration._
 import io.arabesque.embedding.Embedding
 import io.arabesque.graph.MainGraph
@@ -49,6 +49,20 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     val newConfig = this.copy [O] (confs = confs ++ Map(key -> value))
     newConfig.fixAssignments
     newConfig
+  }
+
+  /**
+   * Sets a new computation in this configuration (immutable)
+   */
+  def withNewComputation [E <: Embedding] (computation: Computation[E]): SparkConfiguration[O] = {
+    withNewConfig (SparkConfiguration.COMPUTATION_CONTAINER, computation)
+  }
+  
+  /**
+   * Sets a new master computation in this configuration (immutable)
+   */
+  def withNewMasterComputation (masterComputation: MasterComputation): SparkConfiguration[O] = {
+    withNewConfig (SparkConfiguration.MASTER_COMPUTATION_CONTAINER, masterComputation)
   }
 
   /**
@@ -113,6 +127,72 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
   }
 
   /**
+   * This function accounts for the computation instance that can be set in
+   * this configuration. If this is the case we just return the computation,
+   * otherwise we create an extended one by calling the method from super.
+   */
+  override def createComputation[E <: Embedding](): Computation[E] = {
+    confs.get(SparkConfiguration.COMPUTATION_CONTAINER) match {
+      case Some(cc: ComputationContainer[_]) =>
+        cc.shallowCopy().asInstanceOf[Computation[E]]
+
+      case Some(c) =>
+        throw new RuntimeException (s"Invalid computation type: ${c}")
+
+      case None =>
+        super.createComputation[E]()
+    }
+  }
+
+  /**
+   * Returns the computation container associated with this configuration, if
+   * available. A computation container holds a custom computation that is
+   * shipped to execution in the workers.
+   */
+  def computationContainer[E <: Embedding]: ComputationContainer[E] = {
+    confs.get(SparkConfiguration.COMPUTATION_CONTAINER) match {
+      case Some(cc: ComputationContainer[_]) =>
+        cc.asInstanceOf[ComputationContainer[E]]
+      case Some(cc) =>
+        throw new RuntimeException (s"Computation ${cc} is not a container")
+      case None =>
+        throw new RuntimeException (s"No computation is set")
+    }
+  }
+
+  /**
+   * This function accounts for the master computation instance that can be set in
+   * this configuration. If this is the case we just return the computation,
+   * otherwise we create an extended one by calling the method from super.
+   */
+  override def createMasterComputation(): MasterComputation = {
+    confs.get(SparkConfiguration.MASTER_COMPUTATION_CONTAINER) match {
+      case Some(cc: MasterComputationContainer) =>
+        cc.shallowCopy().asInstanceOf[MasterComputation]
+
+      case Some(c) =>
+        throw new RuntimeException (s"Invalid master computation type: ${c}")
+
+      case None =>
+        super.createMasterComputation()
+    }
+  }
+
+  /**
+   * Returns the master computation container associated with this configuration, if
+   * available. A master computation container holds a custom computation that is
+   * shipped to execution in the workers.
+   */
+  def masterComputationContainer: MasterComputationContainer = {
+    confs.get(SparkConfiguration.MASTER_COMPUTATION_CONTAINER) match {
+      case Some(cc: MasterComputationContainer) =>
+        cc
+      case _ =>
+        new MasterComputationContainer()
+    }
+  }
+
+  /**
    * We assume the number of requested executor cores as an alternative number of
    * partitions. However, by the time we call this function, the config *num_partitions*
    * should be already set by the user, or by the execution master engine which
@@ -122,6 +202,11 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     getInteger("num_workers", 1) *
       getInteger("num_compute_threads", Runtime.getRuntime.availableProcessors))
 
+  /**
+   * Given the total number of partitions in the cluster, this function returns
+   * roughly the number of partitions per worker. We assume an uniform division
+   * among workers.
+   */
   def numPartitionsPerWorker: Int = numPartitions / getInteger("num_workers", 1)
 
   /**
@@ -234,6 +319,10 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 }
 
 object SparkConfiguration {
+  def get[E <: Embedding]: SparkConfiguration[E] = {
+    Configuration.get[SparkConfiguration[E]].asInstanceOf[SparkConfiguration[E]]
+  }
+
   // odag flush methods
   val FLUSH_BY_PATTERN = "flush_by_pattern" // good for regular distributions
   val FLUSH_BY_ENTRIES = "flush_by_entries" // good for irregular distributions but small embedding domains
@@ -246,4 +335,8 @@ object SparkConfiguration {
 
   // hadoop conf
   val HADOOP_CONF = "hadoop_conf"
+
+  // computation container
+  val COMPUTATION_CONTAINER = "computation_container"
+  val MASTER_COMPUTATION_CONTAINER = "master_computation_container"
 }

@@ -61,6 +61,13 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
         return support;
     }
 
+    public void setSupport(int support) {
+       if (this.support != support) {
+         this.support = support;
+         this.clear();
+       }
+    }
+
     private boolean hasDomainReachedSupport(int i) {
         return i < numberOfDomains && (enoughSupport || domainsReachedSupport.contains(i));
     }
@@ -242,7 +249,12 @@ public class DomainSupport implements Writable, Externalizable, PatternAggregati
                 ", enoughSupport=" + enoughSupport +
                 ", support=" + support +
                 ", currentSupport=" + currentSupport +
-                ", numberOfDomains=" + numberOfDomains);
+                ", numberOfDomains=" + numberOfDomains +
+                ", domainSets=" + domainSets +
+                ", intWriterConsumer=" + intWriterConsumer +
+                ", intAdderConsumer=" + intAdderConsumer +
+                ", setFromEmbedding=" + setFromEmbedding +
+                ", embedding=" + embedding);
 
         if (domainSets != null) {
             for (int i = 0; i < numberOfDomains; i++) {

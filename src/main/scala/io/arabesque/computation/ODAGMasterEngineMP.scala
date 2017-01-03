@@ -59,6 +59,8 @@ class ODAGMasterEngineMP [E <: Embedding] (_config: SparkConfiguration[E])
   override def compute() = {
     // accumulatores and spark configuration w.r.t. Spark
     val configBc = sc.broadcast(config)
+    logInfo (s"SparkConfiguration estimated size = ${SizeEstimator.estimate(config)} bytes")
+    logInfo (s"HadoopConfiguration estimated size = ${SizeEstimator.estimate(config.hadoopConf)} bytes")
 
     // setup an RDD to simulate empty partitions and a broadcast variable to
     // communicate the global aggregated ODAGs on each step
