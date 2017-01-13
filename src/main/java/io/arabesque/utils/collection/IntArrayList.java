@@ -808,5 +808,8 @@ public class IntArrayList implements ReclaimableIntCollection, Writable, Externa
           hasNext = loadNext();
           return target;
        }
+
+       public void remove() {
+       }
     }
 }
