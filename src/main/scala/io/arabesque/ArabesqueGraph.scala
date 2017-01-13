@@ -20,17 +20,19 @@ import scala.reflect.ClassTag
 class ArabesqueGraph(
     path: String,
     local: Boolean,
-    arab: ArabesqueContext) extends Logging {
+    arab: ArabesqueContext,
+    logLevel: String) extends Logging {
 
   private val uuid: UUID = UUID.randomUUID
   def tmpPath: String = s"${arab.tmpPath}/graph-${uuid}"
 
-  def this(path: String, arab: ArabesqueContext) = {
-    this (path, false, arab)
+  def this(path: String, arab: ArabesqueContext, logLevel: String) = {
+    this (path, false, arab, logLevel)
   }
 
   private def resultHandler [E <: Embedding : ClassTag] (
       config: SparkConfiguration[E]): ArabesqueResult[E] = {
+    config.set ("log_level", logLevel)
     new ArabesqueResult [E] (arab.sparkContext, config)
   }
 

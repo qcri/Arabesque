@@ -22,7 +22,7 @@ import org.apache.spark.SparkContext
   * @return an [[io.arabesque.ArabesqueContext]]
   *
  */
-class ArabesqueContext(sc: SparkContext) extends Logging {
+class ArabesqueContext(sc: SparkContext, logLevel: String = "info") extends Logging {
 
   private val uuid: UUID = UUID.randomUUID
   def tmpPath: String = s"/tmp/arabesque-${uuid}" // TODO: base dir as config
@@ -45,7 +45,7 @@ class ArabesqueContext(sc: SparkContext) extends Logging {
     * @see [[https://github.com/viniciusvdias/Arabesque/blob/master/README.md Arabesque README]] for how to prepare the input file
     */
   def textFile(path: String, local: Boolean = false): ArabesqueGraph = {
-    new ArabesqueGraph (path, this)
+    new ArabesqueGraph (path, this, logLevel)
   }
 
   /**

@@ -21,6 +21,7 @@ trait SparkMasterEngine [E <: Embedding]
   def config: SparkConfiguration[E]
   def init(): Unit = {
     // set log level
+    logInfo (s"Setting log level to ${config.getLogLevel}")
     setLogLevel (config.getLogLevel)
     sc.setLogLevel (config.getLogLevel.toUpperCase)
     config.setIfUnset ("num_partitions", sc.defaultParallelism)

@@ -27,7 +27,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
      setAppName(appName)
 
    sc = new SparkContext(conf)
-   arab = new ArabesqueContext(sc)
+   arab = new ArabesqueContext(sc, "warn")
 
    val loader = classOf[SparkArabesqueSuite].getClassLoader
    val url = loader.getResource("sample.graph")
@@ -87,8 +87,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
  val motifsNumEmbeddings = 24546
  test ("[motifs,odag] arabesque API") {
    val motifsRes = arabGraph.motifs (3).
-     set ("comm_strategy", COMM_ODAG_SP).
-     set ("log_level", "debug")
+     set ("comm_strategy", COMM_ODAG_SP)
    val odags = motifsRes.odags
    assert (odags.count != 0)
    val embeddings = motifsRes.embeddings
@@ -97,7 +96,6 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
  }
  test ("[motifs,embedding] arabesque API") {
    val motifsRes = arabGraph.motifs (3).
-     set ("log_level", "debug").
      set ("comm_strategy", COMM_EMBEDDING)
    val odags = motifsRes.odags
    assert (odags.count == 0)

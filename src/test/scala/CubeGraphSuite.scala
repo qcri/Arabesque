@@ -22,7 +22,7 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
       setAppName(appName)
 
     sc = new SparkContext(conf)
-    arab = new ArabesqueContext(sc)
+    arab = new ArabesqueContext(sc, "warn")
 
     val loader = classOf[SparkArabesqueSuite].getClassLoader
 
@@ -47,8 +47,7 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
 
     for(k <- 0 to (numEmbedding.size - 1)) {
       val motifsRes = arabGraph.motifs(k).
-        set ("num_partitions", 10).
-        set ("log_level", "info")
+        set ("num_partitions", 10)
       val odags = motifsRes.odags
       val embeddings = motifsRes.embeddings
 
@@ -63,8 +62,7 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
     val numEmbedding = List(0, 8, 12, 0)
 
     for(k <- 0 to (numEmbedding.size - 1)) {
-      val cliqueRes = arabGraph.cliques(k).
-        set ("log_level", "info")
+      val cliqueRes = arabGraph.cliques(k)
 
       val embeddings = cliqueRes.embeddings
 
@@ -83,8 +81,7 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
     val numEmbedding = List(0, 0, 9, 24)
 
     for(k <- 0 to (numEmbedding.size -1)) {
-      val motifsRes = arabGraph.fsm(support, k).
-        set ("log_level", "info")
+      val motifsRes = arabGraph.fsm(support, k)
 
       val embeddings = motifsRes.embeddings
 
@@ -100,8 +97,7 @@ class CubeGraphSuite extends FunSuite with BeforeAndAfterAll {
     // Expected output
     val numTriangles = 0
 
-    val trianglesRes = arabGraph.triangles().
-      set ("log_level", "info")
+    val trianglesRes = arabGraph.triangles()
 
     val embeddings = trianglesRes.embeddings
 
