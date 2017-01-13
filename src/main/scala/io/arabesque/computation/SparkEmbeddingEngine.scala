@@ -275,7 +275,7 @@ case class SparkEmbeddingEngine[O <: Embedding](
    * @param name aggregator's name
    * @return an aggregation storage with the specified name
    */
-  private def getAggregationStorage[K <: Writable, V <: Writable](name: String)
+  override def getAggregationStorage[K <: Writable, V <: Writable](name: String)
       : AggregationStorage[K,V] = aggregationStorages.get(name) match {
     case Some(aggregationStorage : AggregationStorage[K,V]) => aggregationStorage
     case None =>

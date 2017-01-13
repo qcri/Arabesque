@@ -4,7 +4,7 @@
 
 [http://arabesque.io](http://arabesque.io)
 
-*Current Version:* 1.0.2-BETA
+*Current Version:* 1.0.0-SPARK
 
 Arabesque is a distributed graph mining system that enables quick and easy
 development of graph mining algorithms, while providing a scalable and efficient

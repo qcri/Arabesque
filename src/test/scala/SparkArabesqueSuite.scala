@@ -1,8 +1,11 @@
 package io.arabesque
 
-import io.arabesque.embedding._
+import io.arabesque.computation._
 import io.arabesque.conf.{Configuration, SparkConfiguration}
+import io.arabesque.embedding._
+
 import org.apache.spark.{SparkConf, SparkContext}
+
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
@@ -104,22 +107,26 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
  }
  test ("[motifs,custom computation equivalence] arabesque API") {
    import org.apache.hadoop.io.LongWritable
+   import io.arabesque.pattern.Pattern
    import io.arabesque.utils.SerializableWritable
    import io.arabesque.aggregation.reductions.LongSumReduction
 
-   val longUnitSer = new SerializableWritable (new LongWritable(1))
    val AGG_MOTIFS = "motifs"
-   val motifsRes = arabGraph.
-     vertexInducedComputation { (e,c) =>
-       if (e.getNumWords == 3) {
-         c.output (e)
-         c.map (AGG_MOTIFS, e.getPattern, longUnitSer.value)
+   val motifsRes: ArabesqueResult[_] = arabGraph.
+     vertexInducedComputation (
+       new VertexProcessFunc {
+         private lazy val longUnit = new LongWritable(1)
+         def apply(e: VertexInducedEmbedding, c: Computation[VertexInducedEmbedding]): Unit = {
+           if (e.getNumWords == 3) {
+             c.output (e)
+             c.map (AGG_MOTIFS, e.getPattern, longUnit)
+           }
+         }
        }
-     }.
+     ).
      withShouldExpand ((e,c) => e.getNumVertices < 3).
-     withAggregation (AGG_MOTIFS,
-       SparkConfiguration.get.getPatternClass, classOf[LongWritable],
-       new LongSumReduction)
+     withAggregation [Pattern,LongWritable] (AGG_MOTIFS)(
+       (v1, v2) => {v1.set (v1.get + v2.get); v1})
 
    val odags = motifsRes.odags
    assert (odags.count != 0)
@@ -151,22 +158,21 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    import io.arabesque.gmlib.fsm._
    import io.arabesque.pattern.Pattern
    import io.arabesque.utils.SerializableWritable
-
-   // TODO: We currently do not support local static variables working together
-   // with computation containers. Thus, in order to tame limit object creation,
-   // we pool the domain supports.
-   import io.arabesque.gmlib.fsm.pool.DomainSupportPool
+   import java.lang.ThreadLocal
 
    val AGG_SUPPORT = "support"
    val support = 100
    val maxSize = 3
    val fsmRes = arabGraph.
-     edgeInducedComputation { (e,c) =>
-       val domainSupport = DomainSupportPool.instance.createObject (support)
-       domainSupport.setFromEmbedding (e)
-       c.map(AGG_SUPPORT, e.getPattern, domainSupport)
-       DomainSupportPool.instance.reclaimObject (domainSupport)
-     }.
+     edgeInducedComputation { new EdgeProcessFunc {
+       lazy val domainSupport = new ThreadLocal [DomainSupport] {
+         override def initialValue = new DomainSupport(support)
+       }
+       def apply (e: EdgeInducedEmbedding, c: Computation[EdgeInducedEmbedding]): Unit = {
+         domainSupport.get.setFromEmbedding (e)
+         c.map(AGG_SUPPORT, e.getPattern, domainSupport.get)
+       }
+     }}.
      withShouldExpand ((e,c) => e.getNumWords < maxSize).
      withPatternAggregationFilter ((p,c) => c.readAggregation(AGG_SUPPORT).containsKey (p)).
      withAggregationProcess ((e,c) => c.output (e)).
@@ -175,9 +181,8 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
          c.haltComputation()
        }
      }.
-     withAggregation (AGG_SUPPORT,
-       SparkConfiguration.get.getPatternClass.asInstanceOf[Class[Pattern]], classOf[DomainSupport],
-       new DomainSupportReducer(), new DomainSupportEndAggregationFunction())
+     withAggregation [Pattern,DomainSupport] (AGG_SUPPORT,
+       new DomainSupportReducer(), endAggregationFunction = new DomainSupportEndAggregationFunction())
    
    val odags = fsmRes.odags
    val embeddings = fsmRes.embeddings
@@ -228,9 +233,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
      withShouldExpand ((e,c) => e.getNumVertices < 3).
      withFilter ((e,c) => e.getNumVertices < 3 ||
        (e.getNumVertices == 3 && e.getNumEdges == 3)).
-     withAggregation (AGG_OUTPUT,
-       classOf[IntWritable], classOf[LongWritable],
-       new LongSumReduction)
+     withAggregation [IntWritable,LongWritable] (AGG_OUTPUT, new LongSumReduction)
 
    val odags = trianglesRes.odags
    val embeddings = trianglesRes.embeddings
@@ -271,5 +274,30 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    val embeddings = cliquesRes.embeddings
    assert (embeddings.count == cliquesNumEmbeddings)
    assert (embeddings.distinct.count == cliquesNumEmbeddings)
+ }
+ 
+ test ("[cliques percolation] arabesque API") {
+   import io.arabesque.utils.collection.{IntArrayList, UnionFindOps}
+   import scala.collection.JavaConverters._
+   import org.apache.hadoop.io._
+   val maxsize = 3
+   val cliquepercRes = arabGraph.cliquesPercolation (maxsize)
+   val cliqueAdjacencies = cliquepercRes.aggregationStorage [IntArrayList,IntArrayList] ("membership")
+   val cliqueAdjacenciesBc = sc.broadcast (cliqueAdjacencies)
+   val cliques = cliquepercRes.aggregationRDD [IntArrayList,VertexInducedEmbedding] ("cliques")
+   val communities = cliques.map { case (repr,e) =>
+     val m = cliqueAdjacenciesBc.value
+     val key = UnionFindOps.find [IntArrayList] (
+       v => m.getValue(v),
+       (k,v) => m.aggregateWithReusables (k, v),
+       repr.value
+     )
+     (key, e.value)
+   }.reduceByKey { (e1,e2) =>
+     e2.getVertices.iterator.asScala.foreach (v => if (!(e1.getVertices contains v)) e1.addWord (v))
+     e1
+   }
+
+   assert (communities.count == 234)
  }
 } 

@@ -21,7 +21,9 @@ public class AggregationStorageFactory {
         if (Pattern.class.isAssignableFrom(keyClass)) {
             return new PatternAggregationStorage(name);
         } else {
-            return new AggregationStorage(name);
+            AggregationStorage aggStorage = Configuration.get().createAggregationStorage(name);
+            aggStorage.init(name);
+            return aggStorage;
         }
     }
 }

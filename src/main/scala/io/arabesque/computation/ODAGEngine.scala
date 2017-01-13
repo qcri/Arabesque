@@ -208,7 +208,7 @@ trait ODAGEngine[
    * TODO: split aggregations before flush them and review the return type
    */
   def flushAggregationsByName(name: String) = {
-    // does the final local aggregation
+    // the following function does the final local aggregation
     // e.g. for motifs, turns quick patterns into canonical ones
     def aggregate[K <: Writable, V <: Writable](agg1: AggregationStorage[K,V], agg2: AggregationStorage[_,_]) = {
       agg1.finalLocalAggregate (agg2.asInstanceOf[AggregationStorage[K,V]])
@@ -275,7 +275,7 @@ trait ODAGEngine[
    * @param name aggregator's name
    * @return an aggregation storage with the specified name
    */
-  private def getAggregationStorage[K <: Writable, V <: Writable](name: String)
+  override def getAggregationStorage[K <: Writable, V <: Writable](name: String)
       : AggregationStorage[K,V] = aggregationStorages.get(name) match {
     case Some(aggregationStorage : AggregationStorage[K,V]) => aggregationStorage
     case None =>

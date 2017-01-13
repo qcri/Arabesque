@@ -6,18 +6,18 @@ import com.koloboke.collect.IntCursor;
 import com.koloboke.collect.IntIterator;
 import com.koloboke.function.IntConsumer;
 import com.koloboke.function.IntPredicate;
+
 import org.apache.hadoop.io.Writable;
 
 import javax.annotation.Nonnull;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class IntArrayList implements ReclaimableIntCollection, Writable {
+public class IntArrayList implements ReclaimableIntCollection, Writable, Externalizable {
     private static final int INITIAL_SIZE = 16;
 
     private int[] backingArray;
@@ -47,8 +47,16 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
     public IntArrayList(IntArrayList intArrayList) {
         this(intArrayList.backingArray, intArrayList.numElements);
     }
-
+    
     public IntArrayList(int[] intArray, int numElements) {
+       set(intArray, numElements);
+    }
+    
+    public void set(IntArrayList intArrayList) {
+        set(intArrayList.backingArray, intArrayList.numElements);
+    }
+    
+    public void set(int[] intArray, int numElements) {
         this.numElements = numElements;
         backingArray = Arrays.copyOf(intArray, numElements);
     }
@@ -226,6 +234,11 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
     }
 
     @Override
+    public void writeExternal(ObjectOutput objOutput) throws IOException {
+       write (objOutput);
+    }
+
+    @Override
     public void readFields(DataInput dataInput) throws IOException {
         clear();
 
@@ -236,6 +249,11 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
         for (int i = 0; i < numElements; ++i) {
             backingArray[i] = dataInput.readInt();
         }
+    }
+    
+    @Override
+    public void readExternal(ObjectInput objInput) throws IOException, ClassNotFoundException {
+       readFields(objInput);
     }
 
     @Override
@@ -734,5 +752,61 @@ public class IntArrayList implements ReclaimableIntCollection, Writable {
         }
 
         return pos;
+    }
+
+    public Iterator<IntArrayList> combinations(int k) {
+       return new CombinationsIterator (this, k);
+    }
+
+    private class CombinationsIterator implements Iterator<IntArrayList> {
+       private IntArrayList source;
+       private IntArrayList target;
+       private IntArrayList indices;
+       private boolean hasNext;
+       private int k;
+       private int n;
+
+       public CombinationsIterator(IntArrayList source, int k) {
+          this.source = source;
+          this.indices = new IntArrayList(k);
+          this.target = new IntArrayList(k);
+          this.k = k;
+          this.n = source.size();
+          for (int i = 0; i < k; ++i) {
+             indices.add (i);
+             target.add (i);
+          }
+          this.hasNext = true;
+       }
+
+       public boolean hasNext() {
+          return hasNext;
+       }
+
+       private boolean loadNext() {
+          int i = k - 1;
+          indices.setUnchecked (i, indices.getUnchecked(i) + 1);
+          while ((i >= 0) && (indices.getUnchecked(i) >= n - k + 1 + i)) {
+             --i;
+             if (i < 0) return false;
+             indices.setUnchecked (i, indices.getUnchecked(i) + 1);
+          }
+
+          if (indices.getUnchecked(0) > n - k) {
+             return false;
+          }
+
+          for (i = i + 1; i < k; ++i)
+             indices.setUnchecked (i, indices.getUnchecked(i - 1) + 1);
+
+          return true;
+       }
+
+       public IntArrayList next() {
+          for (int i = 0; i < k; ++i)
+             target.setUnchecked (i, source.getUnchecked(indices.getUnchecked(i)));
+          hasNext = loadNext();
+          return target;
+       }
     }
 }

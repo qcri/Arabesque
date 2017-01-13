@@ -229,7 +229,8 @@ public class ExecutionEngine<O extends Embedding>
         aggregationStorage.aggregateWithReusables(key, value);
     }
 
-    private <K extends Writable, V extends Writable> AggregationStorage<K, V> getAggregationStorage(String name) {
+    @Override
+    public <K extends Writable, V extends Writable> AggregationStorage<K, V> getAggregationStorage(String name) {
         AggregationStorage<K, V> aggregationStorage = aggregationStorages.get(name);
 
         if (aggregationStorage == null) {

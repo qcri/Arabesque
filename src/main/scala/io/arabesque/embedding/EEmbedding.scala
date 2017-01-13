@@ -16,6 +16,10 @@ case class EEmbedding(var words: Array[Int]) extends ResultEmbedding {
   def this() = {
     this(null)
   }
+  
+  def combinations(k: Int): Iterator[EEmbedding] = {
+    words.combinations(k).map (new EEmbedding(_))
+  }
 
   override def readFields(in: DataInput): Unit = {
     val wordsLen = in.readInt

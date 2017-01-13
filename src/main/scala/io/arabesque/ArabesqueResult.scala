@@ -1,13 +1,13 @@
 package io.arabesque
 
-import io.arabesque.aggregation.{AggregationStorage, EndAggregationFunction}
-import io.arabesque.aggregation.reductions.ReductionFunction
+import io.arabesque.aggregation._
+import io.arabesque.aggregation.reductions._
 import io.arabesque.computation._
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding.{Embedding, ResultEmbedding}
 import io.arabesque.odag.{SinglePatternODAG, BasicODAG}
 import io.arabesque.pattern.Pattern
-import io.arabesque.utils.Logging
+import io.arabesque.utils.{Logging, SerializableWritable}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.Writable
 import org.apache.spark.rdd.RDD
@@ -91,13 +91,29 @@ case class ArabesqueResult [E <: Embedding : ClassTag] (
   }
 
   /**
-   * Get aggregations defined by the user or empty if it does not exist
+   * Get aggregation mappings defined by the user or empty if it does not exist
    */
   def aggregation [K <: Writable, V <: Writable] (name: String): Map[K,V] = {
-    val aggValue = masterEngine.
-      getAggregatedValue [AggregationStorage[K,V]] (name)
+    val aggValue = aggregationStorage [K,V] (name)
     if (aggValue == null) Map.empty[K,V]
     else aggValue.getMapping
+  }
+  
+  /**
+   * Get aggregation mappings defined by the user or empty if it does not exist
+   */
+  def aggregationStorage [K <: Writable, V <: Writable] (name: String): AggregationStorage[K,V] = {
+    masterEngine.getAggregatedValue [AggregationStorage[K,V]] (name)
+  }
+
+  /*
+   * Get aggregations defined by the user as an RDD or empty if it does not exist.
+   */
+  def aggregationRDD [K <: Writable, V <: Writable] (name: String)
+      : RDD[(SerializableWritable[K],SerializableWritable[V])] = {
+    sc.parallelize (this.aggregation [K,V] (name).toSeq.map {
+      case (k,v) => (new SerializableWritable(k), new SerializableWritable(v))
+    }, config.numPartitions)
   }
 
   /**
@@ -109,7 +125,6 @@ case class ArabesqueResult [E <: Embedding : ClassTag] (
       registeredAggregations.map (name => (name,aggregation(name))).toSeq: _*
     )
   }
-  
 
   /**
    * Saves embeddings as sequence files (HDFS): [[org.apache.hadoop.io.NullWritable, ResultEmbedding]]
@@ -278,6 +293,7 @@ case class ArabesqueResult [E <: Embedding : ClassTag] (
   /**
    * Updates the init function of the underlying computation
    * container.
+   * TODO: this is really necessary for the Scala API ??
    *
    * @param init initialization function for the computation
    *
@@ -292,6 +308,8 @@ case class ArabesqueResult [E <: Embedding : ClassTag] (
   /**
    * Updates the initAggregations function of the underlying computation
    * container.
+   * TODO: maybe this function should be *private* as it is more natural for the
+   * user to call *withAggregation* instead of this function
    *
    * @param initAggregations function that initializes the aggregations for the computation
    *
@@ -307,23 +325,33 @@ case class ArabesqueResult [E <: Embedding : ClassTag] (
    * Adds a new aggregation to the computation
    *
    * @param name identifier of this new aggregation
-   * @param keyClass class of the aggregation key
-   * @param valueClass class of values being aggregated
-   * @param persistent whether this aggregation must be persisted in each
-   * superstep or not
    * @param reductionFunction the function that aggregates two values
    * @param endAggregationFunction the function that is applied at the end of
    * each local aggregation, in the workers
+   * @param persistent whether this aggregation must be persisted in each
+   * superstep or not
+   * @param aggStorageClass custom aggregation storage implementation
    *
    * @return new result
    */
-  def withAggregation [K <: Writable, V <: Writable] (
+  def withAggregation [K <: Writable : ClassTag, V <: Writable: ClassTag] (
       name: String,
-      keyClass: Class[K],
-      valueClass: Class[V],
       reductionFunction: ReductionFunction[V],
       endAggregationFunction: EndAggregationFunction[K,V] = null,
-      persistent: Boolean = false): ArabesqueResult[E] = {
+      persistent: Boolean = false,
+      aggStorageClass: Class[_ <: AggregationStorage[K,V]] = classOf[AggregationStorage[K,V]])
+    : ArabesqueResult[E] = {
+
+    // if the user specifies *Pattern* as the key, we must find the concrete
+    // implementation within the Configuration before registering the
+    // aggregation
+    val _keyClass = implicitly[ClassTag[K]].runtimeClass
+    val keyClass = if (_keyClass == classOf[Pattern]) {
+      SparkConfiguration.get.getPatternClass().asInstanceOf[Class[K]]
+    } else {
+      _keyClass.asInstanceOf[Class[K]]
+    }
+    val valueClass = implicitly[ClassTag[V]].runtimeClass.asInstanceOf[Class[V]]
 
     // get the old init aggregations function in order to compose it
     val oldInitAggregation = getComputationContainer[E].initAggregationsOpt match {
@@ -334,12 +362,42 @@ case class ArabesqueResult [E <: Embedding : ClassTag] (
     // construct an incremental init aggregations function
     val initAggregations = (c: Computation[E]) => {
       oldInitAggregation (c) // init aggregations so far
-      SparkConfiguration.get.registerAggregation (name, keyClass, valueClass,
+      SparkConfiguration.get.registerAggregation (name, aggStorageClass, keyClass, valueClass,
         persistent, reductionFunction, endAggregationFunction)
     }
 
     withInitAggregations (initAggregations)
 
+  }
+  
+  /**
+   * Adds a new aggregation to the computation
+   *
+   * @param name identifier of this new aggregation
+   * @param reductionFunction the function that aggregates two values
+   *
+   * @return new result
+   */
+  def withAggregation [K <: Writable : ClassTag, V <: Writable : ClassTag] (name: String)(
+      reductionFunction: (V,V) => V): ArabesqueResult[E] = {
+    withAggregation [K,V] (name, new ReductionFunctionContainer [V] (reductionFunction))
+  }
+
+  /**
+   * Adds a new aggregation to the computation
+   *
+   * @param name identifier of this new aggregation
+   * @param reductionFunction the function that aggregates two values
+   * @param endAggregationFunction the function that is applied at the end of
+   * each local aggregation, in the workers
+   *
+   * @return new result
+   */
+  def withAggregation [K <: Writable : ClassTag, V <: Writable : ClassTag] (name: String,
+      reductionFunction: (V,V) => V,
+      endAggregationFunction: (AggregationStorage[K,V]) => Unit): ArabesqueResult[E] = {
+    withAggregation [K,V] (name, new ReductionFunctionContainer [V] (reductionFunction),
+      new EndAggregationFunctionContainer [K,V] (endAggregationFunction))
   }
   
   /****** Arabesque Scala API: MasterComputationContainer ******/

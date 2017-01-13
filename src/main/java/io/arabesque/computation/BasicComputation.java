@@ -160,6 +160,11 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
     public <K extends Writable, V extends Writable> AggregationStorage<K, V> readAggregation(String name) {
         return underlyingExecutionEngine.getAggregatedValue(name);
     }
+    
+    @Override
+    public <K extends Writable, V extends Writable> AggregationStorage<K, V> getAggregationStorage(String name) {
+        return underlyingExecutionEngine.getAggregationStorage(name);
+    }
 
     @Override
     public <K extends Writable, V extends Writable> void map(String name, K key, V value) {

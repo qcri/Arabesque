@@ -6,6 +6,7 @@ import org.apache.hadoop.io.Writable;
 import java.io.Serializable;
 
 public class AggregationStorageMetadata<K extends Writable, V extends Writable> implements Serializable {
+    private Class<? extends AggregationStorage> aggStorageClass;
     private Class<K> keyClass;
     private Class<V> valueClass;
     private boolean persistent;
@@ -13,17 +14,23 @@ public class AggregationStorageMetadata<K extends Writable, V extends Writable> 
     private EndAggregationFunction<K, V> endAggregationFunction;
     private int numSplits;
 
-    public AggregationStorageMetadata(Class<K> keyClass, Class<V> valueClass,
+    public AggregationStorageMetadata(Class<? extends AggregationStorage> aggStorageClass,
+            Class<K> keyClass, Class<V> valueClass,
             boolean persistent,
             ReductionFunction<V> reductionFunction,
             EndAggregationFunction<K, V> endAggregationFunction,
             int numSplits) {
+        this.aggStorageClass = aggStorageClass; 
         this.keyClass = keyClass;
         this.valueClass = valueClass;
         this.persistent = persistent;
         this.reductionFunction = reductionFunction;
         this.endAggregationFunction = endAggregationFunction;
         this.numSplits = numSplits;
+    }
+
+    public Class<? extends AggregationStorage> getAggregationStorageClass() {
+        return aggStorageClass;
     }
 
     public Class<K> getKeyClass() {

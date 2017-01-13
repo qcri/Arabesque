@@ -18,6 +18,10 @@ case class VEmbedding(var words: Array[Int]) extends ResultEmbedding {
     this(null)
   }
 
+  def combinations(k: Int): Iterator[VEmbedding] = {
+    words.combinations(k).map (new VEmbedding(_))
+  }
+
   override def readFields(in: DataInput): Unit = {
     val wordsLen = in.readInt
     words = new Array[Int](wordsLen)

@@ -174,6 +174,21 @@ class ArabesqueGraph(
     config.set ("computation", "io.arabesque.gmlib.clique.CliqueComputation")
     cliques (config)
   }
+  
+  /** cliques percolation */
+  def cliquesPercolation(config: SparkConfiguration[_ <: Embedding]): ArabesqueResult[_] = {
+    resultHandler (config)
+  }
+
+  def cliquesPercolation(maxSize: Int): ArabesqueResult[_] = {
+    val config = new SparkConfiguration [VertexInducedEmbedding]
+    config.set ("input_graph_path", path)
+    config.set ("input_graph_local", local)
+    config.set ("output_path", s"${tmpPath}/cliques-${config.getUUID}")
+    config.set ("arabesque.clique.maxsize", maxSize)
+    config.set ("computation", "io.arabesque.gmlib.cliqueperc.CliquePercComputation")
+    cliques (config)
+  }
 
   /** api for custom computations **/
 
@@ -209,7 +224,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration[EdgeInducedEmbedding].withNewComputation (computation)
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
-    config.set ("output_path", s"${tmpPath}/custom-computation-${config.getUUID}")
+    config.set ("output_path", s"${tmpPath}/edge-computation-${config.getUUID}")
     customComputation [EdgeInducedEmbedding] (config)
   }
 
@@ -245,7 +260,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration[VertexInducedEmbedding].withNewComputation (computation)
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)
-    config.set ("output_path", s"${tmpPath}/custom-computation-${config.getUUID}")
+    config.set ("output_path", s"${tmpPath}/vertex-computation-${config.getUUID}")
     customComputation [VertexInducedEmbedding] (config)
   }
 

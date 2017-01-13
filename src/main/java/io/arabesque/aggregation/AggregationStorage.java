@@ -77,7 +77,7 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
     public Map<K, V> getMapping() {
         return Collections.unmodifiableMap(keyValueMap);
     }
-
+    
     public K getKey(K key) {
         if (keyValueMap.containsKey(key)) {
             return key;

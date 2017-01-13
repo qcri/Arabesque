@@ -1,5 +1,6 @@
 package io.arabesque.conf;
 
+import io.arabesque.aggregation.AggregationStorage;
 import io.arabesque.aggregation.AggregationStorageMetadata;
 import io.arabesque.aggregation.EndAggregationFunction;
 import io.arabesque.aggregation.reductions.ReductionFunction;
@@ -113,6 +114,9 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String CONF_INCREMENTAL_AGGREGATION = "arabesque.aggregation.incremental";
     public static final boolean CONF_INCREMENTAL_AGGREGATION_DEFAULT = false;
 
+    public static final String CONF_AGGREGATION_STORAGE_CLASS = "arabesque.aggregation.storage.class";
+    public static final String CONF_AGGREGATION_STORAGE_CLASS_DEFAULT = "io.arabesque.aggregation.AggregationStorage";
+
     protected static Configuration instance = null;
     private ImmutableClassesGiraphConfiguration giraphConfiguration;
 
@@ -128,6 +132,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     private Class<? extends OptimizationSetDescriptor> optimizationSetDescriptorClass;
     private Class<? extends Pattern> patternClass;
     private Class<? extends Computation> computationClass;
+    private Class<? extends AggregationStorage> aggregationStorageClass;
     private Class<? extends MasterComputation> masterComputationClass;
     private Class<? extends Embedding> embeddingClass;
 
@@ -420,25 +425,37 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     }
 
     public <K extends Writable, V extends Writable>
-    void registerAggregation(String name, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction, int numSplits) {
+    void registerAggregation(String name, Class<? extends AggregationStorage> aggStorageClass,
+          Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction, int numSplits) {
         if (aggregationsMetadata.containsKey(name)) {
             return;
         }
 
         AggregationStorageMetadata<K, V> aggregationMetadata =
-                new AggregationStorageMetadata<>(keyClass, valueClass, persistent, reductionFunction, endAggregationFunction, numSplits);
+                new AggregationStorageMetadata<>(aggStorageClass,
+                      keyClass, valueClass, persistent, reductionFunction, endAggregationFunction, numSplits);
 
         aggregationsMetadata.put(name, aggregationMetadata);
     }
 
     public <K extends Writable, V extends Writable>
     void registerAggregation(String name, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction) {
-    	registerAggregation(name, keyClass, valueClass, persistent, reductionFunction, null, defaultAggregatorSplits);
+    	registerAggregation(name, getAggregationStorageClass(), keyClass, valueClass, persistent, reductionFunction, null, defaultAggregatorSplits);
+    }
+    
+    public <K extends Writable, V extends Writable>
+    void registerAggregation(String name, Class<? extends AggregationStorage> aggStorageClass, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction) {
+    	registerAggregation(name, aggStorageClass, keyClass, valueClass, persistent, reductionFunction, null, defaultAggregatorSplits);
     }
 
     public <K extends Writable, V extends Writable>
     void registerAggregation(String name, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction) {
-    	registerAggregation(name, keyClass, valueClass, persistent, reductionFunction, endAggregationFunction, defaultAggregatorSplits);
+    	registerAggregation(name, getAggregationStorageClass(), keyClass, valueClass, persistent, reductionFunction, endAggregationFunction, defaultAggregatorSplits);
+    }
+
+    public <K extends Writable, V extends Writable>
+    void registerAggregation(String name, Class<? extends AggregationStorage> aggStorageClass, Class<K> keyClass, Class<V> valueClass, boolean persistent, ReductionFunction<V> reductionFunction, EndAggregationFunction<K, V> endAggregationFunction) {
+    	registerAggregation(name, aggStorageClass, keyClass, valueClass, persistent, reductionFunction, endAggregationFunction, defaultAggregatorSplits);
     }
 
     public <K extends Writable, V extends Writable> AggregationStorageMetadata<K, V> getAggregationMetadata(String name) {
@@ -451,6 +468,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public <O extends Embedding> Computation<O> createComputation() {
         return ReflectionUtils.newInstance(computationClass);
+    }
+    
+    public <K extends Writable, V extends Writable> AggregationStorage<K,V> createAggregationStorage(String name) {
+        return ReflectionUtils.newInstance (getAggregationMetadata(name).getAggregationStorageClass());
     }
 
     public String getOutputPath() {
@@ -475,6 +496,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public Class<? extends Computation> getComputationClass() {
         return computationClass;
+    }
+    
+    public Class<? extends AggregationStorage> getAggregationStorageClass() {
+        return (Class<? extends AggregationStorage>) getClass(CONF_AGGREGATION_STORAGE_CLASS, CONF_AGGREGATION_STORAGE_CLASS_DEFAULT);
     }
 
     public void setMasterComputationClass(Class<? extends MasterComputation> masterComputationClass) {
