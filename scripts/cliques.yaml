@@ -1,4 +1,4 @@
-computation: io.arabesque.examples.clique.CliqueComputation
+computation: io.arabesque.gmlib.clique.CliqueComputation
 input_graph_path: citeseer-single-label.graph
 output_path: Cliques_Output
 
