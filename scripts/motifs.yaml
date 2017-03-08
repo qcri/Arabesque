@@ -1,4 +1,4 @@
-computation: io.arabesque.examples.motif.MotifComputation
+computation: io.arabesque.gmlib.motif.MotifComputation
 input_graph_path: citeseer-single-label.graph
 output_path: Motifs_Output
 
