@@ -45,7 +45,7 @@ class ArabesqueContext(sc: SparkContext, logLevel: String = "info") extends Logg
     * @see [[https://github.com/viniciusvdias/Arabesque/blob/master/README.md Arabesque README]] for how to prepare the input file
     */
   def textFile(path: String, local: Boolean = false): ArabesqueGraph = {
-    new ArabesqueGraph (path, this, logLevel)
+    new ArabesqueGraph (path, local, this, logLevel)
   }
 
   /**
