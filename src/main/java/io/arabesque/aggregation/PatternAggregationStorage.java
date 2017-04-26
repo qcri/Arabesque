@@ -247,7 +247,7 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
     }
 
     // Thread-safe
-    private K getCanonicalPattern(K quickPattern) {
+    public K getCanonicalPattern(K quickPattern) {
         K canonicalPattern = quick2CanonicalMap.get(quickPattern);
 
         if (canonicalPattern == null) {

@@ -6,6 +6,7 @@ import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.EdgeInducedEmbedding;
 import io.arabesque.pattern.Pattern;
 import org.apache.log4j.Logger;
+import io.arabesque.aggregation.PatternAggregationStorage;
 
 public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding> {
     private static final Logger LOG = Logger.getLogger(FSMComputation.class);
@@ -66,7 +67,8 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
     @Override
     public void aggregationProcess(EdgeInducedEmbedding embedding) {
-        output(embedding.toOutputString() + " _ " + embedding.getPattern().toOutputString());
+        Pattern p = ((PatternAggregationStorage)previousStepAggregation).getCanonicalPattern(embedding.getPattern());
+        output(embedding.toOutputString() + " _ " + p.toOutputString() + " _ " + embedding.getPattern().toOutputString());
 //output(embedding);
     }
 }
