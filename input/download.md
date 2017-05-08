@@ -5,8 +5,8 @@ project: Arabesque
 # Github repo
 
 The source code can be downloaded from Github
-* [Giraph](http://github/qcri/arabesque.io)
-* [Spark](https://github.com/qcri/Arabesque-Spark.git)
+* [Giraph](https://github.com/qcri/Arabesque/tree/master)
+* [Spark](https://github.com/qcri/Arabesque/tree/spark-2.0)
 
 Arabesque is licensed under Apache 2.0.
 
