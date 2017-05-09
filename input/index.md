@@ -12,6 +12,10 @@ Benefits of Arabesque:
 - Support of large graphs with over a billion edges. It can process trillion of subgraphs in a commodity cluster.
 - Designed for Hadoop. Runs as an Apache Giraph Job.
  
+## News
+- We have a new Spark 2.0 based version [download page](download.html).
+- "Graph Data Mining with Arabesque", Sigmod 2017 demo [paper](down/smde47a-husseinA.pdf)
+
 ## Documentation
 
 Check our SOSP 2015 [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf) that describes the system.

@@ -17,7 +17,7 @@ project: Arabesque
 
 ## Helper scripts and configuration files
 You can find an execution-helper script and several configuration files for the different algorithms under the [scripts
-folder in the repository](https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/scripts):
+folder in the repository](https://github.com/qcri/Arabesque/tree/master/scripts):
 
 * `run_arabesque.sh` - Launcher for arabesque executions. Takes as parameters one or more yaml files describing the configuration of the execution to be run. Configurations are applied in sequence with configurations in subsequent yaml files overriding entries of previous ones.
   * `run_arabesque_giraph.sh` - particularly running Arabesque on top of Giraph.
@@ -31,7 +31,7 @@ folder in the repository](https://github.com/Qatar-Computing-Research-Institute/
 
 
 ## Steps
-1. Compile Arabesque with maven
+1. [Optional] Compile Arabesque with maven or Download the provided jar [download page](download.html)
   ```
   cd $ARABESQUE_HOME
   mvn -f pom.xml package -DskipTests
