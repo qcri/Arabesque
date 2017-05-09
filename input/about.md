@@ -16,6 +16,6 @@ Original SOSP Team:
 # External Collaborators
 The Spark version of Arabesque was developed in collaboration with colleaques from the Federal University of Minas Gerais, Brazil.
 
-* [Vinícius Vitor dos Santos Dias](http://add_me) A master student at Federal University of Minas Gerais, Brazil
+* [Vinícius Vitor dos Santos Dias](https://viniciusvdias.github.io/) A master student at Federal University of Minas Gerais, Brazil
 * [Wagner Meira](http://www.dcc.ufmg.br/~meira/) a Professor at Federal University of Minas Gerais, Brazil 
 * [Dorgival Guedes](http://homepages.dcc.ufmg.br/~dorgival/dokuwiki/doku.php) a Professor at Federal University of Minas Gerais, Brazil
