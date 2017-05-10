@@ -309,8 +309,5 @@ public class FSMMasterComputation extends MasterComputation {
 # Developing your own algorithms
 The easiest way to start developing your own graph mining algorithms on top of Arabesque is to clone our [Arabesque-Skeleton repository](https://github.com/Qatar-Computing-Research-Institute/Arabesque-Skeleton). This gives you a preconfigured Maven project with detailed instructions on how to get your code running in a cluster.
 
-# Javadocs
-Under construction
-
 [cliques]:https://en.wikipedia.org/wiki/Clique_problem
 [motifs]:https://en.wikipedia.org/wiki/Network_motif

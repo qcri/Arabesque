@@ -2,12 +2,13 @@ title: How to run Arabesque
 project: Arabesque
 ---
 # How to Run an Arabesque Job
+Arabesque can run as either an Apache Giraph Job or as a Spark Job (to be released in June 2017). Following we have the requirements for these systems.
 
 ## Requirements
 
 * Linux/Mac with 64-bit JVM
 * [A functioning installation of Hadoop2 with MapReduce (local or in a cluster)](http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/)
-* A functioning installation of Apache Spark (v1.6 with hadoop v2.6.0 or v2.0 with hadoop v2.6.5)
+* A functioning installation of Apache Spark (v1.6 with hadoop v2.6.0 or v2.0 with hadoop v2.6.5) if the user prefers to run Arabesque as a Spark job.
 * Apache Maven to be able to compile Arabesque `sudo apt-get install maven`
 * Make sure that Hadoop and Spark env variables are set properly:
   * JAVA_HOME
@@ -20,8 +21,8 @@ You can find an execution-helper script and several configuration files for the 
 folder in the repository](https://github.com/qcri/Arabesque/tree/master/scripts):
 
 * `run_arabesque.sh` - Launcher for arabesque executions. Takes as parameters one or more yaml files describing the configuration of the execution to be run. Configurations are applied in sequence with configurations in subsequent yaml files overriding entries of previous ones.
-  * `run_arabesque_giraph.sh` - particularly running Arabesque on top of Giraph.
-  * `run_arabesque_spark.sh` - particularly running Arabesque on top of Spark.
+  * `run_arabesque_giraph.sh` - Running Arabesque on top of Giraph.
+  * `run_arabesque_spark.sh` - Running Arabesque on top of Spark.
 * `cluster-<platform>.yaml` - File with configurations related to the cluster and, so, common to all algorithms: number of workers, number of threads per worker, number of partitions, etc. Platform can be either `giraph` or `spark`.
 * `<algorithm>.yaml` - Files with configurations related to particular algorithm executions using as input the [provided citeseer graph](https://github.com/Qatar-Computing-Research-Institute/Arabesque/tree/master/data):
   * `fsm.yaml` - Run frequent subgraph mining over the citeseer graph.

@@ -2,11 +2,14 @@ title: Download Arabesque
 project: Arabesque
 ---
 
+We are working on a new version of Arabesque (Spark version), to be released in June 2017.
+
+
 # Github repo
 
 The source code can be downloaded from Github
 * [Giraph](https://github.com/qcri/Arabesque/tree/master)
-* [Spark](https://github.com/qcri/Arabesque/tree/spark-2.0)
+<!-- * [Spark](https://github.com/qcri/Arabesque/tree/spark-2.0) -->
 
 Arabesque is licensed under Apache 2.0.
 
@@ -25,8 +28,9 @@ To run any of the example applications, refer to [our user guide](user_guide.htm
 
 If you want to start developing your own graph mining implementations on top of Arabesque, the easiest way to achieve this is by forking our [Arabesque-Skeleton](https://github.com/qcri/Arabesque-Skeleton) project and follow the instructions on the README file.
 
-# Arabesque tools
+<!-- # Arabesque tools
 
 * [Virtualbox image](https://qbox.qcri.org/s/YoiOdpf9rw2BGzq)
 * Docker image `docker run -it dsqcri/arabesque`
 * [Installation scripts](https://qbox.qcri.org/s/KtATb9N7ArQ83aw) to install a single node arabesque stack
+ -->

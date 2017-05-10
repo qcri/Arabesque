@@ -2,27 +2,25 @@ title: Arabesque, A System for Distributed Graph Mining
 project: Arabesque
 ---
 # Distributed Graph Mining, Made Easy
->Arabesque is a distributed graph mining system that enables quick and easy development of graph mining algorithms, while providing a scalable and efficient implementation that runs on top of Hadoop.
+>Arabesque is a distributed graph mining system that enables quick and easy development of graph mining algorithms, while providing a scalable and efficient implementation that runs on top of Hadoop/Spark.
 
 Benefits of Arabesque:
 - Simple intuitive API, tuned for Graph Mining Problems
 - Handles all the complexity of Graph Mining Algorithms transparently
-- Scalable to hundreds of machines
+- Highly Scalable
 - Efficient implementation: negligible overhead compared to equivalent centralized solutions
 - Support of large graphs with over a billion edges. It can process trillion of subgraphs in a commodity cluster.
-- Designed for Hadoop. Runs as an Apache Giraph Job.
+- Runs as an Apache Spark or Giraph Job.
  
 ## News
-- We have a new Spark 2.0 based version [download page](download.html).
-- "Graph Data Mining with Arabesque", Sigmod 2017 demo [paper](down/smde47a-husseinA.pdf)
+- We have a new Spark 2.0 based version(To be released in June 2017)[download page](download.html).
+- "Graph Data Mining with Arabesque", SIGMOD 2017 demo [paper](down/smde47a-husseinA.pdf)
 
 ## Documentation
 
 Check our SOSP 2015 [paper](http://sigops.org/sosp/sosp15/current/2015-Monterey/printable/093-teixeira.pdf) that describes the system.
 
 Follow our [programming guide](user_guide.html) to learn how to program graph mining applications on Arabesque. You can then try to [run your code](how_run.html)!
-
-We are also working on the system's Javadocs. We'll release them soon.
 
 ## How to Use
 Arabesque can be used in one of 2 ways:
