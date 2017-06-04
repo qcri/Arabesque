@@ -369,6 +369,14 @@ public class BasicMainGraph implements MainGraph {
 
                 while (tokenizer.hasMoreTokens()) {
                     Edge edge = parseEdge(tokenizer, vertexId);
+
+		    //halt if vertex self loop is found
+                    if( edge.getSourceId() == edge.getDestinationId()) {
+                        LOG.error("The input graph contains vertices having self loops. Arabesque does not support self loops");
+                        LOG.error("Self loop at vertex #: " + edge.getSourceId());
+                        throw new RuntimeException("Graphs with self loops are not supported");
+                    }
+
                     addEdge(edge);
                 }
 
