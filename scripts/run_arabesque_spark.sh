@@ -15,6 +15,25 @@ for config_file in "$@"; do
    cat $config_file >> $tempfile
 done
 
+echo ""
+echo "The aggregated config passed by the user:"
+echo "========================================="
+cat $tempfile
+echo ""
+
+# extract the driver memory
+driverMemory=1g
+maxResultSize=1g
+
+while IFS='' read -r line || [ -n "$line" ]; do
+	if echo "$line" | grep 'driver_memory'; then
+		driverMemory=${line#*: }
+	fi
+	if echo "$line" | grep 'max_result_size'; then
+		maxResultSize=${line#*: }
+	fi
+done < "$tempfile"
+
 # arabesque executable
 ARABESQUE_JAR_DIR="`pwd`"
 ARABESQUE_JAR=`find $ARABESQUE_JAR_DIR -maxdepth 1 -name "arabesque-*-jar-with-dependencies.jar" | head -1`
@@ -25,7 +44,7 @@ if [ -z "$ARABESQUE_JAR" ] ; then
 fi
 
 # submit the application to spark cluster
-$SPARK_HOME/bin/spark-submit --class io.arabesque.ArabesqueRunner $ARABESQUE_JAR -y $(basename $tempfile)
+$SPARK_HOME/bin/spark-submit --driver-memory $driverMemory --conf spark.driver.maxResultSize=$maxResultSize --verbose --class io.arabesque.ArabesqueRunner $ARABESQUE_JAR -y $(basename $tempfile)
 
 # remove the tempfile
 rm $tempfile

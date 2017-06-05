@@ -1,5 +1,9 @@
 execution_engine: spark
 spark_master: local[*]
-num_workers: 2
-num_compute_threads: 32
-output_active: no
+num_workers: 1
+num_compute_threads: 6
+worker_memory: 10g
+driver_memory: 8g
+max_result_size: 5g
+
+output_active: yes
