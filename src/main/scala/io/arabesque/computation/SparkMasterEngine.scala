@@ -5,6 +5,7 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.utils.Logging
+import io.arabesque.Compression._
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{NullWritable, Writable}
 import org.apache.spark.rdd.RDD
@@ -113,5 +114,7 @@ object SparkMasterEngine {
       new ODAGMasterEngineMP [E] (sc, config)
     case COMM_EMBEDDING =>
       new SparkEmbeddingMasterEngine [E] (sc, config)
+    case COMM_SIMPLE_STORAGE_SP =>
+      new SimpleStorageMasterEngineSP [E] (sc, config)
   }
 }

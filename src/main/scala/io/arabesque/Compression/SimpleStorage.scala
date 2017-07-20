@@ -8,19 +8,20 @@ import io.arabesque.computation.Computation
 import io.arabesque.embedding.Embedding
 import io.arabesque.odag.domain.{StorageReader, StorageStats}
 import io.arabesque.pattern.Pattern
+import io.arabesque.utils.Logging
 
 /**
   * Created by ehussein on 6/28/17.
   */
-abstract class BasicGRAMIStorage extends Writable with java.io.Externalizable {
-  protected var storage:GRAMIDomainStorage = _
+abstract class SimpleStorage extends Writable with java.io.Externalizable with Logging {
+  protected var storage:SimpleDomainStorage = _
   protected var serializeAsReadOnly: Boolean = false
 
-  protected def createDomainStorage(readOnly: Boolean): GRAMIDomainStorage =
+  protected def createDomainStorage(readOnly: Boolean): SimpleDomainStorage =
     if (readOnly)
-      new GRAMIDomainStorageReadOnly
+      new SimpleDomainStorageReadOnly
     else
-      new GRAMIDomainStorage
+      new SimpleDomainStorage
 
   def addEmbedding(embedding: Embedding): Unit
 
@@ -28,11 +29,11 @@ abstract class BasicGRAMIStorage extends Writable with java.io.Externalizable {
 
   def getReader(computation: Computation[Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int): StorageReader
 
-  def aggregate(embZip: BasicGRAMIStorage): Unit
+  def aggregate(embZip: SimpleStorage): Unit
 
-  def getNumberOfDomains: Int = storage.getNumberOfDomains
+  def getNumberOfDomains(): Int = storage.getNumberOfDomains
 
-  def getStorage: GRAMIDomainStorage = storage
+  def getStorage: SimpleDomainStorage = storage
 
   def getNumberOfEnumerations: Long = storage.getNumberOfEnumerations
 
@@ -46,7 +47,7 @@ abstract class BasicGRAMIStorage extends Writable with java.io.Externalizable {
 
   def getStats: StorageStats = storage.getStats
 
-  def getSerializeasWriteOnly: Boolean = serializeAsReadOnly
+  def getSerializeAsWriteOnly: Boolean = serializeAsReadOnly
 
   def setSerializeAsReadOnly(serializeAsReadOnly: Boolean): Unit = {
     this.serializeAsReadOnly = serializeAsReadOnly

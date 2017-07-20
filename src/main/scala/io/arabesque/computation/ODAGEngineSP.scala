@@ -19,7 +19,7 @@ import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
 import scala.reflect.ClassTag
 
 /**
@@ -139,7 +139,7 @@ case class ODAGEngineSP [E <: Embedding](
 
       override def next = nextRec
     }
-
+    //nextEmbeddingStash.getEzips.iterator.
     // filter and flush
     nextEmbeddingStash.getEzips.iterator.
       filter (odag => computation.aggregationFilter (odag.getPattern)).

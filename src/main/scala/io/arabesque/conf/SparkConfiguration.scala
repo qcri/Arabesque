@@ -332,6 +332,8 @@ object SparkConfiguration {
   val COMM_ODAG_SP = "odag_sp"              // pack embeddings with single-pattern odags
   val COMM_ODAG_MP = "odag_mp"              // pack embeddings with multi-pattern odags
   val COMM_EMBEDDING = "embedding"          // pack embeddings with compressed caches (e.g., LZ4)
+  val COMM_SIMPLE_STORAGE = "simple_storage"
+  val COMM_SIMPLE_STORAGE_SP = "simple_storage_sp"
 
   // hadoop conf
   val HADOOP_CONF = "hadoop_conf"

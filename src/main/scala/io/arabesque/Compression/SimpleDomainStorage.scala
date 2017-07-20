@@ -5,9 +5,14 @@ import io.arabesque.embedding.Embedding
 import io.arabesque.odag.domain.{Storage, StorageReader, StorageStats}
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.WriterSetConsumer
+import io.arabesque.utils.Logging
+import io.arabesque.conf.Configuration
+
 import java.io.{DataInput, DataOutput, IOException}
 import java.util
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors}
+
+import org.apache.commons.configuration.tree.xpath.ConfigurationNodePointerFactory
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -15,10 +20,12 @@ import scala.collection.JavaConversions._
 /**
   * Created by ehussein on 6/27/17.
   */
-class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
+class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
   protected var countsDirty: Boolean = false
   protected var keysOrdered: Boolean = false
-  protected var domainEntries: ArrayBuffer[util.Set[Int]] = _
+  //protected var domainEntries2: ArrayBuffer[util.Set[Int]] = _
+  protected var domainEntries: util.ArrayList[ConcurrentHashMap[Int, Boolean]] = _
+  protected var domainCounters: ArrayBuffer[Long] = _
   protected var domain0OrderedKeys: Array[Int] = _
   protected var numberOfDomains: Int = -1
   protected var writerSetConsumer: WriterSetConsumer = new WriterSetConsumer
@@ -28,6 +35,7 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
 
   def this(numberOfDomains: Int) {
     this()
+    setLogLevel(Configuration.get[Configuration[Embedding]]().getLogLevel)
     setNumberOfDomains(numberOfDomains)
   }
 
@@ -36,21 +44,27 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
     val numWords = embedding.getNumWords
     val words = embedding.getWords
 
+    logInfo(s"Trying to add embedding ${embedding.toOutputString}")
+
     if (domainEntries.size != numWords)
       throw new RuntimeException(s"Tried to add an embedding with wrong number of expected vertices (${domainEntries.size}) ${embedding.toString}")
 
     var i = 0
     while(i < numWords) {
-      domainEntries(i).add(words.getUnchecked(i))
+      domainEntries(i).put(words.getUnchecked(i), false)
       i += 1
     }
+
+    logInfo(s"Embedding ${embedding.toOutputString} has been added successfully.")
 
     countsDirty = true
     numEmbeddings += 1
   }
 
   @Override
-  def aggregate(otherDomainStorage: GRAMIDomainStorage): Unit = {
+  def aggregate(otherDomainStorage: SimpleDomainStorage): Unit = {
+    logInfo(s"Trying to aggregate DomainStorage: ${otherDomainStorage.toString}")
+
     val otherNumberOfDomains = otherDomainStorage.numberOfDomains
 
     if (numberOfDomains == -1)
@@ -61,7 +75,7 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
 
     var i = 0
     while(i < numberOfDomains) {
-      domainEntries(i).addAll(otherDomainStorage.domainEntries(i))
+      domainEntries(i).putAll(otherDomainStorage.domainEntries(i))
       i += 1
     }
 
@@ -79,10 +93,11 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
       return -1
     }
 
-    var num = 0
+    var num: Long = 1L
+    var hasEnums: Boolean = false
 
     if (domainEntries.size <= 0)
-      return num
+      return 0
 
 
     /*
@@ -90,15 +105,27 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
       num += domainEntry.getCounter
     }
     */
-    // number of enumerations is a stat that we ared going to implement its calc later
+    // number of enumerations is a stat that we are going to implement its calc later
+    domainEntries.foreach( domain => {
+      if(domain.size() != 0)
+        hasEnums = true
+      num *= domain.size()
+    })
 
-    num
+    if(!hasEnums)
+      0
+    else
+      num
   }
 
   @Override
   def clear(): Unit = {
     if (domainEntries != null) {
       domainEntries.foreach(domain => domain.clear())
+    }
+
+    if(domainCounters != null) {
+      domainCounters = new ArrayBuffer[Long](numberOfDomains)
     }
 
     domain0OrderedKeys = null
@@ -133,14 +160,14 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
     stats
   }
 
-  override def toString: String = toStringResume
+  override def toString: String = toStringDebug
 
   def getNumberOfDomains: Int = numberOfDomains
 
   @Override
   def toStringResume: String = {
     val sb = new StringBuilder
-    sb.append(s"DomainStorage{numEmbeddings=$numEmbeddings, enumerations=$getNumberOfEnumerations,")
+    sb.append(s"SimpleDomainStorage{numEmbeddings=$numEmbeddings, enumerations=$getNumberOfEnumerations,")
 
     var i = 0
     while(i < domainEntries.size) {
@@ -158,18 +185,20 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
 
   def toStringDebug: String = {
     val sb = new StringBuilder
-    sb.append(s"DomainStorage{numEmbeddings=$numEmbeddings, enumerations=$getNumberOfEnumerations,")
+    sb.append(s"SimpleDomainStorage{numEmbeddings=$numEmbeddings, enumerations=$getNumberOfEnumerations,")
 
     var i = 0
     while(i < domainEntries.size) {
-      sb.append(s" Domain[$i] size ${domainEntries.get(i).size}\n")
+      sb.append(s" Domain[$i] size ${domainEntries(i).size}\n")
 
-      if(domainEntries.get(i).size != 0)
+      if(domainEntries(i).size != 0)
         sb.append("[\n")
-      domainEntries.get(i).foreach(wordId => {
-        sb.append(s"$wordId\n")
+
+      domainEntries(i).foreach(entry => {
+        sb.append(s"${entry._1}\n") // print the wordId
       })
-      if(domainEntries.get(i).size != 0)
+
+      if(domainEntries(i).size != 0)
         sb.append("]\n")
 
       i += 1
@@ -206,7 +235,7 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
       var j = 0
 
       while(j < domainSize) {
-        domainEntries(i).add(dataInput.readInt())
+        domainEntries(i).put(dataInput.readInt(), dataInput.readBoolean())
         j += 1
       }
       i += 1
@@ -223,7 +252,12 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
 
     domainEntries.foreach(domain => {
       dataOutput.writeInt(domain.size())
-      domain.foreach(wordId => dataOutput.writeInt(wordId))
+      domain.foreach(domainEntry => {
+        // write wordId
+        dataOutput.writeInt(domainEntry._1)
+        // write associated value
+        dataOutput.writeBoolean(domainEntry._2)
+      })
     })
   }
 
@@ -243,8 +277,8 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
     domainEntries.foreach(domain => {
       util.Arrays.fill(numEntriesOfPartsInDomain, 0)
 
-      domain.foreach(wordId => {
-        partId = wordId % numParts
+      domain.foreach(domainEntry => {
+        partId = domainEntry._1 % numParts
         numEntriesOfPartsInDomain(partId) += 1
       })
 
@@ -257,15 +291,19 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
         i += 1
       }
 
-      domain.foreach(wordId => {
-        partId = wordId % numParts
-        outputs(partId).writeInt(wordId)
+      domain.foreach(domainEntry => {
+        partId = domainEntry._1 % numParts
+        // write wordId
+        outputs(partId).writeInt(domainEntry._1)
+        // write associated value
+        outputs(partId).writeBoolean(domainEntry._2)
       })
     })
   }
 
   protected def setNumberOfDomains(numberOfDomains: Int): Unit = this.synchronized{
-    if (numberOfDomains == this.numberOfDomains) return
+    if (numberOfDomains == this.numberOfDomains)
+      return
     ensureCanStoreNDomains(numberOfDomains)
     this.numberOfDomains = numberOfDomains
   }
@@ -274,18 +312,29 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
     if (nDomains < 0)
       return
     if (domainEntries == null)
-      domainEntries = new ArrayBuffer[util.Set[Int]] (nDomains)
+      domainEntries = new util.ArrayList[ConcurrentHashMap[Int, Boolean]](nDomains)
+
+    if (domainCounters == null)
+      domainCounters = new ArrayBuffer[Long](nDomains)
 
     val currentNumDomains = domainEntries.size
     val delta = nDomains - currentNumDomains
     var i = 0
+
     while (i < delta) {
-      domainEntries += ConcurrentHashMap.newKeySet()
+      domainEntries += new ConcurrentHashMap[Int, Boolean]
+      domainCounters += 0
       i += 1
+    }
+
+    if (delta > 0) {
+      var counts = new ArrayBuffer[Long](nDomains)
+      counts ++= domainCounters
+      domainCounters = counts
     }
   }
 
-  def getDomainEntries: ArrayBuffer[util.Set[Int]] = {
+  def getDomainEntries: util.ArrayList[ConcurrentHashMap[Int, Boolean]] = {
     domainEntries
   }
 
@@ -303,19 +352,51 @@ class GRAMIDomainStorage extends Storage[GRAMIDomainStorage] {
     pool.shutdown()
   }
 
+  // we need to implement recalculateCounts (i.e. recalcCounters)
   def finalizeConstruction(pool: ExecutorService, numParts: Int): Unit = this.synchronized {
     //recalculateCounts(pool, numParts)
+    recalculateCounters()
     orderDomain0Keys()
+  }
+
+  private def recalculateCounters(): Unit = {
+    if (!countsDirty || numberOfDomains == 0)
+      return
+
+    var i = numberOfDomains - 2
+
+    // update the counter of the last domain with one
+    domainCounters(numberOfDomains - 1) = 1
+
+    while(i >= 0) {
+      // since the counters are the cartesian products of the sizes of the following domains
+      // then currentCounter = lastDomain.counter * lastDomain.size
+      domainCounters(i) = domainCounters(i + 1) * domainEntries(i + 1).size()
+      i -= 1
+    }
+
+    countsDirty = false
   }
 
   private def orderDomain0Keys(): Unit = {
     if (domain0OrderedKeys != null && keysOrdered)
       return
-    domain0OrderedKeys = domainEntries.get(0).toArray[Int]
+    domain0OrderedKeys = domainEntries.get(0).keys().toArray[Int]
     util.Arrays.sort(domain0OrderedKeys)
     keysOrdered = true
   }
 
+  protected def getWordIdsOfDomain(domainId: Int) : Array[Int] = {
+    if(domainId >= numberOfDomains || domainId < 0)
+      throw new ArrayIndexOutOfBoundsException(s"Should not access domain $domainId while numOfDomain=$numberOfDomains")
+    val keys: ArrayBuffer[Int] = new ArrayBuffer[Int]()
+    val keysSet = domainEntries(domainId).keys()
+
+    while(keysSet.hasMoreElements)
+      keys.add(keysSet.nextElement())
+
+    keys.toArray
+  }
 
   /*
   private class RecalculateTask(var partId: Int, var totalParts: Int) extends Runnable {
