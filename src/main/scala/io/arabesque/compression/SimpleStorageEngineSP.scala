@@ -1,4 +1,4 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
 import java.io.{ByteArrayOutputStream, DataOutput, DataOutputStream, OutputStream}
 
@@ -16,8 +16,8 @@ import scala.collection.JavaConversions._
   */
 case class SimpleStorageEngineSP [E <: Embedding]
   (override val partitionId: Int, superstep: Int, accums: Map[String,Accumulator[_]],
-                                                   // TODO do not broadcast if user's code does not requires it
-                                                    previousAggregationsBc: Broadcast[_])
+   // TODO do not broadcast if user's code does not requires it
+   previousAggregationsBc: Broadcast[_])
   extends SimpleStorageEngine[E, SinglePatternSimpleStorage, SinglePatternSimpleStorageStash, SimpleStorageEngineSP[E]] {
 
   // stashes

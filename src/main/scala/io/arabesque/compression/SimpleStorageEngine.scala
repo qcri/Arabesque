@@ -1,4 +1,4 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
 import java.io._
 import java.util.concurrent.{ExecutorService, Executors}
@@ -7,6 +7,8 @@ import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
 import io.arabesque.computation._
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
+import io.arabesque.report._
+
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
@@ -33,6 +35,9 @@ trait SimpleStorageEngine [
   val accums: Map[String,Accumulator[_]]
   val previousAggregationsBc: Broadcast[_]
 
+  //val report: PartitionReport = new PartitionReport
+  //val reportsFilePath: String = "/home/ehussein/Downloads/ArabesqueTesting/compresssion/reports/"
+
   // update aggregations before flush
   def withNewAggregations(aggregationsBc: Broadcast[_]): C
 
@@ -40,6 +45,7 @@ trait SimpleStorageEngine [
   def flush: Iterator[(_,_)]
 
   // stashes: it is dependent of odag and stash implementation
+  //var previousEmbeddingStash: Stash = _
   var currentEmbeddingStashOpt: Option[Stash] = None
   var nextEmbeddingStash: Stash = _
   @transient var stashReader: EfficientReader[E] = _
@@ -70,9 +76,16 @@ trait SimpleStorageEngine [
   var numEmbeddingsProcessed: Long = 0
   var numEmbeddingsGenerated: Long = 0
   var numEmbeddingsOutput: Long = 0
+  var numSpuriousEmbeddings: Long = 0
 
   // TODO: tirar isso !!!
-  def init(): Unit = {}
+  def init(): Unit = {
+    /*
+    report.partitionId = this.partitionId
+    report.superstep = this.superstep
+    report.startTime = System.currentTimeMillis()
+    */
+  }
 
   // output
   @transient var embeddingWriterOpt: Option[SeqWriter] = None
@@ -87,6 +100,12 @@ trait SimpleStorageEngine [
     // make sure we close writers
     if (outputStreamOpt.isDefined) outputStreamOpt.get.close
     if (embeddingWriterOpt.isDefined) embeddingWriterOpt.get.close
+
+    // set the finish time for this partition computation
+    /*
+    report.endTime = System.currentTimeMillis()
+    report.saveReport(reportsFilePath)
+    */
   }
 
   /**
@@ -98,8 +117,11 @@ trait SimpleStorageEngine [
     logInfo (s"Computing partition(${partitionId}) of superstep ${superstep}")
     if (computed)
       throw new RuntimeException ("computation must be atomic")
+
     if (configuration.getEmbeddingClass() == null)
       configuration.setEmbeddingClass (computation.getEmbeddingClass())
+
+    //val stash = inboundStashes.to[SinglePatternSimpleStorageStash]
     expansionCompute (inboundStashes)
     flushStatsAccumulators
     computed = true
@@ -145,12 +167,28 @@ trait SimpleStorageEngine [
     * compressed embeddings
     * @return some embedding or none
     */
-  def getNextInboundEmbedding(
-                               remainingStashes: Iterator[Stash]): Option[E] = {
+  def getNextInboundEmbedding(remainingStashes: Iterator[Stash]): Option[E] = {
     if (!currentEmbeddingStashOpt.isDefined) {
+      // this if statement will be executed once we have finished reading a stash
+      /*
+      if(previousEmbeddingStash != null) {
+        previousEmbeddingStash.saveStorageReports(reportsFilePath+s"partition${partitionId}_superstep_${superstep}_report.txt")
+
+        // calc spurious
+        /*
+        val currentSpurious = previousEmbeddingStash.getNumberSpuriousEmbeddings
+        println(s"PartitionId=$partitionId, SpuriousEmbeddings(CurrentStash)=${currentSpurious}")
+        // accumulate to the partition' global accumulator
+        numSpuriousEmbeddings += currentSpurious
+        */
+      }
+      */
+
       if (remainingStashes.hasNext) {
 
         val currentEmbeddingStash = remainingStashes.next
+
+        //previousEmbeddingStash = currentEmbeddingStash
 
         currentEmbeddingStash.finalizeConstruction (
           SimpleStorageEngine.pool(numPartitionsPerWorker),
@@ -165,7 +203,9 @@ trait SimpleStorageEngine [
 
         currentEmbeddingStashOpt = Some(currentEmbeddingStash)
 
-      } else return None
+      }
+      else
+        return None
     }
 
     // new embedding was found
@@ -187,15 +227,21 @@ trait SimpleStorageEngine [
     def accumulate[T : ClassTag](it: T, accum: Accumulator[_]) = {
       accum.asInstanceOf[Accumulator[T]] += it
     }
-    logInfo (s"Embeddings processed: ${numEmbeddingsProcessed}")
+    logInfo (s"Embeddings processed: ${numEmbeddingsProcessed} by partition($partitionId) in SuperStep($superstep)")
     accumulate (numEmbeddingsProcessed,
       accums(SimpleStorageMasterEngine.AGG_EMBEDDINGS_PROCESSED))
-    logInfo (s"Embeddings generated: ${numEmbeddingsGenerated}")
+
+    logInfo (s"Embeddings generated: ${numEmbeddingsGenerated} by partition($partitionId) in SuperStep($superstep)")
     accumulate (numEmbeddingsGenerated,
       accums(SimpleStorageMasterEngine.AGG_EMBEDDINGS_GENERATED))
-    logInfo (s"Embeddings output: ${numEmbeddingsOutput}")
+
+    logInfo (s"Embeddings output: ${numEmbeddingsOutput} by partition($partitionId) in SuperStep($superstep)")
     accumulate (numEmbeddingsOutput,
       accums(SimpleStorageMasterEngine.AGG_EMBEDDINGS_OUTPUT))
+
+    logInfo (s"Spurious Embeddings: ${numSpuriousEmbeddings} by partition($partitionId) in SuperStep($superstep)")
+    accumulate (numSpuriousEmbeddings,
+      accums(SimpleStorageMasterEngine.AGG_SPURIOUS_EMBEDDINGS))
   }
 
   /**

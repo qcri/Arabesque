@@ -1,4 +1,4 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
 import io.arabesque.computation.Computation
 import io.arabesque.embedding.Embedding
@@ -6,13 +6,11 @@ import io.arabesque.odag.domain.{Storage, StorageReader, StorageStats}
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.WriterSetConsumer
 import io.arabesque.utils.Logging
-import io.arabesque.conf.Configuration
+import io.arabesque.report.StorageReport
 
-import java.io.{DataInput, DataOutput, IOException}
 import java.util
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors}
-
-import org.apache.commons.configuration.tree.xpath.ConfigurationNodePointerFactory
+import java.io._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -33,18 +31,42 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
   // how many valid embeddings this storage actually have ?
   protected var numEmbeddings: Long = 0L
 
+  // how many invalid embeddings this storage/partition generated
+  protected var numSpuriousEmbeddings: Long = 0L
+
+  //protected var report: StorageReport = new StorageReport
+
+
   def this(numberOfDomains: Int) {
     this()
-    setLogLevel(Configuration.get[Configuration[Embedding]]().getLogLevel)
+    //setLogLevel(Configuration.get[Configuration[Embedding]]().getLogLevel)
     setNumberOfDomains(numberOfDomains)
   }
+
+  /*
+  def initReport(): Unit = {
+    // init the report
+    report.numEnumerations = getNumberOfEnumerations
+    report.pruned = ArrayBuffer.fill(numberOfDomains)(0)
+    report.explored = ArrayBuffer.fill(numberOfDomains)(0)
+    report.domainSize = ArrayBuffer.fill(numberOfDomains)(0)
+  }
+
+  def finalizeReport() = {
+    var i = 0
+    while(i < numberOfDomains) {
+      report.domainSize(i) = domainEntries(i).size()
+      i += 1
+    }
+  }
+  */
 
   @Override
   def addEmbedding(embedding: Embedding): Unit = {
     val numWords = embedding.getNumWords
     val words = embedding.getWords
 
-    logInfo(s"Trying to add embedding ${embedding.toOutputString}")
+    //logInfo(s"Trying to add embedding ${embedding.toOutputString}")
 
     if (domainEntries.size != numWords)
       throw new RuntimeException(s"Tried to add an embedding with wrong number of expected vertices (${domainEntries.size}) ${embedding.toString}")
@@ -55,7 +77,7 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
       i += 1
     }
 
-    logInfo(s"Embedding ${embedding.toOutputString} has been added successfully.")
+    //logInfo(s"Embedding ${embedding.toOutputString} has been added successfully.")
 
     countsDirty = true
     numEmbeddings += 1
@@ -63,7 +85,7 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
 
   @Override
   def aggregate(otherDomainStorage: SimpleDomainStorage): Unit = {
-    logInfo(s"Trying to aggregate DomainStorage: ${otherDomainStorage.toString}")
+    //logInfo(s"Trying to aggregate DomainStorage: ${otherDomainStorage.toString}")
 
     val otherNumberOfDomains = otherDomainStorage.numberOfDomains
 
@@ -99,13 +121,12 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     if (domainEntries.size <= 0)
       return 0
 
-
     /*
     for (domainEntry <- domainEntries.get(0).values) {
       num += domainEntry.getCounter
     }
     */
-    // number of enumerations is a stat that we are going to implement its calc later
+    // numOfEnums is the cartesian product of domains sizes
     domainEntries.foreach( domain => {
       if(domain.size() != 0)
         hasEnums = true
@@ -113,7 +134,7 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     })
 
     if(!hasEnums)
-      0
+      -1
     else
       num
   }
@@ -164,6 +185,8 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
 
   def getNumberOfDomains: Int = numberOfDomains
 
+  def getNumberOfEmbeddings: Long = numEmbeddings
+
   @Override
   def toStringResume: String = {
     val sb = new StringBuilder
@@ -195,7 +218,7 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
         sb.append("[\n")
 
       domainEntries(i).foreach(entry => {
-        sb.append(s"${entry._1}\n") // print the wordId
+        sb.append(s"${entry._1} ") // print the wordId
       })
 
       if(domainEntries(i).size != 0)
@@ -399,23 +422,93 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
   }
 
   /*
-  private class RecalculateTask(var partId: Int, var totalParts: Int) extends Runnable {
-    private var domain = 0
-
-    def setDomain(domain: Int): Unit = {
-      this.domain = domain
-    }
-
-    override def run(): Unit = {
-      val currentDomain = domainEntries.get(domain)
-      val followingDomain = domainEntries.get(domain + 1)
-
-      currentDomain.foreach(wordId => {
-        if((wordId % totalParts) == partId) {
-          // do nothing since this is grami
-        }
-      })
-    }
+  def getStorageReport(): StorageReport = {
+    finalizeReport()
+    report
   }
   */
+
+  def printAllEnumerations(filePath: String): Unit = {
+
+    println("Class Name = " + this.getClass.getName)
+    if (countsDirty) {
+      println("Could not print enumerations since counts is dirty")
+      countsDirty = false
+      //return
+    }
+    else
+      println(s"Printing Storage to $filePath")
+
+    val numOfEnums = getNumberOfEnumerations
+    val enums = Array.ofDim[Int](numOfEnums.toInt, numberOfDomains)
+
+    var enumCounter = 0
+    var domainCounter = 0
+
+    def generateEnums(domainNum: Int, embedding: Array[Int]): Unit = {
+      if(domainNum == numberOfDomains) {
+        enums(enumCounter) = embedding.clone()
+        enumCounter += 1
+        return
+      }
+
+      val keys = getWordIdsOfDomain(domainNum).sorted
+      keys.foreach(key => {
+        embedding(domainNum) = key
+        generateEnums(domainNum + 1, embedding)
+      })
+    }
+
+    val arr: Array[Int] = new Array[Int](numberOfDomains)
+    generateEnums(0, arr)
+
+    val pw = new PrintWriter(new File(filePath))
+
+    pw.println(s"NumOfEnums=$numOfEnums")
+    pw.println(s"NumOfDomains = $numberOfDomains")
+    var x = 0
+    domainEntries.foreach(domain => {
+      pw.println(s"Domain $x Size = ${domain.size()}")
+      getWordIdsOfDomain(x).sorted.foreach(pw.println)
+      x += 1
+    })
+
+    enumCounter = 0
+    while(enumCounter < numOfEnums) {
+      domainCounter = 0
+      pw.print(s"E$enumCounter ")
+
+      while(domainCounter < numberOfDomains) {
+        pw.print(enums(enumCounter)(domainCounter))
+        domainCounter += 1
+
+        if(domainCounter < numberOfDomains)
+          pw.print(" ")
+      }
+
+      pw.println()
+      enumCounter += 1
+    }
+
+    pw.close()
+
+    countsDirty = true
+  }
+
+  // how many spurious embeddings this storage have ?
+  def getNumberSpuriousEmbeddings: Long = {
+    val countsAreDirty = countsDirty
+    if (countsAreDirty) {
+      countsDirty = false
+    }
+
+    val sprs = numSpuriousEmbeddings//getNumberOfEnumerations - numEmbeddings
+
+    if(countsAreDirty)
+      countsDirty = true
+    else
+      countsDirty = false
+
+    sprs
+  }
 }

@@ -1,4 +1,6 @@
-package io.arabesque.Compression
+package io.arabesque.compression
+
+import java.nio.file.Paths
 
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
 import io.arabesque.computation.{MasterComputation, SparkMasterEngine}
@@ -33,6 +35,9 @@ C <: SimpleStorageEngine[E,O,S,C]
   // sub-classes must implement
   def config: SparkConfiguration[E]
 
+  var reportsFilePath: String = _
+  var generateReports: Boolean = false
+
   import SimpleStorageMasterEngine._
 
   // testing
@@ -64,6 +69,12 @@ C <: SimpleStorageEngine[E,O,S,C]
         )
     }
 
+    // set reports path
+    if(config.getBoolean("reports_active", false)) {
+      reportsFilePath = config.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
+      generateReports = true
+    }
+
     // master computation
     masterComputation = config.createMasterComputation()
     masterComputation.setUnderlyingExecutionEngine(this)
@@ -81,6 +92,8 @@ C <: SimpleStorageEngine[E,O,S,C]
       sc.accumulator [Long] (0L, AGG_EMBEDDINGS_GENERATED))
     aggAccums.update (AGG_EMBEDDINGS_OUTPUT,
       sc.accumulator [Long] (0L, AGG_EMBEDDINGS_OUTPUT))
+    aggAccums.update (AGG_SPURIOUS_EMBEDDINGS,
+      sc.accumulator [Long] (0L, AGG_SPURIOUS_EMBEDDINGS))
 
     super.init()
   }
@@ -178,4 +191,5 @@ object SimpleStorageMasterEngine {
   val AGG_EMBEDDINGS_PROCESSED = "embeddings_processed"
   val AGG_EMBEDDINGS_GENERATED = "embeddings_generated"
   val AGG_EMBEDDINGS_OUTPUT = "embeddings_output"
+  val AGG_SPURIOUS_EMBEDDINGS = "embeddings_spurious"
 }

@@ -1,4 +1,4 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
 import java.util
 import java.util.concurrent.ExecutorService
@@ -33,6 +33,12 @@ abstract class SimpleStorageStash[O <: SimpleStorage, S <: SimpleStorageStash[O,
   def getEzips(): util.Collection[O]
 
   def clear(): Unit
+
+  def printAllEnumerations(filePath: String): Unit
+
+  //def saveStorageReports(filePath: String): Unit
+
+  def getNumberSpuriousEmbeddings(): Long
 }
 
 trait Reader[E <: Embedding] extends util.Iterator[E] {}

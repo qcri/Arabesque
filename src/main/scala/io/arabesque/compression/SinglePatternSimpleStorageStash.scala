@@ -1,4 +1,4 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
 import io.arabesque.conf.Configuration
 import io.arabesque.embedding.Embedding
@@ -25,20 +25,24 @@ class SinglePatternSimpleStorageStash
     this()
     this.compressedEmbeddingsByPattern = storageByPattern
     this.reusablePattern = Configuration.get[Configuration[Embedding]]().createPattern()
+    /*
     if(reusablePattern == null)
-      println("reusablePattern == null at SinglePatternSimpleStorageStash.createPattern()")
+      logInfo("reusablePattern == null at SinglePatternSimpleStorageStash.createPattern()")
     else
-      println("reusablePattern != null when SinglePatternSimpleStorageStash.createPattern()")
+      logInfo("reusablePattern != null when SinglePatternSimpleStorageStash.createPattern()")
+    */
   }
 
   @Override
   override def addEmbedding(embedding: Embedding): Unit = {
-    logInfo(s"Trying to add embedding ${embedding.toOutputString}")
+    //logInfo(s"Trying to add embedding ${embedding.toOutputString}")
     try {
+      /*
       if(reusablePattern == null)
-        println("reusablePattern == null when SinglePatternSimpleStorageStash.addEmbedding()")
+        logInfo("reusablePattern == null when SinglePatternSimpleStorageStash.addEmbedding()")
       else
-        println("reusablePattern != null when SinglePatternSimpleStorageStash.addEmbedding()")
+        logInfo("reusablePattern != null when SinglePatternSimpleStorageStash.addEmbedding()")
+      */
       reusablePattern.setEmbedding(embedding)
       var embeddingsZip = compressedEmbeddingsByPattern.get(reusablePattern)
       if (embeddingsZip == null) {
@@ -58,7 +62,7 @@ class SinglePatternSimpleStorageStash
 
   @Override
   override def aggregate(ezip: SinglePatternSimpleStorage): Unit = {
-    logInfo(s"Trying to aggregate stash ${ezip.toString}")
+    //logInfo(s"Trying to aggregate stash ${ezip.toString}")
     val pattern = ezip.getPattern
     val existingEzip = compressedEmbeddingsByPattern.get(pattern)
     if (existingEzip == null) // this is a new pattern storage
@@ -69,7 +73,7 @@ class SinglePatternSimpleStorageStash
 
   @Override
   override def aggregateUsingReusable(ezip: SinglePatternSimpleStorage): Unit = {
-    logInfo(s"Trying to aggregate stash.aggregateUsingReusable ${ezip.toString}")
+    //logInfo(s"Trying to aggregate stash.aggregateUsingReusable ${ezip.toString}")
     val pattern: Pattern = ezip.getPattern
 
     var existingEzip: SinglePatternSimpleStorage = compressedEmbeddingsByPattern.get(pattern)
@@ -86,8 +90,8 @@ class SinglePatternSimpleStorageStash
 
   @Override
   override def aggregateStash(value: SinglePatternSimpleStorageStash): Unit = {
-    logInfo(s"Trying to aggregate stash.aggregateStash ${value.toStringDebug}")
-    logInfo(s"With ${this.toStringDebug}")
+    //logInfo(s"Trying to aggregate stash.aggregateStash ${value.toStringDebug}")
+    //logInfo(s"With ${this.toStringDebug}")
     for (otherCompressedEmbeddingsByPatternEntry <- value.compressedEmbeddingsByPattern.entrySet) {
       val pattern = otherCompressedEmbeddingsByPatternEntry.getKey
       val otherCompressedEmbeddings = otherCompressedEmbeddingsByPatternEntry.getValue
@@ -218,6 +222,44 @@ class SinglePatternSimpleStorageStash
     }
 
     override def createInitialValue = new SinglePatternSimpleStorageStash
+  }
+
+  override def printAllEnumerations(filePath: String) = {
+    var i = 0
+    compressedEmbeddingsByPattern.values().foreach(storage => {
+      storage.printAllEnumerations(s"${filePath}_storage$i")
+      i += 1
+    })
+  }
+
+  /*
+  override def saveStorageReports(filePath: String) = {
+    var i = 0
+    val pw = new PrintWriter(new File(filePath))
+    val str:StringBuilder = new StringBuilder
+
+    compressedEmbeddingsByPattern.values().foreach(storage => {
+      val report = storage.getStorageReport()
+      report.storageId = i
+      str.append(report.toString())
+      i += 1
+    })
+
+    pw.println(s"Staaaaash:\n")
+    pw.println(str.toString())
+
+    pw.close()
+  }
+  */
+
+  def getNumberSpuriousEmbeddings: Long = {
+    var totalSpurious:Long = 0L
+
+    compressedEmbeddingsByPattern.values().foreach(storage => {
+      totalSpurious += storage.getNumberSpuriousEmbeddings
+    })
+
+    totalSpurious
   }
 }
 

@@ -1,11 +1,12 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
-import io.arabesque.embedding.Embedding
 import java.io.{ByteArrayInputStream, DataInputStream}
 
+import io.arabesque.embedding.Embedding
 import io.arabesque.aggregation.AggregationStorage
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.pattern.Pattern
+import io.arabesque.report._
 import org.apache.hadoop.io.Writable
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -29,6 +30,8 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
   extends SimpleStorageMasterEngine [E,SinglePatternSimpleStorage,SinglePatternSimpleStorageStash, SimpleStorageEngineSP[E]]{
 
   def config: SparkConfiguration[E] = _config
+
+  val enumsFilePath = "/home/ehussein/Downloads/ArabesqueTesting/compresssion/storage_enums/enums"
 
   def this(_sc: SparkContext, config: SparkConfiguration[E]) {
     this (config)
@@ -64,6 +67,24 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
     val startTime = System.currentTimeMillis
 
     do {
+      val masterReport: MasterReport = new MasterReport
+      masterReport.superstep = superstep
+      masterReport.startTime = System.currentTimeMillis
+
+      /*
+      if(superstep == 3) {
+        // Printing ODAGs at the beginning of each super step
+        println(s"Printing ODAGs at the beginning of super_step($superstep)")
+        var total:Long = 0L
+        aggregatedOdagsBc.value.foreach(odagStash => {
+          println("Pattern: " + odagStash._1.toOutputString)
+          println("ODAG: " + odagStash._2.toString)
+          total += odagStash._2.getNumberOfEmbeddings
+        })
+        println("Total number of embeddings = " + total)
+        //
+      }
+      */
 
       val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
@@ -152,19 +173,35 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
 
           /* maybe debug odag stats */
           if (log.isDebugEnabled) {
+            var totalStorageEstimate:Long = 0
+            var totalPatternEstimate:Long = 0
+
             for ((pattern,odag) <- aggregatedOdagsLocal.iterator) {
               val storage = odag.getStorage
               storage.finalizeConstruction
+
+              val storageEstimate = SizeEstimator.estimate (odag.getStorage)
+              val patternEstimate = SizeEstimator.estimate (pattern)
+
               logDebug (
-                s"Superstep{$superstep}" +
-                  s";Patterns{1}" +
-                  s";StorageEstimate{${SizeEstimator.estimate (odag.getStorage)}}" +
-                  s";PatternEstimate{${SizeEstimator.estimate (pattern)}}" +
-                  s";${storage.toStringResume}" +
-                  s";${storage.getStats}" +
-                  s";${storage.getStats.getSizeEstimations}"
+                s"\n\nSuperstep{$superstep}" +
+                  s";\nPatterns{1}" +
+                  s";\nStorageEstimate{${storageEstimate}}" +
+                  s";\nPatternEstimate{${patternEstimate}}" +
+                  s";\n\n${storage.toStringResume}" +
+                  s";\n\n${storage.getStats}" +
+                  s";\n\n${storage.getStats.getSizeEstimations}"
               )
+
+              totalStorageEstimate += storageEstimate
+              totalPatternEstimate += patternEstimate
             }
+
+            // print totals
+            logDebug(
+              s"\n\nTotalStorageEstimation=$totalStorageEstimate" +
+                s"\nTotalPatternEstimation=$totalPatternEstimate\n"
+            )
           }
 
         case Failure(e) =>
@@ -175,18 +212,46 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       // the exec engines have no use anymore, make room for the next round
       execEngines.unpersist()
 
-      // whether the user chose to customize master computation, executed every
-      // superstep
+      // whether the user chose to customize master computation, executed every superstep
       masterComputation.compute()
 
       val superstepFinish = System.currentTimeMillis
       logInfo (s"Superstep $superstep finished in ${superstepFinish - superstepStart} ms")
+      logInfo(s"${aggregatedOdagsBc.toString()}")
+
+      // print the stash
+      /*
+      if(superstep <= 4) {
+        val stash = new SinglePatternSimpleStorageStash(aggregatedOdagsBc.value)
+        stash.printAllEnumerations(s"${enumsFilePath}_SuperStep$superstep")
+      }
+      */
+      //
 
       // print stats
       aggAccums = aggAccums.map { case (name,accum) =>
         logInfo (s"Accumulator[$name]: ${accum.value}")
         (name -> sc.accumulator [Long] (0L, name))
       }
+
+      // calc storage size/summary for master report for this superstep
+      var i = 0
+      aggregatedOdagsBc.value.foreach(entry => {
+        val pattern = entry._1
+        val odag = entry._2
+        val storage = odag.getStorage
+        storage.finalizeConstruction
+        val storageEstimate = SizeEstimator.estimate (storage)
+        val patternEstimate = SizeEstimator.estimate (pattern)
+        masterReport.storageSize += storageEstimate
+        masterReport.patternSize += patternEstimate
+        masterReport.storageSummary += storage.toStringResume
+        i += 1
+      })
+
+      masterReport.endTime = System.currentTimeMillis()
+      if(generateReports)
+        masterReport.saveReport(reportsFilePath)
 
       superstep += 1
 

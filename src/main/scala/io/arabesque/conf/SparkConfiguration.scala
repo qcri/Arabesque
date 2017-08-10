@@ -198,10 +198,24 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    * should be already set by the user, or by the execution master engine which
    * has SparkContext.defaultParallelism as default
    */
-  def numPartitions: Int = getInteger("num_partitions",
-    getInteger("num_workers", 1) *
-      getInteger("num_compute_threads", Runtime.getRuntime.availableProcessors))
+  def numPartitions: Int = {
+    /*
+    val numOfWorkers = getInteger("num_workers", 1)
+    val numOfThreads = getInteger("num_compute_threads", Runtime.getRuntime.availableProcessors)
+    val numOfPartitions = getInteger("num_partitions", numOfWorkers * numOfThreads)
 
+    println(s"numOfWorkers=$numOfWorkers")
+    println(s"numOfThreads=$numOfThreads")
+    println(s"numOfPartitions=$numOfPartitions")
+
+    numOfPartitions
+    */
+    //*
+    getInteger("num_partitions",
+      getInteger("num_workers", 1) *
+        getInteger("num_compute_threads", Runtime.getRuntime.availableProcessors))
+    //*/
+  }
   /**
    * Given the total number of partitions in the cluster, this function returns
    * roughly the number of partitions per worker. We assume an uniform division
@@ -303,8 +317,12 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
   }
 
   def getValue(key: String, defaultValue: Any): Any = confs.get(key) match {
-    case Some(value) => value
-    case None => defaultValue
+    case Some(value) =>
+//      println(s"default value for $key is $defaultValue and the value found in configuration is $value")
+      value
+    case None =>
+//      println(s"Value for $key not found, replaced with $defaultValue")
+      defaultValue
   }
 
   override def getInteger(key: String, defaultValue: Integer) =

@@ -55,6 +55,8 @@ public class ArabesqueRunner implements Tool {
        );
        SparkContext sc = new SparkContext(config.sparkConf());
 
+       System.out.println("Communication strategy in CONFIG= " + config.getCommStrategy());
+
        SparkMasterEngine masterEngine = SparkMasterEngine$.MODULE$.apply (
              sc, config
        );

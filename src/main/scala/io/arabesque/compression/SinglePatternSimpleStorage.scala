@@ -1,4 +1,4 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
 import java.io.{DataInput, DataOutput, ObjectInput, ObjectOutput}
 
@@ -29,14 +29,14 @@ class SinglePatternSimpleStorage extends SimpleStorage {
   }
 
   override def addEmbedding(embedding: Embedding): Unit = {
-    logInfo(s"Trying to add embedding ${embedding.toOutputString}")
+    //logInfo(s"Trying to add embedding ${embedding.toOutputString}")
     if (pattern == null)
       throw new RuntimeException("Tried to add an embedding without letting embedding zip know about the pattern")
     storage.addEmbedding(embedding)
   }
 
   override def aggregate(embZip: SimpleStorage): Unit = {
-    logInfo(s"Trying to aggregate storage ${embZip.toString}")
+    //logInfo(s"Trying to aggregate storage ${embZip.toString}")
     if (embZip != null)
       storage.aggregate(embZip.asInstanceOf[SinglePatternSimpleStorage].storage)
   }

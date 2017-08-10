@@ -5,7 +5,7 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.utils.Logging
-import io.arabesque.Compression._
+import io.arabesque.compression._
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{NullWritable, Writable}
 import org.apache.spark.rdd.RDD

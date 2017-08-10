@@ -1,4 +1,4 @@
-package io.arabesque.Compression
+package io.arabesque.compression
 
 import org.apache.hadoop.io.Writable
 import java.io._
@@ -8,6 +8,7 @@ import io.arabesque.computation.Computation
 import io.arabesque.embedding.Embedding
 import io.arabesque.odag.domain.{StorageReader, StorageStats}
 import io.arabesque.pattern.Pattern
+import io.arabesque.report.StorageReport
 import io.arabesque.utils.Logging
 
 /**
@@ -37,6 +38,8 @@ abstract class SimpleStorage extends Writable with java.io.Externalizable with L
 
   def getNumberOfEnumerations: Long = storage.getNumberOfEnumerations
 
+  def getNumberOfEmbeddings: Long = storage.getNumberOfEmbeddings
+
   def finalizeConstruction(pool: ExecutorService, numParts: Int): Unit = {
     storage.finalizeConstruction(pool, numParts)
   }
@@ -57,4 +60,10 @@ abstract class SimpleStorage extends Writable with java.io.Externalizable with L
   def writeInParts(outputs: Array[DataOutput], hasContent: Array[Boolean]): Unit = {
     storage.write(outputs, hasContent)
   }
+
+  def printAllEnumerations(filePath: String) = storage.printAllEnumerations(filePath)
+
+  //def getStorageReport(): StorageReport = storage.getStorageReport()
+
+  def getNumberSpuriousEmbeddings: Long = storage.getNumberSpuriousEmbeddings
 }
