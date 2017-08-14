@@ -11,7 +11,6 @@ import io.arabesque.embedding.{EdgeInducedEmbedding, Embedding, VertexInducedEmb
 import io.arabesque.graph.{Edge, LabelledEdge, MainGraph}
 import io.arabesque.odag.domain.StorageReader
 import io.arabesque.pattern.{LabelledPatternEdge, Pattern, PatternEdge, PatternEdgeArrayList}
-import io.arabesque.report.StorageReport
 import io.arabesque.utils.collection.{IntArrayList, IntCollectionAddConsumer}
 
 import scala.util.control.Breaks._
@@ -24,7 +23,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
   //private val LOG = Logger.getLogger(classOf[SimpleDomainStorageReadOnly])
   //setLogLevel(Configuration.get[Configuration[Embedding]]().getLogLevel)
   setNumberOfDomains(numberOfDomains)
-  //initReport()
   //*
   @Override
   @throws(classOf[IOException])
@@ -46,6 +44,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     }
 
     countsDirty = true
+    initReport()
   }
   //*/
 
@@ -404,11 +403,11 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
                   if (invalid) {
                     numSpuriousEmbeddings += 1
-                    //report.pruned(domainOfLastEnumerationStep) += 1
+                    report.pruned(domainOfLastEnumerationStep) += 1
                     return false
                   }
                   else {
-                    //report.explored(domainOfLastEnumerationStep) += 1
+                    report.explored(domainOfLastEnumerationStep) += 1
                     if (enumerationStack.size != targetSize) {
                       //val oneee: DomainEntryReadOnly = newPossibilityForDomain0.asInstanceOf[DomainEntryReadOnly]
                       //enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers))
@@ -474,12 +473,12 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
                   lastEnumerationStep.asInstanceOf[DomainNot0EnumerationStep].pos = i
                   enumerationStack.push(lastEnumerationStep)
                   if (invalid) {
-                    //report.pruned(domainOfLastEnumerationStep) += 1
+                    report.pruned(domainOfLastEnumerationStep) += 1
                     numSpuriousEmbeddings += 1
                     return false
                   }
                   else {
-                    //report.explored(domainOfLastEnumerationStep) += 1
+                    report.explored(domainOfLastEnumerationStep) += 1
                     if (enumerationStack.size != targetSize) {
                       //val oneee: DomainEntryReadOnly = newPossibilityForLastDomain.asInstanceOf[DomainEntryReadOnly]
                       //enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers))

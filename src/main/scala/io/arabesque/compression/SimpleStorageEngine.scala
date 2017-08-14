@@ -1,6 +1,7 @@
 package io.arabesque.compression
 
 import java.io._
+import java.nio.file.Paths
 import java.util.concurrent.{ExecutorService, Executors}
 
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
@@ -8,14 +9,13 @@ import io.arabesque.computation._
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import io.arabesque.report._
-
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
 import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
-import scala.collection.mutable.Map
+import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.reflect.ClassTag
 
 /**
@@ -35,8 +35,10 @@ trait SimpleStorageEngine [
   val accums: Map[String,Accumulator[_]]
   val previousAggregationsBc: Broadcast[_]
 
-  //val report: PartitionReport = new PartitionReport
-  //val reportsFilePath: String = "/home/ehussein/Downloads/ArabesqueTesting/compresssion/reports/"
+  val report: PartitionReport = new PartitionReport
+  val storageReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
+  var reportsFilePath: String = _
+  var generateReports: Boolean = false
 
   // update aggregations before flush
   def withNewAggregations(aggregationsBc: Broadcast[_]): C
@@ -80,11 +82,16 @@ trait SimpleStorageEngine [
 
   // TODO: tirar isso !!!
   def init(): Unit = {
-    /*
+    // set reports path
+    if(configuration.getBoolean("reports_active", false)) {
+      reportsFilePath = configuration.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
+      generateReports = true
+    }
+    //*
     report.partitionId = this.partitionId
     report.superstep = this.superstep
     report.startTime = System.currentTimeMillis()
-    */
+    //*/
   }
 
   // output
@@ -101,11 +108,14 @@ trait SimpleStorageEngine [
     if (outputStreamOpt.isDefined) outputStreamOpt.get.close
     if (embeddingWriterOpt.isDefined) embeddingWriterOpt.get.close
 
+    //*
     // set the finish time for this partition computation
-    /*
     report.endTime = System.currentTimeMillis()
-    report.saveReport(reportsFilePath)
-    */
+    if(generateReports) {
+      report.storageReports = storageReports
+      report.saveReport(reportsFilePath)
+    }
+    //*/
   }
 
   /**
@@ -121,10 +131,15 @@ trait SimpleStorageEngine [
     if (configuration.getEmbeddingClass() == null)
       configuration.setEmbeddingClass (computation.getEmbeddingClass())
 
-    //val stash = inboundStashes.to[SinglePatternSimpleStorageStash]
     expansionCompute (inboundStashes)
     flushStatsAccumulators
     computed = true
+
+    // now get the report of each storage after the computation has finished
+/*    stashes.foreach(stash => {
+      storageReports.appendAll( stash.getStorageReports() )
+    })
+    report.storageReports = storageReports*/
   }
 
   /**
@@ -214,6 +229,8 @@ trait SimpleStorageEngine [
       // no more embeddings to be read from current stash, try to get another
       // stash by recursive call
     } else {
+      val finishedStash = currentEmbeddingStashOpt.get
+      storageReports.appendAll(finishedStash.getStorageReports())
       currentEmbeddingStashOpt = None
       getNextInboundEmbedding(remainingStashes)
     }

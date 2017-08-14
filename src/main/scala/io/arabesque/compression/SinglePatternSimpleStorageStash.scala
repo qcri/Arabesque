@@ -10,7 +10,12 @@ import java.io._
 import java.util
 import java.util._
 import java.util.concurrent.ExecutorService
+
+import io.arabesque.report.StorageReport
+
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
+import scala.runtime.Nothing$
 
 /**
   * Created by ehussein on 7/6/17.
@@ -25,24 +30,11 @@ class SinglePatternSimpleStorageStash
     this()
     this.compressedEmbeddingsByPattern = storageByPattern
     this.reusablePattern = Configuration.get[Configuration[Embedding]]().createPattern()
-    /*
-    if(reusablePattern == null)
-      logInfo("reusablePattern == null at SinglePatternSimpleStorageStash.createPattern()")
-    else
-      logInfo("reusablePattern != null when SinglePatternSimpleStorageStash.createPattern()")
-    */
   }
 
   @Override
   override def addEmbedding(embedding: Embedding): Unit = {
-    //logInfo(s"Trying to add embedding ${embedding.toOutputString}")
     try {
-      /*
-      if(reusablePattern == null)
-        logInfo("reusablePattern == null when SinglePatternSimpleStorageStash.addEmbedding()")
-      else
-        logInfo("reusablePattern != null when SinglePatternSimpleStorageStash.addEmbedding()")
-      */
       reusablePattern.setEmbedding(embedding)
       var embeddingsZip = compressedEmbeddingsByPattern.get(reusablePattern)
       if (embeddingsZip == null) {
@@ -232,25 +224,22 @@ class SinglePatternSimpleStorageStash
     })
   }
 
-  /*
-  override def saveStorageReports(filePath: String) = {
+  //*
+  override def getStorageReports(): ArrayBuffer[StorageReport] = {
     var i = 0
-    val pw = new PrintWriter(new File(filePath))
-    val str:StringBuilder = new StringBuilder
+    val storageReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
+    var report: StorageReport = null
 
     compressedEmbeddingsByPattern.values().foreach(storage => {
-      val report = storage.getStorageReport()
+      report = storage.getStorageReport()
       report.storageId = i
-      str.append(report.toString())
+      storageReports += report
       i += 1
     })
 
-    pw.println(s"Staaaaash:\n")
-    pw.println(str.toString())
-
-    pw.close()
+    storageReports
   }
-  */
+  //*/
 
   def getNumberSpuriousEmbeddings: Long = {
     var totalSpurious:Long = 0L

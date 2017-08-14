@@ -17,10 +17,10 @@ class PartitionReport extends EngineReport {
     pw.println(s"partition_runtime=$getRuntime")
 
     var i = 0
-    storageReports.foreach(storage => {
+    while(i < storageReports.length) {
       pw.println(s"Storage${i}Report=${storageReports(i)}")
       i += 1
-    })
+    }
 
     pw.close()
   }

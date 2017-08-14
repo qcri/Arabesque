@@ -6,8 +6,11 @@ import java.util.concurrent.ExecutorService
 import io.arabesque.computation.Computation
 import io.arabesque.embedding.Embedding
 import io.arabesque.odag.domain.StorageReader
+import io.arabesque.report.StorageReport
 import io.arabesque.utils.Logging
 import org.apache.hadoop.io.Writable
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * Created by ehussein on 7/5/17.
@@ -36,7 +39,7 @@ abstract class SimpleStorageStash[O <: SimpleStorage, S <: SimpleStorageStash[O,
 
   def printAllEnumerations(filePath: String): Unit
 
-  //def saveStorageReports(filePath: String): Unit
+  def getStorageReports(): ArrayBuffer[StorageReport]
 
   def getNumberSpuriousEmbeddings(): Long
 }
@@ -66,6 +69,7 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
     while (true) {
       if (currentReader == null) {
         if (stashIterator.hasNext)
+          // set currentReader = reader of next storage
           currentReader = stashIterator.next.getReader(computation, numPartitions, numBlocks, maxBlockSize)
       }
 

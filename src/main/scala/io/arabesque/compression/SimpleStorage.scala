@@ -63,7 +63,7 @@ abstract class SimpleStorage extends Writable with java.io.Externalizable with L
 
   def printAllEnumerations(filePath: String) = storage.printAllEnumerations(filePath)
 
-  //def getStorageReport(): StorageReport = storage.getStorageReport()
+  def getStorageReport(): StorageReport = storage.getStorageReport()
 
   def getNumberSpuriousEmbeddings: Long = storage.getNumberSpuriousEmbeddings
 }

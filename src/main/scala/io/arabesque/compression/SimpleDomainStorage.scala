@@ -34,7 +34,7 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
   // how many invalid embeddings this storage/partition generated
   protected var numSpuriousEmbeddings: Long = 0L
 
-  //protected var report: StorageReport = new StorageReport
+  protected var report: StorageReport = new StorageReport
 
 
   def this(numberOfDomains: Int) {
@@ -43,23 +43,29 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     setNumberOfDomains(numberOfDomains)
   }
 
-  /*
+  //*
   def initReport(): Unit = {
-    // init the report
-    report.numEnumerations = getNumberOfEnumerations
     report.pruned = ArrayBuffer.fill(numberOfDomains)(0)
     report.explored = ArrayBuffer.fill(numberOfDomains)(0)
     report.domainSize = ArrayBuffer.fill(numberOfDomains)(0)
+
+    /*
+    println("Initializing the storage report!")
+    println("Explored size = " + report.explored.length)
+    println("NumOfDomains=" + numberOfDomains)
+    println("ArrayBuffer.fill.size = " + ArrayBuffer.fill(numberOfDomains)(0).length)
+    */
   }
 
-  def finalizeReport() = {
+  def finalizeReport(): Unit = {
+    report.numEnumerations = getNumberOfEnumerations
     var i = 0
     while(i < numberOfDomains) {
       report.domainSize(i) = domainEntries(i).size()
       i += 1
     }
   }
-  */
+  //*/
 
   @Override
   def addEmbedding(embedding: Embedding): Unit = {
@@ -421,12 +427,12 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     keys.toArray
   }
 
-  /*
+  //*
   def getStorageReport(): StorageReport = {
     finalizeReport()
     report
   }
-  */
+  //*/
 
   def printAllEnumerations(filePath: String): Unit = {
 

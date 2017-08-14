@@ -9,9 +9,9 @@ import scala.collection.mutable.StringBuilder
   */
 class StorageReport {
   var numEnumerations: Long = 0
-  var domainSize: ArrayBuffer[Int] = new ArrayBuffer[Int]()
+  var domainSize: ArrayBuffer[Int] = null // new ArrayBuffer[Int]()
   var explored: ArrayBuffer[Int] = new ArrayBuffer[Int]()
-  var pruned: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
+  var pruned: ArrayBuffer[Int] = null // new ArrayBuffer[Int]()
   var storageId: Int = 0
 
   override def toString(): String = {
