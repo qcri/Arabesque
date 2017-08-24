@@ -11,10 +11,12 @@ import io.arabesque.embedding.{EdgeInducedEmbedding, Embedding, VertexInducedEmb
 import io.arabesque.graph.{Edge, LabelledEdge, MainGraph}
 import io.arabesque.odag.domain.StorageReader
 import io.arabesque.pattern.{LabelledPatternEdge, Pattern, PatternEdge, PatternEdgeArrayList}
+import io.arabesque.report.StorageReport
 import io.arabesque.utils.collection.{IntArrayList, IntCollectionAddConsumer}
 
 import scala.util.control.Breaks._
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * Created by ehussein on 6/27/17.
@@ -44,7 +46,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     }
 
     countsDirty = true
-    initReport()
+    //initReport()
   }
   //*/
 
@@ -92,6 +94,11 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     val TARGET_SUPER_STEP: Int = 3
     var isItTargetSuperStep: Boolean = false
 
+    protected var report: StorageReport = new StorageReport
+    protected var numCompleteEnumerationsVisited:Long = 0
+    // how many invalid embeddings this storage/partition generated
+    protected var numSpuriousEmbeddings: Long = 0L
+
     def this(pattern: Pattern, computation: Computation[Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int) = {
       this()
       this.pattern = pattern
@@ -126,7 +133,30 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
       if(DEBUG_CTOR && isItTargetSuperStep){
         printDebugInfo("ctor", "")
       }
+
+      report.initReport(numberOfDomains)
     }
+
+    //*
+/*    def initReport(): Unit = {
+      report.pruned = ArrayBuffer.fill(numberOfDomains)(0)
+      report.explored = ArrayBuffer.fill(numberOfDomains)(0)
+      report.domainSize = ArrayBuffer.fill(numberOfDomains)(0)
+    }*/
+
+    def finalizeReport(): Unit = {
+      report.numEnumerations = getNumberOfEnumerations
+      report.numCompleteEnumerationsVisited = numCompleteEnumerationsVisited
+      report.numSpuriousEmbeddings = numSpuriousEmbeddings
+      report.numActualEmbeddings = numEmbeddings
+
+      var i = 0
+      while(i < numberOfDomains) {
+        report.domainSize(i) = domainEntries(i).size()
+        i += 1
+      }
+    }
+    //*/
 
     def printDebugInfo(callerName: String, message: String) = {
       println(s"\nInside $callerName (partitionId=$partitionId) " +
@@ -169,7 +199,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
       case reusableVertexEmbedding: VertexInducedEmbedding =>
         val vertices: IntArrayList = reusableVertexEmbedding.getVertices
 
-        val isTargetEmbedding:Boolean = isItTargetEmbedding
+        val isTargetEmbedding:Boolean = false//isItTargetEmbedding
         val isTargetSuperStep:Boolean = (superStep == TARGET_SUPER_STEP)
         val callerName = "tryAddWord"
 
@@ -336,7 +366,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
     def getEnumerationWithStack(targetSize: Int): Boolean = {
       var currentId: Long = 0
-      val isTargetEmbedding:Boolean = isItTargetEmbedding
+      val isTargetEmbedding:Boolean = false//isItTargetEmbedding
       val callerName = "getEnumerationWithStack"
 
       breakable {
@@ -484,7 +514,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
                       //enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers))
                       enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, possibilitiesLastDomain))
                     }
-                    break //todo: break is not supported
+                    break
                   }
                 }
                 //currentId += newPossibilityForLastDomain.getCounter
@@ -497,12 +527,13 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
           // If enumeration stack is of the desired size
           if (enumerationStack.size == targetSize) { // And last element actually represents a valid element
             if (enumerationStack.peek.wordId >= 0) { // Get out of the loop
-              break //todo: break is not supported
+              break
             }
           }
         }
       }
 
+      numCompleteEnumerationsVisited += 1
       val isCompleteEmbeddingValid = testCompleteEmbedding
       val isEmbeddingOfTargetSize = reusableEmbedding.getNumWords == targetSize
 
@@ -520,7 +551,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     }
 
     def moveNext: Boolean = {
-      var isTargetEmbedding:Boolean = isItTargetEmbedding
+      var isTargetEmbedding:Boolean = false//isItTargetEmbedding
       var previousTargetEnumID:Long = -1
       val callerName = "moveNext"
 
@@ -543,7 +574,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
         val GetEnumStack = getEnumerationWithStack(domainEntries.size)
 
-        isTargetEmbedding = isItTargetEmbedding
+        isTargetEmbedding = false//isItTargetEmbedding
 
         if (GetEnumStack) {
           if(DEBUG_MOVE_NEXT && isTargetEmbedding && isItTargetSuperStep) {
@@ -584,7 +615,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     def getEnumBlockID(enumId: Long) = enumId / blockSize
 
     def getNextEnumerationId(enumId: Long): Long = {
-      val isTargetEmbedding:Boolean = isItTargetEmbedding
+      val isTargetEmbedding:Boolean = false//isItTargetEmbedding
       val callerName = "getNextEnumerationId"
 
       if(DEBUG_GetNextEnumerationID && isItTargetSuperStep && isTargetEmbedding) {
@@ -641,6 +672,11 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
     override def close(): Unit = {
       // Do nothing by default
+    }
+
+    def getStorageReport(): StorageReport = {
+      finalizeReport()
+      report
     }
 
     abstract class EnumerationStep {

@@ -7,10 +7,9 @@ import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.pattern.Pattern
-import io.arabesque.utils.SerializableConfiguration
-import org.apache.hadoop.fs.{FileSystem, Path}
+import io.arabesque.report.MasterReport
+
 import org.apache.hadoop.io.Writable
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Accumulator, SparkContext}
@@ -23,7 +22,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
-import scala.reflect.runtime.universe.TypeTag
 import scala.util.{Failure, Success}
 
 /**
@@ -71,6 +69,20 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
     val startTime = System.currentTimeMillis
 
     do {
+      val masterReport: MasterReport = new MasterReport
+      masterReport.superstep = superstep
+      masterReport.startTime = System.currentTimeMillis
+      /*
+      if(superstep == 4) {
+        // Printing ODAGs at the beginning of each super step
+        println(s"Printing ODAGs at the beginning of super_step($superstep)")
+        aggregatedOdagsBc.value.foreach(odagStash => {
+          println("Pattern: " + odagStash._1.toOutputString)
+          println("ODAG: " + odagStash._2.toString)
+        })
+        //
+      }
+      */
 
       val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
@@ -159,19 +171,35 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
 
           /* maybe debug odag stats */
           if (log.isDebugEnabled) {
+            var totalStorageEstimate:Long = 0
+            var totalPatternEstimate:Long = 0
+
             for ((pattern,odag) <- aggregatedOdagsLocal.iterator) {
               val storage = odag.getStorage
               storage.finalizeConstruction
+
+              val storageEstimate = SizeEstimator.estimate (odag.getStorage)
+              val patternEstimate = SizeEstimator.estimate (pattern)
+
               logDebug (
-                s"Superstep{${superstep}}" +
-                s";Patterns{1}" +
-                s";StorageEstimate{${SizeEstimator.estimate (odag.getStorage)}}" +
-                s";PatternEstimate{${SizeEstimator.estimate (pattern)}}" +
-                s";${storage.toStringResume}" +
-                s";${storage.getStats}" +
-                s";${storage.getStats.getSizeEstimations}"
+                s"\n\nSuperstep{$superstep}" +
+                  s";\nPatterns{1}" +
+                  s";\nStorageEstimate{${storageEstimate}}" +
+                  s";\nPatternEstimate{${patternEstimate}}" +
+                  s";\n\n${storage.toStringResume}" +
+                  s";\n\n${storage.getStats}" +
+                  s";\n\n${storage.getStats.getSizeEstimations}"
               )
+
+              totalStorageEstimate += storageEstimate
+              totalPatternEstimate += patternEstimate
             }
+
+            // print totals
+            logDebug(
+              s"\n\nTotalStorageEstimation=$totalStorageEstimate" +
+                s"\nTotalPatternEstimation=$totalPatternEstimate\n"
+            )
           }
 
         case Failure(e) =>
@@ -194,6 +222,25 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
         logInfo (s"Accumulator[$name]: ${accum.value}")
         (name -> sc.accumulator [Long] (0L, name))
       }
+
+      // calc storage size/summary for master report for this superstep
+      var i = 0
+      aggregatedOdagsBc.value.foreach(entry => {
+        val pattern = entry._1
+        val odag = entry._2
+        val storage = odag.getStorage
+        storage.finalizeConstruction
+        val storageEstimate = SizeEstimator.estimate (storage)
+        val patternEstimate = SizeEstimator.estimate (pattern)
+        masterReport.storageSize += storageEstimate
+        masterReport.patternSize += patternEstimate
+        masterReport.storageSummary += storage.toJSONString
+        i += 1
+      })
+
+      masterReport.endTime = System.currentTimeMillis()
+      if(generateReports)
+        masterReport.saveReport(reportsFilePath)
 
       superstep += 1
 
@@ -231,6 +278,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       execEngine.init()
       val stash = new SinglePatternODAGStash (aggregatedOdagsBc.value)
       execEngine.compute (Iterator (stash))
+      execEngine.saveReports()
       execEngine.finalize()
       Iterator(execEngine)
     }

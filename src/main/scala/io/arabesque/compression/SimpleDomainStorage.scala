@@ -30,12 +30,10 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
 
   // how many valid embeddings this storage actually have ?
   protected var numEmbeddings: Long = 0L
-
   // how many invalid embeddings this storage/partition generated
   protected var numSpuriousEmbeddings: Long = 0L
 
   protected var report: StorageReport = new StorageReport
-
 
   def this(numberOfDomains: Int) {
     this()
@@ -43,29 +41,10 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     setNumberOfDomains(numberOfDomains)
   }
 
-  //*
-  def initReport(): Unit = {
-    report.pruned = ArrayBuffer.fill(numberOfDomains)(0)
-    report.explored = ArrayBuffer.fill(numberOfDomains)(0)
-    report.domainSize = ArrayBuffer.fill(numberOfDomains)(0)
-
-    /*
-    println("Initializing the storage report!")
-    println("Explored size = " + report.explored.length)
-    println("NumOfDomains=" + numberOfDomains)
-    println("ArrayBuffer.fill.size = " + ArrayBuffer.fill(numberOfDomains)(0).length)
-    */
+  def getStorageReport(): StorageReport = {
+    //finalizeReport()
+    report
   }
-
-  def finalizeReport(): Unit = {
-    report.numEnumerations = getNumberOfEnumerations
-    var i = 0
-    while(i < numberOfDomains) {
-      report.domainSize(i) = domainEntries(i).size()
-      i += 1
-    }
-  }
-  //*/
 
   @Override
   def addEmbedding(embedding: Embedding): Unit = {
@@ -232,6 +211,28 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
 
       i += 1
     }
+    sb.append("}")
+
+    sb.toString
+  }
+
+  def toJSONString: String = {
+    val sb = new StringBuilder
+    sb.append(s"""{\"NumStoredEmbeddings\":$numEmbeddings, """)
+    sb.append(s"""\"NumEnumerations\":$getNumberOfEnumerations, """)
+    sb.append(s"""\"Domains_Sizes\": [""")
+
+    var i = 0
+    while(i < domainEntries.size) {
+      sb.append(s"""${domainEntries.get(i).size}""")
+
+      if (i != domainEntries.size - 1)
+        sb.append(", ")
+
+      i += 1
+    }
+
+    sb.append("]")
     sb.append("}")
 
     sb.toString
@@ -426,13 +427,6 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
 
     keys.toArray
   }
-
-  //*
-  def getStorageReport(): StorageReport = {
-    finalizeReport()
-    report
-  }
-  //*/
 
   def printAllEnumerations(filePath: String): Unit = {
 

@@ -28,6 +28,7 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG,Sin
     public SinglePatternODAGStash (Map<Pattern,SinglePatternODAG> odagsByPattern) {
         this.compressedEmbeddingsByPattern = odagsByPattern;
         this.reusablePattern = Configuration.get().createPattern();
+        compressedEmbeddingsByPattern.values();
     }
 
     @Override

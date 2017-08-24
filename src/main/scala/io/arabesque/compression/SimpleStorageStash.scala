@@ -55,6 +55,8 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
   private var currentReader: StorageReader = _
   private var currentPositionConsumed: Boolean = true
 
+  private var stashReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
+
   def this(stash: SimpleStorageStash[_ <: SimpleStorage, _], computation: Computation[_ <: Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int) = {
     this()
     this.numPartitions = numPartitions
@@ -94,6 +96,9 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
       // null and let the while begin again (simulate recursive call without the stack
       // building overhead).
       else {
+        val reader = currentReader.asInstanceOf[SimpleDomainStorageReadOnly#Reader]
+        stashReports += reader.getStorageReport()
+
         currentReader.close()
         currentReader = null
       }
@@ -110,4 +115,6 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
   override def remove(): Unit = {
     throw new UnsupportedOperationException
   }
+
+  def getStashStorageReports(): ArrayBuffer[StorageReport] = stashReports
 }

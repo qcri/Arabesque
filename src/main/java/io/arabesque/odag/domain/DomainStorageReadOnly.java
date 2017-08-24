@@ -15,6 +15,7 @@ import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
+import io.arabesque.report.StorageReport;
 import com.koloboke.collect.IntCollection;
 import com.koloboke.collect.set.hash.HashIntSet;
 import com.koloboke.collect.set.hash.HashIntSets;
@@ -26,6 +27,9 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
+
+import scala.Int;
+import scala.collection.JavaConversions.*;
 
 public class DomainStorageReadOnly extends DomainStorage {
     private static final Logger LOG = Logger.getLogger(DomainEntryReadOnly.class);
@@ -87,6 +91,13 @@ public class DomainStorageReadOnly extends DomainStorage {
         private EdgesConsumer edgesConsumer;
         private IntArrayList edgeIds;
 
+        private final boolean debugCtor = false;
+
+        protected StorageReport report = new StorageReport();
+        protected long numCompleteEnumerationsVisited = 0;
+        // how many invalid embeddings this storage/partition generated
+        protected long numSpuriousEmbeddings = 0L;
+
         public Reader(Pattern pattern, Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
             this.pattern = pattern;
             this.computation = computation;
@@ -111,6 +122,34 @@ public class DomainStorageReadOnly extends DomainStorage {
 
             edgesConsumer = new EdgesConsumer(Configuration.get().isGraphEdgeLabelled());
             edgesConsumer.setCollection(edgeIds);
+
+            if(debugCtor && computation.getStep() >= 2) {
+                System.out.println("\nInside ctor(partitionId=" + partitionId + " in SuperStep(" + computation.getStep() + " of SimpleDomainStorageReadOnly.Reader with \n{" +
+                        "\nnumberOfEnumerations=" + numberOfEnumerations +
+                        "\nnumberOfPartitions=" + numPartitions +
+                        "\nnumberOfBlocks=" + numBlocks +
+                        "\nmaxBlockSize=" + maxBlockSize +
+                        "\nblockSize=" + this.blockSize +
+                        "\n}");
+            }
+
+            report.initReport(numberOfDomains);
+        }
+
+        protected void finalizeReport() {
+            report.setNumEnumerations(numberOfEnumerations);
+            report.setNumCompleteEnumerationsVisited(numCompleteEnumerationsVisited);
+            report.setNumSpuriousEmbeddings(numSpuriousEmbeddings);
+            report.setNumActualEmbeddings(numEmbeddings);
+
+            for(int i = 0; i < numberOfDomains; ++i) {
+                report.setDomainSize(i, domainEntries.get(i).size());
+            }
+        }
+
+        public StorageReport getStorageReport() {
+            finalizeReport();
+            return report;
         }
 
         @Override
@@ -301,6 +340,7 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                 int domainWithPointers = enumerationStack.size() - 1;
 
+                // we are in the first domain: Domain0 -> Domain0EnumerationStep
                 // Need to increment index of first domain
                 if (domainWithPointers == -1) {
                     Domain0EnumerationStep domain0EnumerationStep = (Domain0EnumerationStep) lastEnumerationStep;
@@ -335,8 +375,12 @@ public class DomainStorageReadOnly extends DomainStorage {
                             enumerationStack.push(domain0EnumerationStep);
 
                             if (invalid) {
+                                numSpuriousEmbeddings += 1;
+                                report.incrementPruned(domainOfLastEnumerationStep,1);
                                 return false;
                             } else {
+                                report.incrementExplored(domainOfLastEnumerationStep,1);
+                                // add new DomainNot0EnumerationStep with wordId = -1, and all possible ids for next domain
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForDomain0;
 
@@ -351,7 +395,8 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                         currentId += newPossibilityForDomain0.getCounter();
                     }
-                } else {
+                } // we are now in one of the non-0 domains: Domain0 -> DomainNot0EnumerationStep
+                else {
                     DomainNot0EnumerationStep domainNot0EnumerationStep = (DomainNot0EnumerationStep) lastEnumerationStep;
 
                     ConcurrentHashMap<Integer, DomainEntry> possibilitiesLastDomain = domainEntries.get(domainOfLastEnumerationStep);
@@ -387,8 +432,11 @@ public class DomainStorageReadOnly extends DomainStorage {
                             enumerationStack.push(lastEnumerationStep);
 
                             if (invalid) {
+                                numSpuriousEmbeddings += 1;
+                                report.incrementPruned(domainOfLastEnumerationStep,1);
                                 return false;
                             } else {
+                                report.incrementExplored(domainOfLastEnumerationStep,1);
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForLastDomain;
                                     enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers()));
@@ -412,7 +460,15 @@ public class DomainStorageReadOnly extends DomainStorage {
                 }
             }
 
-            return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
+            numCompleteEnumerationsVisited += 1;
+            boolean isCompleteEmbeddingValid = testCompleteEmbedding();
+            boolean isEmbeddingOfTargetSize = reusableEmbedding.getNumWords() == targetSize;
+
+            if(!(isCompleteEmbeddingValid && isEmbeddingOfTargetSize))
+                numSpuriousEmbeddings += 1;
+
+            //return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
+            return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
         }
 
         public String toStringResume() {
@@ -468,6 +524,7 @@ public class DomainStorageReadOnly extends DomainStorage {
             return myPartition - owningPartition;
         }
 
+        // means this enum is in my block to handle
         public boolean isThisMyBlock(long blockId) {
             return blockId % numPartitions == partitionId;
         }

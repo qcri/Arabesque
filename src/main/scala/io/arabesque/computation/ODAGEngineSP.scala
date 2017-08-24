@@ -38,7 +38,17 @@ case class ODAGEngineSP [E <: Embedding](
 
   // stashes
   nextEmbeddingStash = new SinglePatternODAGStash
-  
+
+  def saveReports() = {
+    partitionReport.endTime = System.currentTimeMillis()
+    if(generateReports) {
+      partitionReport.partitionId = this.partitionId
+      partitionReport.superstep = this.superstep
+      partitionReport.storageReports = storageReports
+      partitionReport.saveReport(reportsFilePath)
+    }
+  }
+
   /**
    * Returns a new execution engine from this with the aggregations/computation
    * variables updated (immutability)

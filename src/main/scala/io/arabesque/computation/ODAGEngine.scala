@@ -1,25 +1,24 @@
 package io.arabesque.computation
 
 import java.io._
+import java.nio.file.Paths
 import java.util.concurrent.{ExecutorService, Executors}
 
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
-import io.arabesque.odag.domain.DomainEntry
 import io.arabesque.odag._
 import io.arabesque.odag.BasicODAGStash.EfficientReader
-import io.arabesque.pattern.Pattern
-import io.arabesque.utils.SerializableConfiguration
+import io.arabesque.report._
+
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.reflect.ClassTag
 
 trait ODAGEngine[
@@ -34,7 +33,13 @@ trait ODAGEngine[
   val superstep: Int
   val accums: Map[String,Accumulator[_]]
   val previousAggregationsBc: Broadcast[_]
- 
+
+  // partition report
+  val partitionReport: PartitionReport = new PartitionReport
+  val storageReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
+  var reportsFilePath: String = _
+  var generateReports: Boolean = false
+
   // update aggregations before flush
   def withNewAggregations(aggregationsBc: Broadcast[_]): C
 
@@ -45,7 +50,6 @@ trait ODAGEngine[
   var currentEmbeddingStashOpt: Option[S] = None
   var nextEmbeddingStash: S = _
   @transient var odagStashReader: EfficientReader[E] = _
-
   
   @transient lazy val computation: Computation[E] = {
     val computation = configuration.createComputation [E]
@@ -72,9 +76,20 @@ trait ODAGEngine[
   var numEmbeddingsProcessed: Long = 0
   var numEmbeddingsGenerated: Long = 0
   var numEmbeddingsOutput: Long = 0
+  var numSpuriousEmbeddings: Long = 0
 
   // TODO: tirar isso !!!
-  def init(): Unit = {}
+  def init(): Unit = {
+    // set reports path
+    if(configuration.getBoolean("reports_active", false)) {
+      reportsFilePath = configuration.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
+      reportsFilePath += "/Partitions/"
+      generateReports = true
+    }
+    partitionReport.partitionId = this.partitionId
+    partitionReport.superstep = this.superstep
+    partitionReport.startTime = System.currentTimeMillis()
+  }
 
   // output
   @transient var embeddingWriterOpt: Option[SeqWriter] = None
@@ -176,6 +191,7 @@ trait ODAGEngine[
     // no more embeddings to be read from current stash, try to get another
     // stash by recursive call
     } else {
+      storageReports.appendAll(odagStashReader.getStashStorageReports())
       currentEmbeddingStashOpt = None
       getNextInboundEmbedding(remainingStashes)
     }
@@ -198,6 +214,9 @@ trait ODAGEngine[
     logInfo (s"Embeddings output: ${numEmbeddingsOutput}")
     accumulate (numEmbeddingsOutput,
       accums(ODAGMasterEngine.AGG_EMBEDDINGS_OUTPUT))
+    logInfo (s"Spurious Embeddings: ${numSpuriousEmbeddings} by partition($partitionId) in SuperStep($superstep)")
+    accumulate (numSpuriousEmbeddings,
+      accums(ODAGMasterEngine.AGG_SPURIOUS_EMBEDDINGS))
   }
 
   /**

@@ -72,6 +72,7 @@ C <: SimpleStorageEngine[E,O,S,C]
     // set reports path
     if(config.getBoolean("reports_active", false)) {
       reportsFilePath = config.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
+      reportsFilePath += "/Master/"
       generateReports = true
     }
 

@@ -430,8 +430,18 @@ public class DomainStorage extends Storage<DomainStorage> {
 
         for (int i = 0; i < domainEntries.size(); i++) {
             sb.append("Domain[" + i + "] size " + domainEntries.get(i).size());
+
+            /* print the domain keys/wordIds
+            sb.append(" With keys = {\n");
+            Enumeration<Integer> keys = domainEntries.get(i).keys();
+            while(keys.hasMoreElements())
+                sb.append(keys.nextElement() + " ");
+            sb.append("}");
+            */
+
             if (i != domainEntries.size() - 1)
-               sb.append (", ");
+                //sb.append ("\n");
+                sb.append (", ");
         }
         sb.append("}");
 
@@ -487,6 +497,28 @@ public class DomainStorage extends Storage<DomainStorage> {
                 sb.append('\n');
             }
         }
+
+        return sb.toString();
+    }
+
+    public String toJSONString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"NumStoredEmbeddings\":" + numEmbeddings + ", ");
+        sb.append("\"NumEnumerations\":" + getNumberOfEnumerations() + ", ");
+        sb.append("\"Domains_Sizes\": [");
+
+        int i = 0;
+        while(i < domainEntries.size()) {
+            sb.append(domainEntries.get(i).size());
+
+            if (i != domainEntries.size() - 1)
+                sb.append(", ");
+
+            i += 1;
+        }
+
+        sb.append("]");
+        sb.append("}");
 
         return sb.toString();
     }

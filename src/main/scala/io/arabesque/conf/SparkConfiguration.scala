@@ -108,7 +108,7 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
       setMaster (sparkMaster)
         
     conf.set ("spark.executor.memory", getString("worker_memory", "1g"))
-    conf.set ("spark.driver.memory", getString("worker_memory", "1g"))
+    conf.set ("spark.driver.memory", getString("driver_memory", "1g"))
 
     sparkMaster match {
       case "yarn-client" | "yarn-cluster" | "yarn" =>

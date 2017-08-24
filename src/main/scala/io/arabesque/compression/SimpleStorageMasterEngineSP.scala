@@ -6,7 +6,8 @@ import io.arabesque.embedding.Embedding
 import io.arabesque.aggregation.AggregationStorage
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.pattern.Pattern
-import io.arabesque.report._
+import io.arabesque.report.MasterReport
+
 import org.apache.hadoop.io.Writable
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -245,7 +246,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
         val patternEstimate = SizeEstimator.estimate (pattern)
         masterReport.storageSize += storageEstimate
         masterReport.patternSize += patternEstimate
-        masterReport.storageSummary += storage.toStringResume
+        masterReport.storageSummary += storage.toJSONString
         i += 1
       })
 
@@ -289,6 +290,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       execEngine.init()
       val stash = new SinglePatternSimpleStorageStash(aggregatedOdagsBc.value)
       execEngine.compute (Iterator (stash))
+      execEngine.saveReports()
       execEngine.finalize()
       Iterator(execEngine)
     }
