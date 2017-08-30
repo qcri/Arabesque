@@ -10,8 +10,12 @@ import scala.collection.mutable
   */
 class MasterReport extends EngineReport {
   var storageSummary: ArrayBuffer[String] = new ArrayBuffer[String]()
-  var storageSize: ArrayBuffer[Long] = new ArrayBuffer[Long]()
   var patternSize: ArrayBuffer[Long] = new ArrayBuffer[Long]()
+  var storageSize: ArrayBuffer[Long] = new ArrayBuffer[Long]()
+  var domainEntriesCalculatedSize: ArrayBuffer[Long] = new ArrayBuffer[Long]()
+  var calculatedSize: ArrayBuffer[Long] = new ArrayBuffer[Long]()
+  var numberOfWordsInDomains: ArrayBuffer[Long] = new ArrayBuffer[Long]()
+  var numberOfWordsInConnections: ArrayBuffer[Long] = new ArrayBuffer[Long]()
 
   override def saveReport(path: String) = {
     val filePath = s"$path/MasterReport.txt"
@@ -56,8 +60,12 @@ class MasterReport extends EngineReport {
     var i = 0
     while(i < storageSize.length) {
       str.append(s"""{\"Summary\":${storageSummary(i)},""")
+      str.append(s"""\"NumberOfWordsInDomains\":${numberOfWordsInDomains(i)},""")
+      str.append(s"""\"NumberOfWordsInConnections\":${numberOfWordsInConnections(i)},""")
+      str.append(s"""\"PatternSize\":${patternSize(i)},""")
       str.append(s"""\"StorageSize\":${storageSize(i)},""")
-      str.append(s"""\"PatternSize\":${patternSize(i)}}""")
+      str.append(s"""\"DomainEntriesCalculatedSize\":${domainEntriesCalculatedSize(i)},""")
+      str.append(s"""\"CalculatedSize\":${calculatedSize(i)}}""")
 
       i += 1
 

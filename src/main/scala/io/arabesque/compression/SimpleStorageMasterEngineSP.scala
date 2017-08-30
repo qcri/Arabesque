@@ -162,6 +162,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       }
 
       odags = aggregatedOdags.values :: odags
+      println("odag.simpleStorage = ")
 
       val odagsFuture = Future { aggregatedOdags.collectAsMap  }
       // odags
@@ -180,6 +181,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
             for ((pattern,odag) <- aggregatedOdagsLocal.iterator) {
               val storage = odag.getStorage
               storage.finalizeConstruction
+//              odag.getStorage.getDomainEntries.foreach(domain => domain);
 
               val storageEstimate = SizeEstimator.estimate (odag.getStorage)
               val patternEstimate = SizeEstimator.estimate (pattern)
@@ -239,13 +241,18 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       var i = 0
       aggregatedOdagsBc.value.foreach(entry => {
         val pattern = entry._1
-        val odag = entry._2
-        val storage = odag.getStorage
+        //val odag = entry._2
+        // entry._2 is the odag
+        val storage = entry._2.getStorage
         storage.finalizeConstruction
         val storageEstimate = SizeEstimator.estimate (storage)
         val patternEstimate = SizeEstimator.estimate (pattern)
+        masterReport.numberOfWordsInDomains += storage.getNumberOfWordsInDomains()
+        masterReport.numberOfWordsInConnections += storage.getNumberOfWordsInConnections()
         masterReport.storageSize += storageEstimate
         masterReport.patternSize += patternEstimate
+        masterReport.calculatedSize += storage.getCalculatedSizeInBytes
+        masterReport.domainEntriesCalculatedSize += storage.getDomainEntriesCalculatedSizeInBytes
         masterReport.storageSummary += storage.toJSONString
         i += 1
       })

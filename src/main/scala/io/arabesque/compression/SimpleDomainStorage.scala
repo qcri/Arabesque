@@ -7,10 +7,11 @@ import io.arabesque.pattern.Pattern
 import io.arabesque.utils.WriterSetConsumer
 import io.arabesque.utils.Logging
 import io.arabesque.report.StorageReport
-
 import java.util
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors}
 import java.io._
+
+import org.apache.spark.util.SizeEstimator
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -45,6 +46,43 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     //finalizeReport()
     report
   }
+
+  def getCalculatedSizeInBytes(): Long = {
+    // size of variables such as numberOfDomains, countsDirty ... etc
+    var sizeInBytes: Long = 28
+
+    // calc size of domain0OrderedKeys
+    sizeInBytes += (domain0OrderedKeys.length * 4)
+
+    // calc size of domainCounters
+    sizeInBytes += (domainCounters.length * 8)
+
+    // calc size of domainEntries
+    sizeInBytes += getDomainEntriesCalculatedSizeInBytes()
+
+    // calc size of writerSetConsumer
+
+    sizeInBytes
+  }
+
+  def getDomainEntriesCalculatedSizeInBytes(): Long = {
+    var size: Long = 0
+    val recordSize: Long = 4 + 4
+
+    domainEntries.foreach(domain => {
+      size += (domain.size() * recordSize)
+    })
+
+    size
+  }
+
+  def getNumberOfWordsInDomains(): Long = {
+    var count = 0L
+    domainEntries.foreach(domain => count += domain.size())
+    count
+  }
+
+  def getNumberOfWordsInConnections(): Long = 0
 
   @Override
   def addEmbedding(embedding: Embedding): Unit = {

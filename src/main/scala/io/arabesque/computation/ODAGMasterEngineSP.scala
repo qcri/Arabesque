@@ -232,8 +232,12 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
         storage.finalizeConstruction
         val storageEstimate = SizeEstimator.estimate (storage)
         val patternEstimate = SizeEstimator.estimate (pattern)
+        masterReport.numberOfWordsInDomains += storage.getNumberOfWordsInDomains()
+        masterReport.numberOfWordsInConnections += storage.getNumberOfWordsInConnections()
         masterReport.storageSize += storageEstimate
         masterReport.patternSize += patternEstimate
+        masterReport.calculatedSize += storage.getCalculatedSizeInBytes
+        masterReport.domainEntriesCalculatedSize += storage.getDomainEntriesCalculatedSizeInBytes
         masterReport.storageSummary += storage.toJSONString
         i += 1
       })

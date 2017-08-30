@@ -1,7 +1,6 @@
 package io.arabesque.odag.domain;
 
 import io.arabesque.computation.Computation;
-import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.WriterSetConsumer;
@@ -14,6 +13,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
+
+import org.apache.spark.util.SizeEstimator;
+
 
 public class DomainStorage extends Storage<DomainStorage> {
     protected boolean countsDirty;
@@ -79,7 +81,78 @@ public class DomainStorage extends Storage<DomainStorage> {
         for (int i = 0; i < delta; ++i) {
             domainEntries.add(new ConcurrentHashMap<Integer, DomainEntry>());
         }
-    } 
+    }
+
+    public long getCalculatedSizeInBytes() {
+        // size of variables such as numberOfDomains, countsDirty ... etc
+        long sizeInBytes = 20;
+
+        // calc size of domain0OrderedKeys
+        sizeInBytes += (domain0OrderedKeys.length * 4);
+
+        // calc size of domainEntries
+        sizeInBytes += getDomainEntriesCalculatedSizeInBytes();
+
+        // calc size of writerSetConsumer
+
+        return sizeInBytes;
+    }
+
+    public long getDomainEntriesCalculatedSizeInBytes() {
+        long size = 0;
+
+        for(int i = 0 ; i < domainEntries.size() ; ++i) {
+            ConcurrentHashMap<Integer, DomainEntry> domain = domainEntries.get(i);
+
+            // size to store keys
+            size += (4 * domain.size());
+
+            // size to store values
+           Object[] entries = domain.values().toArray();
+
+            for(int j = 0 ; j < entries.length ; ++j) {
+                Object entry = entries[j];
+                if(entry instanceof DomainEntryReadOnly) {
+                    size += ((DomainEntryReadOnly)entry).getNumPointers() * 4;
+                    //System.out.println("DomainEntryReadOnly is used");
+                }
+                else {
+                    size += ((DomainEntrySet)entry).getNumPointers() * 8;
+                    //System.out.println("DomainEntrySet is used");
+                }
+            }
+        }
+
+        return size;
+    }
+
+    public long getNumberOfWordsInDomains() {
+        long count = 0;
+
+        for(int i = 0 ; i < domainEntries.size() ; ++i) {
+            ConcurrentHashMap<Integer, DomainEntry> domain = domainEntries.get(i);
+
+            // number of words in each domain
+            count += domain.size();
+        }
+
+        return count;
+    }
+
+    public long getNumberOfWordsInConnections() {
+        long count = 0;
+
+        for(int i = 0 ; i < domainEntries.size() ; ++i) {
+            Collection<DomainEntry> entries = domainEntries.get(i).values();
+
+            // number of connections in each domain entry
+            for(DomainEntry entry : entries) {
+                count += entry.getNumPointers();
+            }
+        }
+
+        return count;
+    }
 
     @Override
     public void addEmbedding(Embedding embedding) {
