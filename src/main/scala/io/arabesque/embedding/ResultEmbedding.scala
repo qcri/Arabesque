@@ -46,6 +46,9 @@ trait ResultEmbedding extends Writable {
     return true
   }
 
+  def toOutputString(): String = {
+    return "[" + words.mkString(", ") + "]"
+  }
 }
 
 object ResultEmbedding {
