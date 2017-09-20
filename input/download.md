@@ -2,8 +2,6 @@ title: Download Arabesque
 project: Arabesque
 ---
 
-We are working on a new version of Arabesque (Spark version), to be released in June 2017.
-
 
 # Github repo
 
