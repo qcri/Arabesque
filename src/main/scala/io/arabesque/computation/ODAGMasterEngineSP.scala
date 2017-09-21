@@ -84,6 +84,12 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       }
       */
 
+      // halt to record by yourkit
+      if(superstep == 5) {
+        println("### Sleeping at the beggining of the superstep ###")
+        Thread.sleep(60000)
+      }
+
       val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
 
@@ -163,6 +169,13 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       val odagsFuture = Future { aggregatedOdags.collectAsMap  }
       // odags
       Await.ready (odagsFuture, atMost = Duration.Inf)
+
+      // halt to record by yourkit
+      if(superstep == 5) {
+        println("### Sleeping before ODAGs aggregation ###")
+        Thread.sleep(60000)
+      }
+
       odagsFuture.value.get match {
         case Success(aggregatedOdagsLocal) =>
           logInfo (s"Number of aggregated ODAGs = ${aggregatedOdagsLocal.size}")
@@ -247,7 +260,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
         masterReport.saveReport(reportsFilePath)
 
       superstep += 1
-
+      //Thread.sleep(10000)
     } while (!sc.isStopped && !aggregatedOdagsBc.value.isEmpty) // while there are ODAGs to be processed
 
     val finishTime = System.currentTimeMillis
