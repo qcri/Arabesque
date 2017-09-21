@@ -18,8 +18,8 @@ clique finding, motif counting, frequent subgraph mining and triangle counting.
 
 This jar is ideal if you simply want to test the example applications or manually setup your own project.
 
-[Download the latest Giraph JAR](arabesque-1.0.3-BETA-jar-with-dependencies.jar)
-[Download the latest Spark JAR](arabesque-1.0.0-SPARK-jar-with-dependencies.jar)
+* [Download the latest Giraph JAR](https://qbox.qcri.org/s/ZpA823NgPQqDzB8)
+* [Download the latest Spark JAR](https://qbox.qcri.org/s/xvlvdDPGiEFYNjK)
 
 To run any of the example applications, refer to [our user guide](user_guide.html#how-to-run-an-arabesque-job).
 

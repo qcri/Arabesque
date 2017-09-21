@@ -13,8 +13,8 @@ Benefits of Arabesque:
 - Runs as an Apache Spark or Giraph Job.
  
 ## News
-- We have a new Spark 2.0 based version(To be released in June 2017)[download page](download.html).
-- "Graph Data Mining with Arabesque", SIGMOD 2017 demo [paper](down/smde47a-husseinA.pdf)
+- We have a new Spark 2.0 based version [download page](download.html).
+- "Graph Data Mining with Arabesque", SIGMOD 2017 demo [paper](http://ds.qcri.org/publications/2017-hussein-sigmod.pdf)
 
 ## Documentation
 
