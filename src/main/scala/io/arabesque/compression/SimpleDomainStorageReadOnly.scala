@@ -15,7 +15,7 @@ import io.arabesque.report.StorageReport
 import io.arabesque.utils.collection.{IntArrayList, IntCollectionAddConsumer}
 
 import scala.util.control.Breaks._
-import scala.collection.JavaConversions._
+//import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -39,13 +39,16 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
       var j = 0
 
       while(j < domainSize) {
-        domainEntries(i).put(dataInput.readInt(), dataInput.readBoolean())
+        domainEntries.get(i).put(dataInput.readInt(), dataInput.readBoolean())
         j += 1
       }
       i += 1
     }
 
     countsDirty = true
+
+    //isStorageInitialized = false
+    //initStorage()
     //initReport()
   }
   //*/
@@ -66,6 +69,35 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     throw new RuntimeException("Multi-pattern with SimpleStorage is not available")
   }
 
+  /*
+  // Efficient Storage
+  private var storage: Array[Array[Int]] = _
+  protected var isStorageInitialized: Boolean = false
+
+  def initStorage(): Unit = {
+    if(isStorageInitialized)
+      return
+
+    storage = new Array[Array[Int]](numberOfDomains)
+
+    var i = 0
+    while(i < numberOfDomains) {
+      val words: Array[Int] = Array.ofDim(domainEntries.get(i).size)
+      val keysSet = domainEntries.get(i).keys
+
+      var j = 0
+      while(keysSet.hasMoreElements) {
+        words(j) = keysSet.nextElement()
+        j += 1
+      }
+
+      storage(i) = words
+      i += 1
+    }
+    isStorageInitialized = true
+  }
+
+  */
   class Reader
     extends StorageReader {
     final private var mainGraph: MainGraph = _
@@ -135,14 +167,16 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
       }
 
       report.initReport(numberOfDomains)
+      //initStorage()
     }
 
-    //*
-/*    def initReport(): Unit = {
-      report.pruned = ArrayBuffer.fill(numberOfDomains)(0)
-      report.explored = ArrayBuffer.fill(numberOfDomains)(0)
-      report.domainSize = ArrayBuffer.fill(numberOfDomains)(0)
-    }*/
+    /*
+    protected def getWordIdsOfDomain(domainId: Int) : Array[Int] = {
+      if(domainId >= numberOfDomains || domainId < 0)
+        throw new ArrayIndexOutOfBoundsException(s"Should not access domain $domainId while numOfDomain=$numberOfDomains")
+      storage(domainId)
+    }
+    */
 
     def finalizeReport(): Unit = {
       report.numEnumerations = getNumberOfEnumerations
@@ -152,7 +186,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
       var i = 0
       while(i < numberOfDomains) {
-        report.domainSize(i) = domainEntries(i).size()
+        report.domainSize(i) = domainEntries.get(i).size()
         i += 1
       }
     }

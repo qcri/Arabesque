@@ -87,11 +87,12 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       }
       */
       // halt to record by yourkit
+      /*
       if(superstep == 4) {
         println("### Sleeping at the beggining of the superstep ###")
-        Thread.sleep(60000)
+        Thread.sleep(120000)
       }
-
+      */
 
       val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
@@ -175,10 +176,12 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       Await.ready (odagsFuture, atMost = Duration.Inf)
 
       // halt to record by yourkit
+      /*
       if(superstep == 4) {
         println("### Sleeping before ODAGs aggregation ###")
-        Thread.sleep(60000)
+        Thread.sleep(120000)
       }
+      */
 
       odagsFuture.value.get match {
         case Success(aggregatedOdagsLocal) =>
