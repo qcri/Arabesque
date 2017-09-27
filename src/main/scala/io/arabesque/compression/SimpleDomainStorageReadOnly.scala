@@ -47,8 +47,8 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
     countsDirty = true
 
-    //isStorageInitialized = false
-    //initStorage()
+    isStorageInitialized = false
+    initStorage()
     //initReport()
   }
   //*/
@@ -69,7 +69,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     throw new RuntimeException("Multi-pattern with SimpleStorage is not available")
   }
 
-  /*
+  //*
   // Efficient Storage
   private var storage: Array[Array[Int]] = _
   protected var isStorageInitialized: Boolean = false
@@ -97,7 +97,8 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     isStorageInitialized = true
   }
 
-  */
+  //*/
+
   class Reader
     extends StorageReader {
     final private var mainGraph: MainGraph = _
@@ -170,13 +171,13 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
       //initStorage()
     }
 
-    /*
+    //*
     protected def getWordIdsOfDomain(domainId: Int) : Array[Int] = {
       if(domainId >= numberOfDomains || domainId < 0)
         throw new ArrayIndexOutOfBoundsException(s"Should not access domain $domainId while numOfDomain=$numberOfDomains")
       storage(domainId)
     }
-    */
+    //*/
 
     def finalizeReport(): Unit = {
       report.numEnumerations = getNumberOfEnumerations
@@ -411,7 +412,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
           currentId = lastEnumerationStep.currentId
 
           if (wordIdOfLastEnumerationStep >= 0) {
-            //currentId += domainEntries(domainOfLastEnumerationStep).get(wordIdOfLastEnumerationStep).getCounter
             currentId += domainCounters(domainOfLastEnumerationStep)
             reusableEmbedding.removeLastWord()
           }
@@ -433,16 +433,12 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
             var currentIndex: Int = domain0EnumerationStep.index
 
-            //val domain0: ConcurrentHashMap[Int, Boolean] = domainEntries.get(0)
-
             currentIndex += 1
             breakable {
               while (currentIndex < domain0OrderedKeys.length) {
                 val wordId: Int = domain0OrderedKeys(currentIndex)
-                //val newPossibilityForDomain0: DomainEntry = domain0.get(wordId)
                 val domain0Counter: Long = domainCounters(0)
-                //if ((domainOfLastEnumerationStep < targetSize - 1 && currentId + newPossibilityForDomain0.getCounter > targetEnumId)
-                //  || (domainOfLastEnumerationStep == targetSize - 1 && currentId == targetEnumId)) {
+
                 if ((domainOfLastEnumerationStep < targetSize - 1 && currentId + domain0Counter > targetEnumId)
                   || (domainOfLastEnumerationStep == targetSize - 1 && currentId == targetEnumId)) {
                   var invalid: Boolean = false
@@ -452,7 +448,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
                   // so skip everything and return false since enumId was associated
                   // with an invalid embedding.
                   if (!tryAddWord(wordId)) {
-                    //targetEnumId = currentId + newPossibilityForDomain0.getCounter - 1
                     targetEnumId = currentId + domain0Counter - 1
                     invalid = true
                     // Add word anyway. Embedding will be invalid with this word but it will be
@@ -483,7 +478,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
                     break
                   }
                 }
-                //currentId += newPossibilityForDomain0.getCounter
                 currentId += domainCounters(0)
                 currentIndex += 1
               }
@@ -497,10 +491,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
             }
             // we are now in one of the non-0 domains: Domain0 -> DomainNot0EnumerationStep
             val domainNot0EnumerationStep: DomainNot0EnumerationStep = lastEnumerationStep.asInstanceOf[DomainNot0EnumerationStep]
-            //val possibilitiesLastDomain: util.Set[Int] = domainEntries(domainOfLastEnumerationStep)
-            //val possibilitiesLastDomain: ConcurrentHashMap[Integer, Boolean] = domainEntries(domainOfLastEnumerationStep)
 
-            //val possibilitiesLastDomain: Array[Int] = getWordIdsOfDomain(domainOfLastEnumerationStep)
             val possibilitiesLastDomain: Array[Int] = {
               if(domainOfLastEnumerationStep + 1 ==  numberOfDomains)
                 new Array[Int](0)
@@ -515,19 +506,12 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
             breakable {
               while (i < pointers.length) {
                 val newWordId: Int = pointers(i)
-                //val newPossibilityForLastDomain: DomainEntry = possibilitiesLastDomain.get(newWordId)
-                //val newPossibilityForLastDomain: Array[Int] = getWordIdsOfDomain(domainOfLastEnumerationStep + 1)
                 val numOfNewPossibilities: Long = domainCounters(domainOfLastEnumerationStep)
 
-                //assert(newPossibilityForLastDomain != null)
-
-                //if ((domainOfLastEnumerationStep < targetSize - 1 && currentId + newPossibilityForLastDomain.getCounter > targetEnumId)
-                //  || (domainOfLastEnumerationStep == targetSize - 1 && currentId == targetEnumId)) {
                 if ((domainOfLastEnumerationStep < targetSize - 1 && currentId + numOfNewPossibilities > targetEnumId)
                   || (domainOfLastEnumerationStep == targetSize - 1 && currentId == targetEnumId)) {
                   var invalid: Boolean = false
                   if (!tryAddWord(newWordId)) {
-                    //targetEnumId = currentId + newPossibilityForLastDomain.getCounter - 1
                     targetEnumId = currentId + numOfNewPossibilities - 1
                     invalid = true
                     reusableEmbedding.addWord(newWordId)
@@ -551,7 +535,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
                     break
                   }
                 }
-                //currentId += newPossibilityForLastDomain.getCounter
                 currentId += numOfNewPossibilities
 
                 i += 1
@@ -585,7 +568,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     }
 
     def moveNext: Boolean = {
-      var isTargetEmbedding:Boolean = false//isItTargetEmbedding
+      var isTargetEmbedding:Boolean = false
       var previousTargetEnumID:Long = -1
       val callerName = "moveNext"
 
