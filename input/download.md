@@ -37,7 +37,7 @@ If you want to start using Arabesque on a single machine without first having to
 
 # Reproducing the results of the SOSP'15 paper
 
-After the SOSP publication, we have substantially refactored the codebase in order to open source it and make it more easily readable. The result is the version of Arabesque available in the website. While cleaner in terms of code, this version leaves some performance on the table compared to the SOSP prototype. If you want to make a performance comparison and reproduce the performance numbers of the SOSP paper, you can download the original prototype [here](https://www.dropbox.com/s/7utts0o2atotq6t/Qanat.zip?dl=0)".
+After the SOSP publication, we have substantially refactored the codebase in order to open source it and make it more easily readable. The result is the version of Arabesque available in the website. While cleaner in terms of code, this version leaves some performance on the table compared to the SOSP prototype. If you want to make a performance comparison and reproduce the performance numbers of the SOSP paper, you can download the original prototype [here](https://www.dropbox.com/s/7utts0o2atotq6t/Qanat.zip?dl=0).
 
 The prototype is called Qanat. The archive is organized as following:
 
