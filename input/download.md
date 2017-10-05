@@ -2,6 +2,13 @@ title: Download Arabesque
 project: Arabesque
 ---
 
+# Quick start
+
+If you want to start using Arabesque on a single machine without first having to install and configure the Hadoop stack, you can choose one of the following options:
+
+* [Virtualbox image](https://qbox.qcri.org/s/Yfnxi9J3Bkkf1lH)
+* Docker image `docker run -it dsqcri/arabesque` (select user `su arabesque`)
+* [Installation scripts](https://qbox.qcri.org/s/HiSHoQ2YSPFrjet) to install Arabesque stack on a single node
 
 # Github repo
 
@@ -26,14 +33,6 @@ To run any of the example applications, refer to [our user guide](user_guide.htm
 # Preconfigured Maven project
 
 If you want to start developing your own graph mining implementations on top of Arabesque, the easiest way to achieve this is by forking our [Arabesque-Skeleton](https://github.com/qcri/Arabesque-Skeleton) project and follow the instructions on the README file.
-
-# Quick start
-
-If you want to start using Arabesque on a single machine without first having to install and configure the Hadoop stack, you can choose one of the following options:
-
-* [Virtualbox image](https://qbox.qcri.org/s/Yfnxi9J3Bkkf1lH)
-* Docker image `docker run -it dsqcri/arabesque` (select user `su arabesque`)
-* [Installation scripts](https://qbox.qcri.org/s/HiSHoQ2YSPFrjet) to install Arabesque stack on a single node
 
 # Reproducing the results of the SOSP'15 paper
 
