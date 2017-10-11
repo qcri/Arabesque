@@ -5,7 +5,7 @@
 
    <groupId>io.arabesque</groupId>
    <artifactId>arabesque</artifactId>
-   <version>1.0.0-SPARK</version>
+   <version>1.0.1-SPARK</version>
    <name>Arabesque</name>
    <description>A system for distributed graph mining</description>
    <url>http://arabesque.io</url>
@@ -250,10 +250,17 @@
       </dependency>
 
       <!-- Scala Testing-->
+      <!-- https://mvnrepository.com/artifact/org.scala-lang.modules/scala-xml_2.11 -->
+      <dependency>
+         <groupId>org.scala-lang.modules</groupId>
+         <artifactId>scala-xml_2.11</artifactId>
+         <version>1.0.6</version>
+      </dependency>
+
       <dependency>
          <groupId>org.scalatest</groupId>
          <artifactId>scalatest_${scala.binary.version}</artifactId>
-         <version>2.2.6</version>
+         <version>3.0.0</version>
          <scope>test</scope>
       </dependency>
 

@@ -11,10 +11,11 @@ import org.apache.hadoop.io.WritableComparable;
 import java.io.*;
 import java.lang.reflect.Constructor;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AggregationStorage<K extends Writable, V extends Writable> implements Writable, Externalizable {
     private String name;
-    protected Map<K, V> keyValueMap;
+    protected ConcurrentHashMap<K, V> keyValueMap;
     protected Class<K> keyClass;
     protected Class<V> valueClass;
     protected ReductionFunction<V> reductionFunction;
@@ -32,12 +33,12 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
 
     public AggregationStorage(String name, Map<K,V> keyValueMap) {
        init(name);
-       this.keyValueMap = keyValueMap;
+       this.keyValueMap = new ConcurrentHashMap<>(keyValueMap);
     }
 
     protected void init(String name) {
         if (keyValueMap == null) {
-            keyValueMap = new HashMap<>();
+            keyValueMap = new ConcurrentHashMap<>();
         }
 
         reset();
@@ -100,15 +101,15 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
         }
     }
 
-    // Not thread-safe
+    // thread-safe on key access
     // Watch out if reusing either Key or Value. Copies ARE NOT MADE!!!
     public void aggregate(K key, V value) {
-        V myValue = keyValueMap.get(key);
-
-        if (myValue == null) {
-            keyValueMap.put(key, value);
-        } else {
-            keyValueMap.put(key, reductionFunction.reduce(myValue, value));
+        V mapValue = keyValueMap.putIfAbsent(key, value);
+        if (mapValue == null){
+            return;
+        }
+        synchronized (mapValue){
+            keyValueMap.put(key, reductionFunction.reduce(mapValue, value));
         }
     }
 
@@ -136,9 +137,9 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
 
     // Thread-safe
     public void finalLocalAggregate(AggregationStorage<K, V> otherStorage) {
-        synchronized (this) {
+        //synchronized (this) {
             aggregate(otherStorage);
-        }
+        //}
     }
 
     // Not thread-safe
@@ -196,7 +197,7 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
         endAggregationFunction = (EndAggregationFunction<K,V>) objInput.readObject();
 
         if (keyValueMap == null) {
-            keyValueMap = new HashMap<>();
+            keyValueMap = new ConcurrentHashMap<>();
         }
 
         try {
@@ -263,7 +264,7 @@ public class AggregationStorage<K extends Writable, V extends Writable> implemen
 
     public void transferKeyFrom(K key, AggregationStorage<K, V> otherAggregationStorage) {
         aggregate(key, otherAggregationStorage.getValue(key));
-        otherAggregationStorage.removeKey(key);
+        //otherAggregationStorage.removeKey(key);
     }
 
     @Override

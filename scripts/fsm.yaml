@@ -1,5 +1,5 @@
 computation: io.arabesque.gmlib.fsm.FSMComputation
-master_computation: io.arabesque.examples.fsm.FSMMasterComputation
+master_computation: io.arabesque.gmlib.fsm.FSMMasterComputation
 input_graph_path: citeseer.graph
 output_path: FSM_Output
 

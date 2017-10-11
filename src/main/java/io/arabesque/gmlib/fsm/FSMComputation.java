@@ -67,8 +67,7 @@ public class FSMComputation extends EdgeInducedComputation<EdgeInducedEmbedding>
 
     @Override
     public void aggregationProcess(EdgeInducedEmbedding embedding) {
-        Pattern p = ((PatternAggregationStorage)previousStepAggregation).getCanonicalPattern(embedding.getPattern());
-        output(embedding.toOutputString() + " _ " + p.toOutputString() + " _ " + embedding.getPattern().toOutputString());
+        output(embedding.toOutputString() + " _ " + embedding.getPattern().toOutputString());
 //output(embedding);
     }
 }
