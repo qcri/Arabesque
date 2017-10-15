@@ -77,23 +77,12 @@ public abstract class AbstractMainGraph implements MainGraph {
       throw new RuntimeException("Invalid path: " + path);
     }
   }
-/*
+
   protected void readFromHdfs(org.apache.hadoop.fs.Path hdfsPath) throws IOException {
     FileSystem fs = FileSystem.get(new org.apache.hadoop.conf.Configuration());
     InputStream is = fs.open(hdfsPath);
     readFromInputStream(is);
     is.close();
-  }*/
-  protected void readFromHdfs(org.apache.hadoop.fs.Path hdfsPath) throws IOException {
-    try {
-      FileSystem fs = FileSystem.get(
-              new java.net.URI("hdfs://localhost:9000"),
-              new org.apache.hadoop.conf.Configuration());
-      InputStream is = fs.open(hdfsPath);
-      readFromInputStream(is);
-      is.close();
-    } catch (java.net.URISyntaxException e) {
-    }
   }
 
   protected void readFromFile(Path filePath) throws IOException {
