@@ -7,38 +7,39 @@ import com.koloboke.function.IntConsumer;
 public interface MainGraph {
     void reset();
 
+    int getVertexLabel(int v);
+
     boolean isNeighborVertex(int v1, int v2);
 
-    MainGraph addVertex(Vertex vertex);
-
-    Vertex[] getVertices();
-
-    Vertex getVertex(int vertexId);
 
     int getNumberVertices();
-
-    Edge[] getEdges();
-
-    Edge getEdge(int edgeId);
-
     int getNumberEdges();
 
-    ReclaimableIntCollection getEdgeIds(int v1, int v2);
+    int getEdgeLabel(int edgeId);
+    int getEdgeSource(int edgeId);
+    int getEdgeDst(int edgeId);
 
-    MainGraph addEdge(Edge edge);
+    int neighborhoodSize(int vertexId);
+
+//    ReclaimableIntCollection getEdgeIds(int v1, int v2);
+
 
     boolean areEdgesNeighbors(int edge1Id, int edge2Id);
 
-    @Deprecated
-    boolean isNeighborEdge(int src1, int dest1, int edge2);
 
-    VertexNeighbourhood getVertexNeighbourhood(int vertexId);
+    void processEdgeNeighbors(int vertexId,IntConsumer intAddConsumer);
+    void processVertexNeighbors(int vertexId,IntConsumer intAddConsumer);
 
-    IntCollection getVertexNeighbours(int vertexId);
 
     boolean isEdgeLabelled();
 
     boolean isMultiGraph();
 
+    @Deprecated
+    // This shouldn't be used. Inefficient design typically.
     void forEachEdgeId(int v1, int v2, IntConsumer intConsumer);
+
+    MainGraph addEdge(Edge edge);
+    MainGraph addVertex(Vertex vertex);
+
 }

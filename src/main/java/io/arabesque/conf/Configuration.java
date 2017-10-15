@@ -55,10 +55,18 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String CONF_MAINGRAPH_PATH_DEFAULT = "main.graph";
     public static final String CONF_MAINGRAPH_LOCAL = "arabesque.graph.local";
     public static final boolean CONF_MAINGRAPH_LOCAL_DEFAULT = false;
-    public static final String CONF_MAINGRAPH_EDGE_LABELLED = "arabesque.graph.edge_labelled";
+    public static final String CONF_MAINGRAPH_EDGE_LABELLED  = "arabesque.graph.edge_labelled";
     public static final boolean CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT = false;
-    public static final String CONF_MAINGRAPH_MULTIGRAPH = "arabesque.graph.multigraph";
+    public static final String CONF_MAINGRAPH_FLOAT_EDGE     = "arabesque.graph.float_edge";
+    public static final boolean CONF_MAINGRAPH_FLOAT_EDGE_DEFAULT = false;
+    public static final String CONF_MAINGRAPH_IS_BINARY      = "arabesque.graph.binary";
+    public static final String CONF_MAINGRAPH_VERTICES       = "arabesque.graph.vertices";
+    public static final String CONF_MAINGRAPH_EDGES          = "arabesque.graph.edges";
+    public static final String CONF_MAINGRAPH_LABELS         = "arabesque.graph.labels";
+    public static final String CONF_MAINGRAPH_NUM_EDGE_LABELS= "arabesque.graph.edge_labels";
+    public static final String CONF_MAINGRAPH_MULTIGRAPH     = "arabesque.graph.multigraph";
     public static final boolean CONF_MAINGRAPH_MULTIGRAPH_DEFAULT = false;
+
 
     public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS = "arabesque.optimizations.descriptor";
     public static final String CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT = "io.arabesque.optimization.ConfigBasedOptimizationSetDescriptor";
@@ -144,6 +152,8 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     private boolean isGraphEdgeLabelled;
     protected boolean initialized = false;
     private boolean isGraphMulti;
+    private boolean isFloatEdge;
+    private boolean isBinary;
 
     public UUID getUUID() {
        return uuid;
@@ -212,6 +222,9 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
         isGraphEdgeLabelled = getBoolean(CONF_MAINGRAPH_EDGE_LABELLED, CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT);
         isGraphMulti = getBoolean(CONF_MAINGRAPH_MULTIGRAPH, CONF_MAINGRAPH_MULTIGRAPH_DEFAULT);
+        isFloatEdge = getBoolean(CONF_MAINGRAPH_FLOAT_EDGE,CONF_MAINGRAPH_FLOAT_EDGE_DEFAULT);
+        isBinary = getBoolean(CONF_MAINGRAPH_IS_BINARY,Boolean.FALSE);
+        mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
         optimizationSetDescriptorClass = (Class<? extends OptimizationSetDescriptor>) getClass(CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS, CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT);
         patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
 
@@ -269,6 +282,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     public Integer getInteger(String key, Integer defaultValue) {
         return giraphConfiguration.getInt(key, defaultValue);
+    }
+
+    public Double getDouble(String key, Double defaultValue) {
+        return giraphConfiguration.getDouble(key, defaultValue);
     }
 
     public Long getLong(String key, Long defaultValue) {
@@ -362,11 +379,11 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
             Constructor<? extends MainGraph> constructor;
 
             if (useLocalGraph) {
-                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, boolean.class, boolean.class);
-                return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
+                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class);//, boolean.class, boolean.class);
+                return constructor.newInstance(Paths.get(getMainGraphPath()));//, isGraphEdgeLabelled, isGraphMulti);
             } else {
-                constructor = mainGraphClass.getConstructor(Path.class, boolean.class, boolean.class);
-                return constructor.newInstance(new Path(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
+                constructor = mainGraphClass.getConstructor(Path.class);//, boolean.class, boolean.class);
+                return constructor.newInstance(new Path(getMainGraphPath()));//, isGraphEdgeLabelled, isGraphMulti);
             }
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new RuntimeException("Could not load main graph", e);
@@ -494,8 +511,33 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return isGraphMulti;
     }
 
+    public boolean isFloatEdge() {
+        return isFloatEdge;
+    }
+
+    public boolean isBinaryInputFile() {
+        return isBinary;
+    }
+
+    public long getNumberVertices() {
+        return getLong(CONF_MAINGRAPH_VERTICES,-1L);
+    }
+
+    public long getNumberEdges(){
+        return getLong(CONF_MAINGRAPH_EDGES,-1L);
+    }
+    public long getNumberLabels(){
+        return getLong(CONF_MAINGRAPH_LABELS,-1L);
+    }
     public Class<? extends Computation> getComputationClass() {
         return computationClass;
+    }
+    public int getNumberEdgesLabels() {
+        return getInteger(CONF_MAINGRAPH_NUM_EDGE_LABELS,-1);
+    }
+
+    public boolean hasMultipleVertexLabels() {
+        return getBoolean("arabesque.graph.multiple_vertex_labels", false);
     }
     
     public Class<? extends AggregationStorage> getAggregationStorageClass() {
