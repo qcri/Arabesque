@@ -10,7 +10,6 @@ package fi.tkk.ics.jbliss;
 import cz.adamh.utils.NativeUtils;
 import io.arabesque.conf.Configuration;
 import io.arabesque.graph.MainGraph;
-import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.JBlissPattern;
 import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
@@ -83,8 +82,7 @@ public class Graph<V extends Comparable> {
 		IntCursor vertexCursor = vertices.cursor();
 
 		while (vertexCursor.moveNext()) {
-			Vertex vertex = mainGraph.getVertex(vertexCursor.elem());
-			_add_vertex(bliss, vertex.getVertexLabel());
+			_add_vertex(bliss, mainGraph.getVertexLabel(vertexCursor.elem()));
 		}
 
 		ObjCursor<PatternEdge> edgeCursor = edges.cursor();

@@ -2,9 +2,7 @@ package io.arabesque.pattern;
 
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
-import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
@@ -279,17 +277,12 @@ public abstract class BasicPattern implements Pattern {
 
     @Override
     public boolean addEdge(int edgeId) {
-        Edge edge = mainGraph.getEdge(edgeId);
-
-        return addEdge(edge);
-    }
-
-    public boolean addEdge(Edge edge) {
-        int srcId = edge.getSourceId();
+        int srcId = mainGraph.getEdgeSource(edgeId);
+        int dstId = mainGraph.getEdgeDst(edgeId);
         int srcPos = addVertex(srcId);
-        int dstPos = addVertex(edge.getDestinationId());
+        int dstPos = addVertex(dstId);
 
-        PatternEdge patternEdge = createPatternEdge(edge, srcPos, dstPos, srcId);
+        PatternEdge patternEdge = createPatternEdge(edgeId, srcPos, dstPos, srcId);
 
         return addEdge(patternEdge);
     }
@@ -487,10 +480,10 @@ public abstract class BasicPattern implements Pattern {
         return new PatternEdgeArrayList();
     }
 
-    protected PatternEdge createPatternEdge(Edge edge, int srcPos, int dstPos, int srcId) {
+    protected PatternEdge createPatternEdge(int edgeId, int srcPosB, int dstPosB, int srcIdB) {
         PatternEdge patternEdge = patternEdgePool.createObject();
 
-        patternEdge.setFromEdge(edge, srcPos, dstPos, srcId);
+        patternEdge.setFromEdge(edgeId, srcPosB, dstPosB, srcIdB);
 
         return patternEdge;
     }
@@ -514,9 +507,7 @@ public abstract class BasicPattern implements Pattern {
             return StringUtils.join(edges, ",");
         }
         else if (getNumberOfVertices() == 1) {
-            Vertex vertex = mainGraph.getVertex(vertices.getUnchecked(0));
-
-            return "0(" + vertex.getVertexLabel() + ")";
+            return "0(" + mainGraph.getVertexLabel(vertices.getUnchecked(0)) + ")";
         }
         else {
             return "";

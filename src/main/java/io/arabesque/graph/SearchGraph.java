@@ -1,7 +1,7 @@
 package io.arabesque.graph;
 
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntIterator;
+import com.koloboke.collect.IntIterator;
 
 /**
  * Used for the search function where we require a reverse lookup from label to vertex.

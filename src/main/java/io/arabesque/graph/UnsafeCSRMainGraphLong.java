@@ -1,7 +1,7 @@
 package io.arabesque.graph;
 
 import io.arabesque.conf.Configuration;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.function.IntConsumer;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.log4j.Logger;
 

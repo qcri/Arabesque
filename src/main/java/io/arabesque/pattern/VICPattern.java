@@ -1,9 +1,7 @@
 package io.arabesque.pattern;
 
 import io.arabesque.conf.Configuration;
-import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
-import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgeArrayListPool;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import io.arabesque.utils.collection.IntArrayList;
@@ -123,8 +121,7 @@ public class VICPattern extends BasicPattern {
 
         while (vertexIdCursor.moveNext()) {
             int vertexId = vertexIdCursor.elem();
-            Vertex vertex = mainGraph.getVertex(vertexId);
-            underlyingPosToLabel.add(vertex.getVertexLabel());
+            underlyingPosToLabel.add(mainGraph.getVertexLabel(vertexId));
         }
 
         for (PatternEdge edge : getEdges()) {
@@ -508,9 +505,7 @@ public class VICPattern extends BasicPattern {
 
         @Override
         public void accept(int edgeId) {
-            Edge edge = mainGraph.getEdge(edgeId);
-
-            candidateEdgesList.add(createPatternEdge(edge, neighbourTmpPos, newTmpVertexPos, neighbourVertexId));
+            candidateEdgesList.add(createPatternEdge(edgeId, neighbourTmpPos, newTmpVertexPos, neighbourVertexId));
         }
     }
 

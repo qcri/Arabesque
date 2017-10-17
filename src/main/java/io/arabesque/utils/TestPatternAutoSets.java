@@ -55,7 +55,8 @@ public class TestPatternAutoSets {
 
             System.out.println("Found edge " + srcId + ", " + dstId);
 
-            IntCollection edgeIdsToAdd = mainGraph.getEdgeIds(srcId, dstId);
+            //TODO: why we use this utility?
+            IntCollection edgeIdsToAdd = null;//mainGraph.getEdgeIds(srcId, dstId);
             IntCursor edgeIdsToAddCursor = edgeIdsToAdd.cursor();
 
             while (edgeIdsToAddCursor.moveNext()) {

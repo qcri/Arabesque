@@ -1,9 +1,7 @@
 package io.arabesque.pattern;
 
 import io.arabesque.conf.Configuration;
-import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
-import io.arabesque.graph.Vertex;
 import io.arabesque.pattern.pool.PatternEdgePool;
 import org.apache.hadoop.io.Writable;
 
@@ -17,6 +15,7 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
     private int srcLabel;
     private int destPos;
     private int destLabel;
+    private final MainGraph mainGraph = Configuration.get().getMainGraph();
 
     public PatternEdge() {
         this(-1, -1, -1, -1);
@@ -45,23 +44,15 @@ public class PatternEdge implements Comparable<PatternEdge>, Writable {
         setDestLabel(edge.getDestLabel());
     }
 
-    public void setFromEdge(Edge edge, int srcPos, int dstPos) {
-        setFromEdge(edge, srcPos, dstPos, edge.getSourceId());
+    public void setFromEdge(int edgeId, int srcPos, int dstPos) {
+        setFromEdge(edgeId, srcPos, dstPos, mainGraph.getEdgeSource(edgeId));
     }
 
-    public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
-        MainGraph mainGraph = Configuration.get().getMainGraph();
+    public void setFromEdge(int edgeId, int srcPos, int dstPos, int srcId) {
+        setSrcLabel(mainGraph.getVertexLabel(mainGraph.getEdgeSource(edgeId)));
+        setDestLabel(mainGraph.getVertexLabel(mainGraph.getEdgeDst(edgeId)));
 
-        int srcVertexId = edge.getSourceId();
-        int dstVertexId = edge.getDestinationId();
-
-        Vertex srcVertex = mainGraph.getVertex(srcVertexId);
-        Vertex dstVertex = mainGraph.getVertex(dstVertexId);
-
-        setSrcLabel(srcVertex.getVertexLabel());
-        setDestLabel(dstVertex.getVertexLabel());
-
-        if (srcId != srcVertexId) {
+        if (srcId != mainGraph.getEdgeSource(edgeId)) {
             invert();
         }
 

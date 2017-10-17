@@ -5,9 +5,6 @@ import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.EdgeInducedEmbedding;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.embedding.VertexInducedEmbedding;
-import io.arabesque.graph.Edge;
-import io.arabesque.graph.Vertex;
-import io.arabesque.graph.LabelledEdge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.pattern.LabelledPatternEdge;
 import io.arabesque.pattern.Pattern;
@@ -31,7 +28,7 @@ public class DomainStorageReadOnly extends DomainStorage {
     private static final Logger LOG = Logger.getLogger(DomainEntryReadOnly.class);
 
     @Override
-    public void readFields(DataInput dataInput) throws IOException { 
+    public void readFields(DataInput dataInput) throws IOException {
         this.clear();
 
         numEmbeddings = dataInput.readLong();
@@ -229,9 +226,8 @@ public class DomainStorageReadOnly extends DomainStorage {
             @Override
             public void accept(int edgeId) {
                 if (hasLabel) {
-                    LabelledEdge labelledEdge = (LabelledEdge) mainGraph.getEdge(edgeId);
 
-                    if (labelledEdge.getEdgeLabel() != targetLabel) {
+                    if (mainGraph.getEdgeLabel(edgeId) != targetLabel) {
                         return;
                     }
                 }
@@ -272,10 +268,12 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                 for (int i = 0; i < numEdgesPattern; ++i) {
                     PatternEdge edgePattern = edgesPattern.get(i);
-                    Edge edgeEmbedding = mainGraph.getEdge(edgesEmbedding.getUnchecked(i));
+                    final int srcA = mainGraph.getEdgeSource(edgesEmbedding.getUnchecked(i));
+                    final int dstA = mainGraph.getEdgeDst(edgesEmbedding.getUnchecked(i));
 
-                    if (!edgeEmbedding.hasVertex(verticesEmbedding.getUnchecked(edgePattern.getSrcPos())) ||
-                            !edgeEmbedding.hasVertex(verticesEmbedding.getUnchecked(edgePattern.getDestPos()))) {
+                    if ( !(srcA == verticesEmbedding.getUnchecked(edgePattern.getSrcPos()) || dstA == verticesEmbedding.getUnchecked(edgePattern.getSrcPos() ) ||
+
+                        !(srcA == verticesEmbedding.getUnchecked(edgePattern.getDestPos()) || dstA == verticesEmbedding.getUnchecked(edgePattern.getDestPos())))){
                         return false;
                     }
                 }
@@ -738,9 +736,7 @@ public class DomainStorageReadOnly extends DomainStorage {
             @Override
             public void accept(int edgeId) {
                 if (hasLabel) {
-                    LabelledEdge labelledEdge = (LabelledEdge) mainGraph.getEdge(edgeId);
-
-                    if (labelledEdge.getEdgeLabel() != targetLabel) {
+                    if (mainGraph.getEdgeLabel(edgeId) != targetLabel) {
                         return;
                     }
                 }

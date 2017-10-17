@@ -1,8 +1,5 @@
 package io.arabesque.pattern;
 
-import io.arabesque.graph.Edge;
-import io.arabesque.graph.LabelledEdge;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -38,14 +35,14 @@ public class LabelledPatternEdge extends PatternEdge {
         }
     }
 
-    @Override
-    public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
-        super.setFromEdge(edge, srcPos, dstPos, srcId);
-
-        if (edge instanceof LabelledEdge) {
-            label = ((LabelledEdge) edge).getEdgeLabel();
-        }
-    }
+//    @Override
+//    public void setFromEdge(Edge edge, int srcPos, int dstPos, int srcId) {
+//        super.setFromEdge(edge, srcPos, dstPos, srcId);
+//
+//        if (edge instanceof LabelledEdge) {
+//            label = ((LabelledEdge) edge).getEdgeLabel();
+//        }
+//    }
 
     public int getLabel() {
         return label;

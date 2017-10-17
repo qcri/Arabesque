@@ -1,10 +1,10 @@
 package io.arabesque.graph;
 
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.IntIterator;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMap;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
-import net.openhft.koloboke.function.IntConsumer;
+import com.koloboke.collect.IntIterator;
+import com.koloboke.collect.map.hash.HashIntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
+import com.koloboke.function.IntConsumer;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;

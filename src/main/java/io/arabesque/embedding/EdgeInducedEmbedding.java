@@ -1,8 +1,7 @@
 package io.arabesque.embedding;
 
-import io.arabesque.graph.Edge;
 import io.arabesque.utils.collection.IntArrayList;
-import com.koloboke.collect.IntCollection;
+import com.koloboke.function.IntConsumer;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -42,10 +41,9 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
         IntArrayList edges = getEdges();
 
         for (int i = 0; i < numEdges; ++i) {
-            Edge edge = mainGraph.getEdge(edges.getUnchecked(i));
-            sb.append(edge.getSourceId());
-            sb.append("-");
-            sb.append(edge.getDestinationId());
+            // TODO hack! this is because sometimes we invert the edge id to encode information
+            int id = Math.abs(edges.getUnchecked(i));
+            sb.append(id).append("-").append(mainGraph.getEdgeDst(id)).append("-").append(mainGraph.getEdgeLabel(id));
             sb.append(" ");
         }
 
@@ -67,15 +65,14 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
     }
 
     @Override
-    protected IntCollection getValidNeighboursForExpansion(int vertexId) {
-        return mainGraph.getVertexNeighbourhood(vertexId).getNeighbourEdges();
+    protected void processValidNeighbors(int vertexId, IntConsumer intAddConsumer) {
+        mainGraph.processEdgeNeighbors(vertexId, intAddConsumer);
     }
 
     @Override
     protected boolean areWordsNeighbours(int wordId1, int wordId2) {
         return mainGraph.areEdgesNeighbors(wordId1, wordId2);
     }
-
 
     /**
      * Add word and update the number of vertices in this embedding.
@@ -90,28 +87,19 @@ public class EdgeInducedEmbedding extends BasicEmbedding {
     }
 
     private void updateVertices(int word) {
-        final Edge edge = mainGraph.getEdge(word);
+        // TODO hack! this is because sometimes we invert the edge id to encode information
+        final int srcId = mainGraph.getEdgeSource(word);
+        final int dstId = mainGraph.getEdgeDst(word);
 
         int numVerticesAdded = 0;
 
-        boolean srcIsNew = false;
-        boolean dstIsNew = false;
-
-        if (!vertices.contains(edge.getSourceId())) {
-            srcIsNew = true;
-        }
-
-        if (!vertices.contains(edge.getDestinationId())) {
-            dstIsNew = true;
-        }
-
-        if (srcIsNew) {
-            vertices.add(edge.getSourceId());
+        if (!vertices.contains(srcId)) {
+            vertices.add(srcId);
             ++numVerticesAdded;
         }
 
-        if (dstIsNew) {
-            vertices.add(edge.getDestinationId());
+        if (!vertices.contains(dstId)) {
+            vertices.add(dstId);
             ++numVerticesAdded;
         }
 

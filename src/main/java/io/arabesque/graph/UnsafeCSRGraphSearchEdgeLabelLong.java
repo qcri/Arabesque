@@ -2,8 +2,8 @@ package io.arabesque.graph;
 
 import io.arabesque.conf.Configuration;
 import io.arabesque.utils.collection.IntArrayList;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMap;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
+import com.koloboke.collect.map.hash.HashIntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
 
 import java.io.IOException;
 import java.nio.file.Path;

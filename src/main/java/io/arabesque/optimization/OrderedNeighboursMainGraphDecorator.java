@@ -1,9 +1,9 @@
 package io.arabesque.optimization;
 
+import io.arabesque.graph.BasicMainGraph;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.MainGraph;
 import io.arabesque.graph.Vertex;
-import io.arabesque.graph.VertexNeighbourhood;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.ReclaimableIntCollection;
 import com.koloboke.collect.IntCollection;
@@ -20,9 +20,10 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
         int numVertices = underlyingMainGraph.getNumberVertices();
 
         orderedNeighbours = new IntArrayList[numVertices];
+        BasicMainGraph g_ = (BasicMainGraph) underlyingMainGraph;
 
         for (int i = 0; i < numVertices; ++i) {
-            IntCollection neighboursOfI = underlyingMainGraph.getVertexNeighbours(i);
+            IntCollection neighboursOfI = g_.getVertexNeighbors(i);//getVertexNeighbours(i);
 
             if (neighboursOfI != null) {
                 orderedNeighbours[i] = new IntArrayList(neighboursOfI);
@@ -37,6 +38,11 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     }
 
     @Override
+    public int getVertexLabel(int v) {
+        return underlyingMainGraph.getVertexLabel(v);
+    }
+
+    @Override
     public boolean isNeighborVertex(int v1, int v2) {
         return underlyingMainGraph.isNeighborVertex(v1, v2);
     }
@@ -47,28 +53,8 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     }
 
     @Override
-    public Vertex[] getVertices() {
-        return underlyingMainGraph.getVertices();
-    }
-
-    @Override
-    public Vertex getVertex(int vertexId) {
-        return underlyingMainGraph.getVertex(vertexId);
-    }
-
-    @Override
     public int getNumberVertices() {
         return underlyingMainGraph.getNumberVertices();
-    }
-
-    @Override
-    public Edge[] getEdges() {
-        return underlyingMainGraph.getEdges();
-    }
-
-    @Override
-    public Edge getEdge(int edgeId) {
-        return underlyingMainGraph.getEdge(edgeId);
     }
 
     @Override
@@ -77,8 +63,23 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     }
 
     @Override
-    public ReclaimableIntCollection getEdgeIds(int v1, int v2) {
-        return underlyingMainGraph.getEdgeIds(v1, v2);
+    public int getEdgeLabel(int edgeId) {
+        return underlyingMainGraph.getEdgeLabel(edgeId);
+    }
+
+    @Override
+    public int getEdgeSource(int edgeId) {
+        return underlyingMainGraph.getEdgeSource(edgeId);
+    }
+
+    @Override
+    public int getEdgeDst(int edgeId) {
+        return underlyingMainGraph.getEdgeDst(edgeId);
+    }
+
+    @Override
+    public int neighborhoodSize(int vertexId) {
+        return underlyingMainGraph.neighborhoodSize(vertexId);
     }
 
     @Override
@@ -91,19 +92,19 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
         return underlyingMainGraph.areEdgesNeighbors(edge1Id, edge2Id);
     }
 
+//    @Override
+//    public boolean isNeighborEdge(int src1, int dest1, int edge2) {
+//        return underlyingMainGraph.isNeighborEdge(src1, dest1, edge2);
+//    }
+
     @Override
-    public boolean isNeighborEdge(int src1, int dest1, int edge2) {
-        return underlyingMainGraph.isNeighborEdge(src1, dest1, edge2);
+    public void processVertexNeighbors(int vertexId, IntConsumer intAddConsumer) {
+        underlyingMainGraph.processVertexNeighbors(vertexId, intAddConsumer);
     }
 
     @Override
-    public VertexNeighbourhood getVertexNeighbourhood(int vertexId) {
-        return underlyingMainGraph.getVertexNeighbourhood(vertexId);
-    }
-
-    @Override
-    public IntCollection getVertexNeighbours(int vertexId) {
-        return orderedNeighbours[vertexId];
+    public void processEdgeNeighbors(int vertexId, IntConsumer intAddConsumer) {
+        underlyingMainGraph.processEdgeNeighbors(vertexId, intAddConsumer);
     }
 
     @Override

@@ -70,8 +70,8 @@ public class VertexInducedEmbedding extends BasicEmbedding {
         return numEdgesAddedWithWord.getLastOrDefault(0);
     }
 
-    protected IntCollection getValidNeighboursForExpansion(int vertexId) {
-        return mainGraph.getVertexNeighbours(vertexId);
+    protected void processValidNeighbors(int vertexId, IntConsumer intAddConsumer) {
+        mainGraph.processVertexNeighbors(vertexId,intAddConsumer);
     }
 
     @Override
