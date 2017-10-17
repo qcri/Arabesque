@@ -1,4 +1,4 @@
-package io.arabesque.examples.all_pairs;
+package io.arabesque.gmlib.all_pairs;
 
 import io.arabesque.computation.VertexInducedComputation;
 import io.arabesque.embedding.VertexInducedEmbedding;

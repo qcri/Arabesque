@@ -7,17 +7,25 @@ import io.arabesque.computation.comm.CommunicationStrategy;
 import io.arabesque.computation.comm.MessageWrapper;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
+import io.arabesque.utils.collection.IntArrayList;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 public class ExecutionEngine<O extends Embedding>
         extends BasicComputation<IntWritable, NullWritable, NullWritable, MessageWrapper> 
@@ -40,6 +48,7 @@ public class ExecutionEngine<O extends Embedding>
     private long currentEmbeddingChildrenGenerated;
     private O currentEmbedding;
     private boolean firstVertex;
+    private IntArrayList vertices_partial;
 
     private Computation<O> computation;
 
@@ -62,6 +71,10 @@ public class ExecutionEngine<O extends Embedding>
         init();
     }
 
+    public IntArrayList getPartialVertices(){
+        return vertices_partial;
+    }
+
     protected void init() {
         this.configuration = Configuration.get();
         this.aggregationStorageFactory = new AggregationStorageFactory();
@@ -81,6 +94,19 @@ public class ExecutionEngine<O extends Embedding>
 
         firstVertex = true;
 
+        if (getSuperstep()==0){
+            // Check if we do all or partial.
+            String path = configuration.getPartialVerticesPath();
+            if (path != null){
+                Path vv = new Path(path);
+                try {
+                    vertices_partial = read_partial_vertices(vv);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Failed!!!");
+                }
+            }
+        }
         if (getPhase() == 0) {
             computation = configuration.createComputation();
             computation.setUnderlyingExecutionEngine(this);
@@ -93,6 +119,31 @@ public class ExecutionEngine<O extends Embedding>
 
             computation.init();
         }
+    }
+
+    private IntArrayList read_partial_vertices(Object path) throws IOException {
+        IntArrayList vertices = new IntArrayList(1024);
+
+        if (path instanceof java.nio.file.Path) {
+            //java.nio.file.Path filePath = (java.nio.file.Path) path;
+            throw new RuntimeException("Put the file in hdfs");
+        } else if (path instanceof org.apache.hadoop.fs.Path) {
+            org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
+            FileSystem fs = FileSystem.get(new org.apache.hadoop.conf.Configuration());
+            InputStream is = fs.open(hadoopPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(is)));
+            String line = reader.readLine();
+
+            while (line != null) {
+                StringTokenizer tokenizer = new StringTokenizer(line);
+                vertices.add(Integer.parseInt(tokenizer.nextToken()));
+                line = reader.readLine();
+            }
+            is.close();
+        } else {
+            throw new RuntimeException("Invalid path: " + path);
+        }
+        return vertices;
     }
 
     @Override

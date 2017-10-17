@@ -1,4 +1,4 @@
-package io.arabesque.examples.all_pairs;
+package io.arabesque.gmlib.all_pairs;
 
 /**
  * Created by siganos on 2/16/16.

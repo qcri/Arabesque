@@ -18,7 +18,7 @@ public abstract class BasicComputation<E extends Embedding> implements Computati
 
     private boolean outputEnabled;
 
-    private CommonExecutionEngine<E> underlyingExecutionEngine;
+    protected CommonExecutionEngine<E> underlyingExecutionEngine;
     private MainGraph mainGraph;
     private Configuration configuration;
     private IntConsumer expandConsumer;

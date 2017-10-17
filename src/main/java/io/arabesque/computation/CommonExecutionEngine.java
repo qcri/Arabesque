@@ -2,6 +2,7 @@ package io.arabesque.computation;
 
 import io.arabesque.aggregation.AggregationStorage;
 import io.arabesque.embedding.Embedding;
+import io.arabesque.utils.collection.IntArrayList;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
@@ -27,4 +28,6 @@ public interface CommonExecutionEngine<O extends Embedding> {
 
     void output(Embedding embedding);
 
-}
+    IntArrayList getPartialVertices();
+
+    }

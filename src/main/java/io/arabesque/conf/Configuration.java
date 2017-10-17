@@ -219,12 +219,12 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         odagNumAggregators = getInteger(CONF_EZIP_AGGREGATORS, CONF_EZIP_AGGREGATORS_DEFAULT);
         is2LevelAggregationEnabled = getBoolean(CONF_2LEVELAGG_ENABLED, CONF_2LEVELAGG_ENABLED_DEFAULT);
         forceGC = getBoolean(CONF_FORCE_GC, CONF_FORCE_GC_DEFAULT);
-        mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
         isGraphEdgeLabelled = getBoolean(CONF_MAINGRAPH_EDGE_LABELLED, CONF_MAINGRAPH_EDGE_LABELLED_DEFAULT);
         isGraphMulti = getBoolean(CONF_MAINGRAPH_MULTIGRAPH, CONF_MAINGRAPH_MULTIGRAPH_DEFAULT);
         isFloatEdge = getBoolean(CONF_MAINGRAPH_FLOAT_EDGE,CONF_MAINGRAPH_FLOAT_EDGE_DEFAULT);
         isBinary = getBoolean(CONF_MAINGRAPH_IS_BINARY,Boolean.FALSE);
         mainGraphClass = (Class<? extends MainGraph>) getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT);
+
         optimizationSetDescriptorClass = (Class<? extends OptimizationSetDescriptor>) getClass(CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS, CONF_OPTIMIZATIONSETDESCRIPTOR_CLASS_DEFAULT);
         patternClass = (Class<? extends Pattern>) getClass(CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT);
 
@@ -348,6 +348,9 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return getString(CONF_MAINGRAPH_PATH, CONF_MAINGRAPH_PATH_DEFAULT);
     }
 
+    public String getPartialVerticesPath() {
+        return getString("arabesque.partial_vertices",null);
+    }
     public long getInfoPeriod() {
         return infoPeriod;
     }
