@@ -96,16 +96,7 @@ public class ExecutionEngine<O extends Embedding>
 
         if (getSuperstep()==0){
             // Check if we do all or partial.
-            String path = configuration.getPartialVerticesPath();
-            if (path != null){
-                Path vv = new Path(path);
-                try {
-                    vertices_partial = read_partial_vertices(vv);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    throw new RuntimeException("Failed!!!");
-                }
-            }
+            vertices_partial = configuration.getPartialVertices();
         }
         if (getPhase() == 0) {
             computation = configuration.createComputation();
@@ -116,34 +107,8 @@ public class ExecutionEngine<O extends Embedding>
                     configuration.setEmbeddingClass(computation.getEmbeddingClass());
                 }
             }
-
             computation.init();
         }
-    }
-
-    private IntArrayList read_partial_vertices(Object path) throws IOException {
-        IntArrayList vertices = new IntArrayList(1024);
-
-        if (path instanceof java.nio.file.Path) {
-            //java.nio.file.Path filePath = (java.nio.file.Path) path;
-            throw new RuntimeException("Put the file in hdfs");
-        } else if (path instanceof org.apache.hadoop.fs.Path) {
-            org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
-            FileSystem fs = FileSystem.get(new org.apache.hadoop.conf.Configuration());
-            InputStream is = fs.open(hadoopPath);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(is)));
-            String line = reader.readLine();
-
-            while (line != null) {
-                StringTokenizer tokenizer = new StringTokenizer(line);
-                vertices.add(Integer.parseInt(tokenizer.nextToken()));
-                line = reader.readLine();
-            }
-            is.close();
-        } else {
-            throw new RuntimeException("Invalid path: " + path);
-        }
-        return vertices;
     }
 
     @Override

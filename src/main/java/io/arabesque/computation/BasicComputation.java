@@ -9,6 +9,7 @@ import com.koloboke.collect.IntCollection;
 import com.koloboke.collect.set.hash.HashIntSet;
 import com.koloboke.collect.set.hash.HashIntSets;
 import com.koloboke.function.IntConsumer;
+import io.arabesque.utils.collection.IntArrayList;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;

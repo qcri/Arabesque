@@ -11,6 +11,7 @@ import io.arabesque.odag._
 import io.arabesque.odag.BasicODAGStash.EfficientReader
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.SerializableConfiguration
+import io.arabesque.utils.collection.IntArrayList
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}

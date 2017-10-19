@@ -11,6 +11,7 @@ import io.arabesque.odag._
 import io.arabesque.odag.BasicODAGStash.EfficientReader
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.SerializableConfiguration
+import io.arabesque.utils.collection.IntArrayList
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
@@ -116,6 +117,7 @@ trait ODAGEngine[
    */
   private def expansionCompute(inboundStashes: Iterator[S]): Unit = {
     if (superstep == 0) { // bootstrap
+      vertices_partial = configuration.getPartialVertices
 
       val initialEmbedd: E = configuration.createEmbedding()
       computation.expand (initialEmbedd)
@@ -398,4 +400,5 @@ object ODAGEngine {
   }
 
   override def finalize: Unit = shutdownPool
+
 }

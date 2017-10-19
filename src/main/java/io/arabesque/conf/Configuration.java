@@ -16,14 +16,21 @@ import io.arabesque.optimization.OptimizationSet;
 import io.arabesque.optimization.OptimizationSetDescriptor;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.VICPattern;
+import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.pool.Pool;
 import io.arabesque.utils.pool.PoolRegistry;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Paths;
@@ -492,6 +499,47 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     
     public <K extends Writable, V extends Writable> AggregationStorage<K,V> createAggregationStorage(String name) {
         return ReflectionUtils.newInstance (getAggregationMetadata(name).getAggregationStorageClass());
+    }
+
+    public IntArrayList getPartialVertices() {
+        String path = getPartialVerticesPath();
+        if (path == null){
+            return null;
+        }
+        Path vv = new Path(path);
+        try {
+            return _read_partial_vertices(vv);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed!!!");
+        }
+
+    }
+
+    private IntArrayList _read_partial_vertices(Object path) throws IOException {
+
+        IntArrayList vertices = new IntArrayList(1024);
+
+        if (path instanceof java.nio.file.Path) {
+            //java.nio.file.Path filePath = (java.nio.file.Path) path;
+            throw new RuntimeException("Put the file in hdfs");
+        } else if (path instanceof org.apache.hadoop.fs.Path) {
+            org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
+            FileSystem fs = FileSystem.get(new org.apache.hadoop.conf.Configuration());
+            InputStream is = fs.open(hadoopPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(is)));
+            String line = reader.readLine();
+
+            while (line != null) {
+                StringTokenizer tokenizer = new StringTokenizer(line);
+                vertices.add(Integer.parseInt(tokenizer.nextToken()));
+                line = reader.readLine();
+            }
+            is.close();
+        } else {
+            throw new RuntimeException("Invalid path: " + path);
+        }
+        return vertices;
     }
 
     public String getOutputPath() {

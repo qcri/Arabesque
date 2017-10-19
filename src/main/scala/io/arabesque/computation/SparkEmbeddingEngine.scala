@@ -7,8 +7,9 @@ import io.arabesque.cache.LZ4ObjectCache
 import io.arabesque.conf.Configuration
 import io.arabesque.embedding._
 import io.arabesque.utils.SerializableConfiguration
+import io.arabesque.utils.collection.IntArrayList
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.{LongWritable, NullWritable, Writable, SequenceFile}
+import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.Accumulator
@@ -117,7 +118,7 @@ case class SparkEmbeddingEngine[O <: Embedding](
    */
   private def expansionCompute(inboundCaches: Iterator[LZ4ObjectCache]): Unit = {
     if (superstep == 0) { // bootstrap
-
+      vertices_partial = configuration.getPartialVertices
       val initialEmbedd: O = configuration.createEmbedding()
       computation.expand (initialEmbedd)
 
