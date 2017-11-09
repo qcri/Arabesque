@@ -3,12 +3,12 @@ package io.arabesque.odag
 import io.arabesque.embedding.Embedding
 import io.arabesque.computation.Computation
 import io.arabesque.odag.domain.StorageReader
-import io.arabesque.odag.domain.{DomainStorage, DomainStorageReadOnly}
+import io.arabesque.odag.domain._
 import io.arabesque.pattern.Pattern
-
 import io.arabesque.conf.{Configuration, SparkConfiguration}
-
+import io.arabesque.compression._
 import java.io._
+
 
 import scala.collection.JavaConversions._
 
@@ -22,7 +22,7 @@ class MultiPatternODAG extends BasicODAG {
 
   def this(numDomains: Int) = {
     this()
-    storage = new DomainStorage(numDomains)
+    storage = new PrimitiveODAGDomainStorage(numDomains)
     serializeAsReadOnly = false
   }
 
