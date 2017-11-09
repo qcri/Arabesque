@@ -10,7 +10,6 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import io.arabesque.report._
 import org.apache.hadoop.fs.{FileSystem, Path}
-
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
 import org.apache.spark.Accumulator
@@ -86,6 +85,7 @@ trait SimpleStorageEngine [
     if(configuration.getBoolean("reports_active", false)) {
       reportsFilePath = configuration.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
       reportsFilePath += "/Partitions/"
+      // TODO we set a specific flag for partition reports
       generateReports = true
     }
     partitionReport.partitionId = this.partitionId

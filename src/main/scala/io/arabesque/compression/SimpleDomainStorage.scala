@@ -6,12 +6,11 @@ import io.arabesque.odag.domain.{Storage, StorageReader, StorageStats}
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.WriterSetConsumer
 import io.arabesque.utils.Logging
-import io.arabesque.report.StorageReport
 import java.util
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors}
 import java.io._
 
-import org.apache.spark.util.SizeEstimator
+import io.arabesque.report2.StorageReport
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -89,8 +88,6 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     val numWords = embedding.getNumWords
     val words = embedding.getWords
 
-    //logInfo(s"Trying to add embedding ${embedding.toOutputString}")
-
     if (domainEntries.size != numWords)
       throw new RuntimeException(s"Tried to add an embedding with wrong number of expected vertices (${domainEntries.size}) ${embedding.toString}")
 
@@ -100,16 +97,12 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
       i += 1
     }
 
-    //logInfo(s"Embedding ${embedding.toOutputString} has been added successfully.")
-
     countsDirty = true
     numEmbeddings += 1
   }
 
   @Override
   def aggregate(otherDomainStorage: SimpleDomainStorage): Unit = {
-    //logInfo(s"Trying to aggregate DomainStorage: ${otherDomainStorage.toString}")
-
     val otherNumberOfDomains = otherDomainStorage.numberOfDomains
 
     if (numberOfDomains == -1)
@@ -144,11 +137,6 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     if (domainEntries.size <= 0)
       return 0
 
-    /*
-    for (domainEntry <- domainEntries.get(0).values) {
-      num += domainEntry.getCounter
-    }
-    */
     // numOfEnums is the cartesian product of domains sizes
     domainEntries.foreach( domain => {
       if(domain.size() != 0)
@@ -189,16 +177,6 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
       stats.sumDomainSize += domainSize
 
       // no pointers in grami so no pointer calcs
-      /*
-      for (domainEntry <- domainMap.values) {
-        val numPointers = domainEntry.getNumPointers
-        val numWastedPointers = domainEntry.getWastedPointers
-        if (numPointers > stats.maxPointersSize) stats.maxPointersSize = numPointers
-        if (numPointers < stats.minPointersSize) stats.minPointersSize = numPointers
-        stats.sumPointersSize += numPointers
-        stats.sumWastedPointers += numWastedPointers
-      }
-      */
     })
 
     stats
@@ -369,7 +347,7 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
     })
   }
 
-  protected def setNumberOfDomains(numberOfDomains: Int): Unit = this.synchronized{
+  protected def setNumberOfDomains(numberOfDomains: Int): Unit = this.synchronized {
     if (numberOfDomains == this.numberOfDomains)
       return
     ensureCanStoreNDomains(numberOfDomains)
@@ -456,7 +434,7 @@ class SimpleDomainStorage extends Storage[SimpleDomainStorage] with Logging {
 
   protected def getWordIdsOfDomain(domainId: Int) : Array[Int] = {
     if(domainId >= numberOfDomains || domainId < 0)
-      throw new ArrayIndexOutOfBoundsException(s"Should not access domain $domainId while numOfDomain=$numberOfDomains")
+      throw new ArrayIndexOutOfBoundsException(s"Should not access domain $domainId while numOfDomains=$numberOfDomains")
     val keys: ArrayBuffer[Int] = new ArrayBuffer[Int]()
     val keysSet = domainEntries(domainId).keys()
 

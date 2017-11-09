@@ -44,7 +44,7 @@ case class ODAGEngineSP [E <: Embedding](
     if(generateReports) {
       partitionReport.partitionId = this.partitionId
       partitionReport.superstep = this.superstep
-      partitionReport.storageReports = storageReports
+      partitionReport.storageReports = storageReports.toArray
       partitionReport.saveReport(reportsFilePath)
     }
   }
@@ -141,7 +141,13 @@ case class ODAGEngineSP [E <: Embedding](
           val (wordId, entry) = entriesIterator.next
           val domainEntries = newOdag.getStorage().getDomainEntries()
 
-          domainEntries.get (domainId).put (wordId, entry)
+          //domainEntries.get (domainId).put (wordId, entry)
+          domainEntries(domainId).synchronized {
+            // for map based storage
+            //domainEntries(domainId).put(wordId, entry)
+            // for list based storage
+            domainEntries(domainId).put(wordId,entry)
+          }
 
           ((newOdag.getPattern(),domainId,wordId.intValue), newOdag)
 

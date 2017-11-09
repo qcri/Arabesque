@@ -19,7 +19,7 @@ class SinglePatternSimpleStorage extends SimpleStorage {
     this()
     this.pattern = pattern
     serializeAsReadOnly = false
-    storage = new SimpleDomainStorage(numberOfDomains)
+    storage = new UPSDomainStorage(numberOfDomains)
   }
 
   def this(readOnly: Boolean) {

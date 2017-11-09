@@ -37,11 +37,11 @@ abstract class SimpleStorageStash[O <: SimpleStorage, S <: SimpleStorageStash[O,
 
   def clear(): Unit
 
-  def printAllEnumerations(filePath: String): Unit
+  //def printAllEnumerations(filePath: String): Unit
 
-  def getStorageReports(): ArrayBuffer[StorageReport]
+  //def getStorageReports(): ArrayBuffer[StorageReport]
 
-  def getNumberSpuriousEmbeddings(): Long
+  //def getNumberSpuriousEmbeddings(): Long
 }
 
 trait Reader[E <: Embedding] extends util.Iterator[E] {}
@@ -96,7 +96,7 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
       // null and let the while begin again (simulate recursive call without the stack
       // building overhead).
       else {
-        val reader = currentReader.asInstanceOf[SimpleDomainStorageReadOnly#Reader]
+        val reader = currentReader.asInstanceOf[UPSDomainStorageReadOnly#Reader]
         stashReports += reader.getStorageReport()
 
         currentReader.close()

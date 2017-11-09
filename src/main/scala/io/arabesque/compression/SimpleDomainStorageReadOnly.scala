@@ -30,6 +30,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
   @throws(classOf[IOException])
   override def readFields (dataInput: DataInput): Unit = {
     this.clear()
+
     numEmbeddings = dataInput.readLong()
     setNumberOfDomains(dataInput.readInt())
 
@@ -49,7 +50,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
 
     isStorageInitialized = false
     initStorage()
-    //initReport()
   }
   //*/
 
@@ -57,7 +57,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
   @throws[RuntimeException]
   override def getReader(pattern: Pattern, computation: Computation[Embedding],
                 numPartitions: Int, numBlocks: Int, maxBlockSize: Int): StorageReader = {
-    //logInfo(s"Getting  a reader from SimpleDomainStorageReadOnly with maxBlockSize=$maxBlockSize, numBlocks=$numBlocks, numPartitions=$numPartitions")
     new Reader(pattern, computation, numPartitions, numBlocks, maxBlockSize)
   }
 
@@ -65,12 +64,11 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
   @throws[RuntimeException]
   override def getReader(patterns: Array[Pattern], computation: Computation[Embedding],
                 numPartitions: Int, numBlocks: Int, maxBlockSize: Int): StorageReader = {
-    //new MultiPatternReader(patterns, computation, numPartitions, numBlocks, maxBlockSize)
     throw new RuntimeException("Multi-pattern with SimpleStorage is not available")
   }
 
   //*
-  // Efficient Storage
+  // Reading efficient storage
   private var storage: Array[Array[Int]] = _
   protected var isStorageInitialized: Boolean = false
 
@@ -114,6 +112,7 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
     final private var superStep: Int = _
 
     private var targetEnumId: Long = 0L
+
     private var edgesConsumer: EdgesConsumer = _
     private var edgeIds: IntArrayList = _
 
@@ -247,13 +246,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
         if (vertices.contains(wordId))
           return false
 
-        /*
-        if(DEBUG_TryAddWord && isTargetSuperStep && isTargetEmbedding) {
-          val message = s"I am in TryAddWord and word $wordId is not part of the embedding"
-          printDebugInfo(callerName, message)
-        }
-        */
-
         singletonExtensionSet.clear()
         singletonExtensionSet.add(wordId)
 
@@ -289,9 +281,6 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
         return true
 
       case reusableEdgeEmbedding:EdgeInducedEmbedding =>
-        //val reusableEdgeEmbedding: EdgeInducedEmbedding = reusableEmbedding.asInstanceOf[EdgeInducedEmbedding]
-        //logInfo(s"Trying to add wordId=$wordId")
-
         singletonExtensionSet.clear()
         singletonExtensionSet.add(wordId)
 
@@ -511,18 +500,22 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
                 if ((domainOfLastEnumerationStep < targetSize - 1 && currentId + numOfNewPossibilities > targetEnumId)
                   || (domainOfLastEnumerationStep == targetSize - 1 && currentId == targetEnumId)) {
                   var invalid: Boolean = false
+
                   if (!tryAddWord(newWordId)) {
                     targetEnumId = currentId + numOfNewPossibilities - 1
                     invalid = true
                     reusableEmbedding.addWord(newWordId)
                   }
+
                   lastEnumerationStep.currentId = currentId
                   lastEnumerationStep.wordId = newWordId
                   lastEnumerationStep.asInstanceOf[DomainNot0EnumerationStep].pos = i
                   enumerationStack.push(lastEnumerationStep)
+
                   if (invalid) {
                     report.pruned(domainOfLastEnumerationStep) += 1
                     numSpuriousEmbeddings += 1
+
                     return false
                   }
                   else {
@@ -542,11 +535,9 @@ class SimpleDomainStorageReadOnly extends SimpleDomainStorage {
             }
           }
           // If enumeration stack is of the desired size
-          if (enumerationStack.size == targetSize) { // And last element actually represents a valid element
-            if (enumerationStack.peek.wordId >= 0) { // Get out of the loop
+          if (enumerationStack.size == targetSize) // And last element actually represents a valid element
+            if (enumerationStack.peek.wordId >= 0) // Get out of the loop
               break
-            }
-          }
         }
       }
 

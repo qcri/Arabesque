@@ -1,21 +1,15 @@
 package io.arabesque.odag;
 
 import io.arabesque.computation.Computation;
-import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.odag.domain.DomainStorage;
-import io.arabesque.odag.domain.DomainStorageReadOnly;
+import io.arabesque.odag.domain.*;
 import io.arabesque.odag.domain.StorageReader;
-import io.arabesque.odag.domain.StorageStats;
-import io.arabesque.pattern.Pattern;
-import org.apache.giraph.aggregators.BasicAggregator;
+import io.arabesque.report.StorageReport;
+import io.arabesque.compression.*;
 import org.apache.hadoop.io.Writable;
-import org.apache.log4j.Logger;
 
-import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
-import io.arabesque.report.StorageReport;
 
 public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGStash>
       implements Writable {
@@ -95,7 +89,7 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
             // null and let the while begin again (simulate recursive call without the stack
             // building overhead).
             else {
-               DomainStorageReadOnly.Reader reader = (DomainStorageReadOnly.Reader)currentReader;
+               PrimitiveODAGDomainStorageReadOnly.Reader reader = (PrimitiveODAGDomainStorageReadOnly.Reader)currentReader;
                stashReports.add(reader.getStorageReport());
 
                currentReader.close();

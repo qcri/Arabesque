@@ -1,5 +1,9 @@
-package io.arabesque.odag.domain;
+package io.arabesque.compression;
 
+import com.koloboke.collect.IntCollection;
+import com.koloboke.collect.map.IntObjMap;
+import com.koloboke.collect.set.hash.HashIntSet;
+import com.koloboke.collect.set.hash.HashIntSets;
 import io.arabesque.computation.Computation;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.EdgeInducedEmbedding;
@@ -8,29 +12,26 @@ import io.arabesque.embedding.VertexInducedEmbedding;
 import io.arabesque.graph.Edge;
 import io.arabesque.graph.LabelledEdge;
 import io.arabesque.graph.MainGraph;
+import io.arabesque.odag.domain.*;
 import io.arabesque.pattern.LabelledPatternEdge;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
+import io.arabesque.report.StorageReport;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
-import io.arabesque.report.StorageReport;
-import com.koloboke.collect.IntCollection;
-import com.koloboke.collect.set.hash.HashIntSet;
-import com.koloboke.collect.set.hash.HashIntSets;
 import org.apache.log4j.Logger;
 
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.ConcurrentHashMap;
 
-public class DomainStorageReadOnly extends DomainStorage {
+public class PrimitiveODAGDomainStorageReadOnly extends PrimitiveODAGDomainStorage {
     private static final Logger LOG = Logger.getLogger(DomainEntryReadOnly.class);
 
     @Override
-    public void readFields(DataInput dataInput) throws IOException { 
+    public void readFields(DataInput dataInput) throws IOException {
         this.clear();
 
         numEmbeddings = dataInput.readLong();
@@ -39,7 +40,7 @@ public class DomainStorageReadOnly extends DomainStorage {
         for (int i = 0; i < numberOfDomains; ++i) {
             int domainEntryMapSize = dataInput.readInt();
 
-            ConcurrentHashMap<Integer, DomainEntry> domainEntryMap = domainEntries.get(i);
+            IntObjMap<DomainEntry> domainEntryMap = domainEntries.get(i);
 
             for (int j = 0; j < domainEntryMapSize; ++j) {
                 int wordId = dataInput.readInt();
@@ -86,7 +87,7 @@ public class DomainStorageReadOnly extends DomainStorage {
         private EdgesConsumer edgesConsumer;
         private IntArrayList edgeIds;
 
-        private final boolean debugCtor = false;
+        //private final boolean debugCtor = false;
 
         protected StorageReport report = new StorageReport();
         protected long numCompleteEnumerationsVisited = 0;
@@ -118,7 +119,7 @@ public class DomainStorageReadOnly extends DomainStorage {
             edgesConsumer = new EdgesConsumer(Configuration.get().isGraphEdgeLabelled());
             edgesConsumer.setCollection(edgeIds);
 
-            if(debugCtor && computation.getStep() >= 2) {
+/*            if(debugCtor && computation.getStep() >= 2) {
                 System.out.println("\nInside ctor(partitionId=" + partitionId + " in SuperStep(" + computation.getStep() + " of SimpleDomainStorageReadOnly.Reader with \n{" +
                         "\nnumberOfEnumerations=" + numberOfEnumerations +
                         "\nnumberOfPartitions=" + numPartitions +
@@ -126,7 +127,7 @@ public class DomainStorageReadOnly extends DomainStorage {
                         "\nmaxBlockSize=" + maxBlockSize +
                         "\nblockSize=" + this.blockSize +
                         "\n}");
-            }
+            }*/
 
             report.initReport(numberOfDomains);
         }
@@ -342,7 +343,7 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                     int currentIndex = domain0EnumerationStep.index;
 
-                    ConcurrentHashMap<Integer, DomainEntry> domain0 = domainEntries.get(0);
+                    IntObjMap<DomainEntry> domain0 = domainEntries.get(0);
 
                     while (++currentIndex < domain0OrderedKeys.length) {
                         int wordId = domain0OrderedKeys[currentIndex];
@@ -370,8 +371,9 @@ public class DomainStorageReadOnly extends DomainStorage {
                             enumerationStack.push(domain0EnumerationStep);
 
                             if (invalid) {
-                                report.pruned[domainOfLastEnumerationStep] += 1;
                                 numSpuriousEmbeddings += 1;
+                                //report.incrementPruned(domainOfLastEnumerationStep,1);
+                                report.pruned[domainOfLastEnumerationStep] += 1;
                                 return false;
                             } else {
                                 //report.incrementExplored(domainOfLastEnumerationStep,1);
@@ -395,7 +397,7 @@ public class DomainStorageReadOnly extends DomainStorage {
                 else {
                     DomainNot0EnumerationStep domainNot0EnumerationStep = (DomainNot0EnumerationStep) lastEnumerationStep;
 
-                    ConcurrentHashMap<Integer, DomainEntry> possibilitiesLastDomain = domainEntries.get(domainOfLastEnumerationStep);
+                    IntObjMap<DomainEntry> possibilitiesLastDomain = domainEntries.get(domainOfLastEnumerationStep);
 
                     int[] pointers = domainNot0EnumerationStep.domain;
 
@@ -428,8 +430,9 @@ public class DomainStorageReadOnly extends DomainStorage {
                             enumerationStack.push(lastEnumerationStep);
 
                             if (invalid) {
-                                report.pruned[domainOfLastEnumerationStep] += 1;
                                 numSpuriousEmbeddings += 1;
+                                //report.incrementPruned(domainOfLastEnumerationStep,1);
+                                report.pruned[domainOfLastEnumerationStep] += 1;
                                 return false;
                             } else {
                                 //report.incrementExplored(domainOfLastEnumerationStep,1);
@@ -897,7 +900,7 @@ public class DomainStorageReadOnly extends DomainStorage {
 
                     int currentIndex = domain0EnumerationStep.index;
 
-                    ConcurrentHashMap<Integer, DomainEntry> domain0 = domainEntries.get(0);
+                    IntObjMap<DomainEntry> domain0 = domainEntries.get(0);
 
                     while (++currentIndex < domain0OrderedKeys.length) {
                         int wordId = domain0OrderedKeys[currentIndex];
@@ -944,7 +947,7 @@ public class DomainStorageReadOnly extends DomainStorage {
                 } else {
                     DomainNot0EnumerationStep domainNot0EnumerationStep = (DomainNot0EnumerationStep) lastEnumerationStep;
 
-                    ConcurrentHashMap<Integer, DomainEntry> possibilitiesLastDomain = domainEntries.get(domainOfLastEnumerationStep);
+                    IntObjMap<DomainEntry> possibilitiesLastDomain = domainEntries.get(domainOfLastEnumerationStep);
 
                     int[] pointers = domainNot0EnumerationStep.domain;
 

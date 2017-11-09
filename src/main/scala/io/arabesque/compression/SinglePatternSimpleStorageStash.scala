@@ -216,6 +216,7 @@ class SinglePatternSimpleStorageStash
     override def createInitialValue = new SinglePatternSimpleStorageStash
   }
 
+  /*
   override def printAllEnumerations(filePath: String) = {
     var i = 0
     compressedEmbeddingsByPattern.values().foreach(storage => {
@@ -223,8 +224,9 @@ class SinglePatternSimpleStorageStash
       i += 1
     })
   }
+  */
 
-  //*
+  /*
   override def getStorageReports(): ArrayBuffer[StorageReport] = {
     var i = 0
     val storageReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
@@ -239,8 +241,9 @@ class SinglePatternSimpleStorageStash
 
     storageReports
   }
-  //*/
+  */
 
+  /*
   def getNumberSpuriousEmbeddings: Long = {
     var totalSpurious:Long = 0L
 
@@ -250,6 +253,7 @@ class SinglePatternSimpleStorageStash
 
     totalSpurious
   }
+  */
 }
 
 object SinglePatternSimpleStorageStash {

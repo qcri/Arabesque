@@ -8,7 +8,6 @@ import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.pattern.Pattern
 import io.arabesque.report.MasterReport
-
 import org.apache.hadoop.io.Writable
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -85,12 +84,12 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       */
 
       // halt to record by yourkit
-      //*
+      /*
       if(superstep == 4) {
         println("### Sleeping at the beggining of the superstep ###")
         Thread.sleep(60000)
       }
-      //*/
+      */
 
       val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
@@ -173,12 +172,12 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       Await.ready (odagsFuture, atMost = Duration.Inf)
 
       // halt to record by yourkit
-      //*
+      /*
       if(superstep == 4) {
         println("### Sleeping before ODAGs aggregation ###")
         Thread.sleep(60000)
       }
-      //*/
+      */
 
       odagsFuture.value.get match {
         case Success(aggregatedOdagsLocal) =>
@@ -249,13 +248,13 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
         storage.finalizeConstruction
         val storageEstimate = SizeEstimator.estimate (storage)
         val patternEstimate = SizeEstimator.estimate (pattern)
-        masterReport.numberOfWordsInDomains += storage.getNumberOfWordsInDomains()
-        masterReport.numberOfWordsInConnections += storage.getNumberOfWordsInConnections()
-        masterReport.storageSize += storageEstimate
-        masterReport.patternSize += patternEstimate
-        masterReport.calculatedSize += storage.getCalculatedSizeInBytes
-        masterReport.domainEntriesCalculatedSize += storage.getDomainEntriesCalculatedSizeInBytes
-        masterReport.storageSummary += storage.toJSONString
+        masterReport.numberOfWordsInDomains.add( storage.getNumberOfWordsInDomains() );
+        masterReport.numberOfWordsInConnections.add( storage.getNumberOfWordsInConnections() );
+        masterReport.storageSize.add( storageEstimate );
+        masterReport.patternSize.add( patternEstimate );
+        masterReport.calculatedSize.add( storage.getCalculatedSizeInBytes );
+        masterReport.domainEntriesCalculatedSize.add( storage.getDomainEntriesCalculatedSizeInBytes );
+        masterReport.storageSummary.add( storage.toJSONString );
         i += 1
       })
 
@@ -264,7 +263,6 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
         masterReport.saveReport(reportsFilePath)
 
       superstep += 1
-      //Thread.sleep(10000)
     } while (!sc.isStopped && !aggregatedOdagsBc.value.isEmpty) // while there are ODAGs to be processed
 
     val finishTime = System.currentTimeMillis

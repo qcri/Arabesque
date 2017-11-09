@@ -1,9 +1,9 @@
 package io.arabesque.odag;
 
+import io.arabesque.compression.*;
 import io.arabesque.computation.Computation;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.odag.domain.DomainStorage;
-import io.arabesque.odag.domain.DomainStorageReadOnly;
+import io.arabesque.odag.domain.*;
 import io.arabesque.odag.domain.StorageReader;
 import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
@@ -13,12 +13,12 @@ import java.io.*;
 import java.util.concurrent.ExecutorService;
 
 public abstract class BasicODAG implements Writable, Externalizable {
-    protected DomainStorage storage;
+    protected PrimitiveODAGDomainStorage storage;
     protected boolean serializeAsReadOnly;
 
-    protected DomainStorage createDomainStorage(boolean readOnly) {
-        if (readOnly) return new DomainStorageReadOnly();
-        else return new DomainStorage();
+    protected PrimitiveODAGDomainStorage createDomainStorage(boolean readOnly) {
+        if (readOnly) return new PrimitiveODAGDomainStorageReadOnly();
+        else return new PrimitiveODAGDomainStorage();
     }
 
     public abstract void addEmbedding(Embedding embedding);
@@ -34,7 +34,7 @@ public abstract class BasicODAG implements Writable, Externalizable {
         return storage.getNumberOfDomains();
     }
 
-    public DomainStorage getStorage() {
+    public PrimitiveODAGDomainStorage getStorage() {
         return storage;
     }
 

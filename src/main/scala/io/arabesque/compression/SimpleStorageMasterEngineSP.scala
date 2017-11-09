@@ -7,7 +7,6 @@ import io.arabesque.aggregation.AggregationStorage
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.pattern.Pattern
 import io.arabesque.report.MasterReport
-
 import org.apache.hadoop.io.Writable
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -87,12 +86,12 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       }
       */
       // halt to record by yourkit
-      //*
-      if(superstep == 4) {
-        println("### Sleeping at the beggining of the superstep ###")
-        Thread.sleep(90000)
+      /*
+      if(superstep == 3) {
+        println("### Sleeping at the beginning of the superstep ###")
+        Thread.sleep(240000)
       }
-      //*/
+      */
 
       val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
@@ -176,12 +175,12 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       Await.ready (odagsFuture, atMost = Duration.Inf)
 
       // halt to record by yourkit
-      //*
+      /*
       if(superstep == 4) {
         println("### Sleeping before ODAGs aggregation ###")
         Thread.sleep(90000)
       }
-      //*/
+      */
 
       odagsFuture.value.get match {
         case Success(aggregatedOdagsLocal) =>
@@ -257,19 +256,37 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       var i = 0
       aggregatedOdagsBc.value.foreach(entry => {
         val pattern = entry._1
-        //val odag = entry._2
-        // entry._2 is the odag
         val storage = entry._2.getStorage
         storage.finalizeConstruction
         val storageEstimate = SizeEstimator.estimate (storage)
         val patternEstimate = SizeEstimator.estimate (pattern)
-        masterReport.numberOfWordsInDomains += storage.getNumberOfWordsInDomains()
-        masterReport.numberOfWordsInConnections += storage.getNumberOfWordsInConnections()
-        masterReport.storageSize += storageEstimate
-        masterReport.patternSize += patternEstimate
-        masterReport.calculatedSize += storage.getCalculatedSizeInBytes
-        masterReport.domainEntriesCalculatedSize += storage.getDomainEntriesCalculatedSizeInBytes
-        masterReport.storageSummary += storage.toJSONString
+        masterReport.numberOfWordsInDomains.add( storage.getNumberOfWordsInDomains())
+        masterReport.numberOfWordsInConnections.add( storage.getNumberOfWordsInConnections())
+        var readingStorageSize: Long = 0
+        if(storage.isInstanceOf[GenericSimpleDomainStorageReadOnly]) {
+          readingStorageSize = storage.asInstanceOf[GenericSimpleDomainStorageReadOnly].getReadingStorageSize
+          //println("Yes it is GenericSimpleDomainStorageReadOnly")
+        }
+        else
+          if(storage.isInstanceOf[PrimitiveSimpleDomainStorageReadOnly]) {
+            readingStorageSize = storage.asInstanceOf[PrimitiveSimpleDomainStorageReadOnly].getReadingStorageSize
+            //println("Yes it is PrimitiveSimpleDomainStorageReadOnly")
+          }
+          else
+          if(storage.isInstanceOf[UltraPrimitiveSimpleDomainStorageReadOnly]) {
+            readingStorageSize = storage.asInstanceOf[UltraPrimitiveSimpleDomainStorageReadOnly].getReadingStorageSize
+            //println("Yes it is UltraPrimitiveSimpleDomainStorageReadOnly")
+          }
+          else
+          if(storage.isInstanceOf[UPSDomainStorageReadOnly]) {
+            readingStorageSize = storage.asInstanceOf[UPSDomainStorageReadOnly].getReadingStorageSize
+            //println("Yes it is UPSDomainStorageReadOnly")
+          }
+        masterReport.storageSize.add( storageEstimate - readingStorageSize )
+        masterReport.patternSize.add( patternEstimate )
+        masterReport.calculatedSize.add( storage.getCalculatedSizeInBytes )
+        masterReport.domainEntriesCalculatedSize.add( storage.getDomainEntriesCalculatedSizeInBytes )
+        masterReport.storageSummary.add( storage.toJSONString )
         i += 1
       })
 

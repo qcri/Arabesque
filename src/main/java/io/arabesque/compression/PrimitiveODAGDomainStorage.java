@@ -1,11 +1,15 @@
-package io.arabesque.odag.domain;
+package io.arabesque.compression;
 
+import com.koloboke.collect.map.IntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
+import com.koloboke.collect.IntCursor;
+import com.koloboke.function.IntObjConsumer;
 import io.arabesque.computation.Computation;
 import io.arabesque.embedding.Embedding;
+import io.arabesque.odag.domain.*;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.utils.WriterSetConsumer;
 import io.arabesque.utils.collection.IntArrayList;
-import com.koloboke.collect.IntCursor;
 import org.weakref.jmx.com.google.common.primitives.Ints;
 
 import java.io.DataInput;
@@ -14,18 +18,21 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class DomainStorage extends Storage<DomainStorage> {
+public class PrimitiveODAGDomainStorage extends Storage<PrimitiveODAGDomainStorage> {
     protected boolean countsDirty;
     protected boolean keysOrdered;
-    protected ArrayList<ConcurrentHashMap<Integer, DomainEntry>> domainEntries;
+    protected ArrayList<IntObjMap<DomainEntry>> domainEntries;
+
     protected int[] domain0OrderedKeys;
     protected int numberOfDomains;
     protected WriterSetConsumer writerSetConsumer;
 
     // how many valid embeddings this storage actually have ?
     protected long numEmbeddings;
+    // how many invalid embeddings this storage/partition generated
+    //protected long numSpuriousEmbeddings;
 
-    public DomainStorage(int numberOfDomains) {
+    public PrimitiveODAGDomainStorage(int numberOfDomains) {
         setNumberOfDomains(numberOfDomains);
         countsDirty = false;
         keysOrdered = false;
@@ -33,7 +40,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         numEmbeddings = 0;
     }
 
-    public DomainStorage() {
+    public PrimitiveODAGDomainStorage() {
         numberOfDomains = -1;
         countsDirty = false;
         keysOrdered = false;
@@ -50,13 +57,13 @@ public class DomainStorage extends Storage<DomainStorage> {
         this.numberOfDomains = numberOfDomains;
     }
 
-    public ArrayList<ConcurrentHashMap<Integer, DomainEntry>> getDomainEntries() {
+    public ArrayList<IntObjMap<DomainEntry>> getDomainEntries() {
        return domainEntries;
     }
 
     public int getNumberOfEntries() {
        int numEntries = 0;
-       for (ConcurrentHashMap<Integer, DomainEntry> domain: domainEntries)
+       for (IntObjMap domain: domainEntries)
           numEntries += domain.size();
        return numEntries;
     }
@@ -76,8 +83,10 @@ public class DomainStorage extends Storage<DomainStorage> {
         int delta = nDomains - currentNumDomains;
 
         for (int i = 0; i < delta; ++i) {
-            domainEntries.add(new ConcurrentHashMap<Integer, DomainEntry>());
+            IntObjMap<DomainEntry> newDomain = HashIntObjMaps.newMutableMap();
+            domainEntries.add(newDomain);
         }
+
     }
 
     public long getCalculatedSizeInBytes() {
@@ -99,7 +108,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         long size = 0;
 
         for(int i = 0 ; i < domainEntries.size() ; ++i) {
-            ConcurrentHashMap<Integer, DomainEntry> domain = domainEntries.get(i);
+            IntObjMap domain = domainEntries.get(i);
 
             // size to store keys
             size += (4 * domain.size());
@@ -127,7 +136,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         long count = 0;
 
         for(int i = 0 ; i < domainEntries.size() ; ++i) {
-            ConcurrentHashMap<Integer, DomainEntry> domain = domainEntries.get(i);
+            IntObjMap domain = domainEntries.get(i);
 
             // number of words in each domain
             count += domain.size();
@@ -162,20 +171,24 @@ public class DomainStorage extends Storage<DomainStorage> {
         }
 
         for (int i = 0; i < numWords; ++i) {
-            DomainEntry domainEntryForCurrentWord = domainEntries.get(i).get(words.getUnchecked(i));
+            synchronized (domainEntries.get(i)) {
+                DomainEntry domainEntryForCurrentWord = domainEntries.get(i).get(words.getUnchecked(i));
 
-            if (domainEntryForCurrentWord == null) {
-                domainEntryForCurrentWord = new DomainEntrySet();
-                domainEntries.get(i).put(words.getUnchecked(i), domainEntryForCurrentWord);
+                if (domainEntryForCurrentWord == null) {
+                    domainEntryForCurrentWord = new DomainEntrySet();
+                    domainEntries.get(i).put(words.getUnchecked(i), domainEntryForCurrentWord);
+                }
             }
         }
 
         for (int i = numWords - 1; i > 0; --i) {
-            DomainEntry domainEntryForPreviousWord = domainEntries.get(i - 1).get(words.getUnchecked(i - 1));
+            synchronized (domainEntries.get(i - 1)) {
+                DomainEntry domainEntryForPreviousWord = domainEntries.get(i - 1).get(words.getUnchecked(i - 1));
 
-            assert domainEntryForPreviousWord != null;
+                assert domainEntryForPreviousWord != null;
 
-            domainEntryForPreviousWord.insertConnectionToWord(words.getUnchecked(i));
+                domainEntryForPreviousWord.insertConnectionToWord(words.getUnchecked(i));
+            }
         }
 
         countsDirty = true;
@@ -188,7 +201,7 @@ public class DomainStorage extends Storage<DomainStorage> {
      * affecting the same DomainEntries (i.e, each thread handles different wordIds).
      */
     @Override
-    public void aggregate(DomainStorage otherDomainStorage) {
+    public void aggregate(PrimitiveODAGDomainStorage otherDomainStorage) {
         int otherNumberOfDomains = otherDomainStorage.numberOfDomains;
 
         if (numberOfDomains == -1) {
@@ -201,11 +214,38 @@ public class DomainStorage extends Storage<DomainStorage> {
         }
 
         for (int i = 0; i < numberOfDomains; ++i) {
-            ConcurrentHashMap<Integer, DomainEntry> thisDomainMap = domainEntries.get(i);
-            ConcurrentHashMap<Integer, DomainEntry> otherDomainMap = otherDomainStorage.domainEntries.get(i);
+            IntObjMap<DomainEntry> thisDomainMap = domainEntries.get(i);
+            IntObjMap<DomainEntry> otherDomainMap = otherDomainStorage.domainEntries.get(i);
 
             for (Map.Entry<Integer, DomainEntry> otherDomainMapEntry : otherDomainMap.entrySet()) {
-                Integer otherVertexId = otherDomainMapEntry.getKey();
+                int otherVertexId = otherDomainMapEntry.getKey();
+                DomainEntry otherDomainEntry = otherDomainMapEntry.getValue();
+
+                DomainEntry thisDomainEntry = thisDomainMap.get(otherVertexId);
+
+                if (thisDomainEntry == null) {
+                    thisDomainMap.put(otherVertexId, otherDomainEntry);
+                } else {
+                    thisDomainEntry.aggregate(otherDomainEntry);
+                }
+            }
+            /*
+            otherDomainMap.forEach(new IntObjConsumer<DomainEntry>() {
+                @Override
+                public void accept(int a, DomainEntry b) {
+                    DomainEntry thisDomainEntry = thisDomainMap.get(a);
+
+                    if (thisDomainEntry == null) {
+                        thisDomainMap.put(a, b);
+                    } else {
+                        thisDomainEntry.aggregate(b);
+                    }
+                }
+            });
+            */
+
+            for (Map.Entry<Integer, DomainEntry> otherDomainMapEntry : otherDomainMap.entrySet()) {
+                int otherVertexId = otherDomainMapEntry.getKey();
                 DomainEntry otherDomainEntry = otherDomainMapEntry.getValue();
 
                 DomainEntry thisDomainEntry = thisDomainMap.get(otherVertexId);
@@ -248,7 +288,7 @@ public class DomainStorage extends Storage<DomainStorage> {
     @Override
     public void clear() {
         if (domainEntries != null) {
-            for (ConcurrentHashMap<Integer, DomainEntry> domainMap : domainEntries) {
+            for (IntObjMap domainMap : domainEntries) {
                 domainMap.clear();
             }
         }
@@ -285,7 +325,7 @@ public class DomainStorage extends Storage<DomainStorage> {
     private void orderDomain0Keys() {
         if (domain0OrderedKeys != null && keysOrdered)
            return;
-        domain0OrderedKeys = Ints.toArray(domainEntries.get(0).keySet());
+        domain0OrderedKeys = domainEntries.get(0).keySet().toIntArray();
         Arrays.sort(domain0OrderedKeys);
         keysOrdered = true;
     }
@@ -306,16 +346,18 @@ public class DomainStorage extends Storage<DomainStorage> {
 
         @Override
         public void run() {
-            ConcurrentHashMap<Integer, DomainEntry> currentEntryMap = domainEntries.get(domain);
-            ConcurrentHashMap<Integer, DomainEntry> followingEntryMap = domainEntries.get(domain + 1);
+            synchronized (this) {
+                IntObjMap<DomainEntry> currentEntryMap = domainEntries.get(domain);
+                IntObjMap<DomainEntry> followingEntryMap = domainEntries.get(domain + 1);
 
-            for (Map.Entry<Integer, DomainEntry> entry : currentEntryMap.entrySet()) {
-                int wordId = entry.getKey();
+                for (Map.Entry<Integer, DomainEntry> entry : currentEntryMap.entrySet()) {
+                    int wordId = entry.getKey();
 
-                if (wordId % totalParts == partId) {
-                    DomainEntry domainEntry = entry.getValue();
-                    domainEntry.setCounter(0);
-                    domainEntry.incrementCounterFrom(followingEntryMap);
+                    if (wordId % totalParts == partId) {
+                        DomainEntry domainEntry = entry.getValue();
+                        domainEntry.setCounter(0);
+                        domainEntry.incrementCounterFrom(followingEntryMap);
+                    }
                 }
             }
         }
@@ -363,7 +405,7 @@ public class DomainStorage extends Storage<DomainStorage> {
         dataOutput.writeLong(numEmbeddings);
         dataOutput.writeInt(numberOfDomains);
 
-        for (ConcurrentHashMap<Integer, DomainEntry> domainEntryMap : domainEntries) {
+        for (IntObjMap<DomainEntry> domainEntryMap : domainEntries) {
             dataOutput.writeInt(domainEntryMap.size());
             for (Map.Entry<Integer, DomainEntry> entry : domainEntryMap.entrySet()) {
                 Integer wordId = entry.getKey();
@@ -383,7 +425,7 @@ public class DomainStorage extends Storage<DomainStorage> {
             outputs[i].writeInt(numberOfDomains);
         }
 
-        for (ConcurrentHashMap<Integer, DomainEntry> domainEntryMap : domainEntries) {
+        for (IntObjMap<DomainEntry> domainEntryMap : domainEntries) {
             Arrays.fill(numEntriesOfPartsInDomain, 0);
 
             for (Integer wordId : domainEntryMap.keySet()) {
@@ -427,9 +469,10 @@ public class DomainStorage extends Storage<DomainStorage> {
 
         numEmbeddings = dataInput.readLong();
         setNumberOfDomains(dataInput.readInt());
+
         for (int i = 0; i < numberOfDomains; ++i) {
             int domainEntryMapSize = dataInput.readInt();
-            ConcurrentHashMap<Integer, DomainEntry> domainEntryMap = domainEntries.get(i);
+            IntObjMap<DomainEntry> domainEntryMap = domainEntries.get(i);
 
             for (int j = 0; j < domainEntryMapSize; ++j) {
                 int wordId = dataInput.readInt();
@@ -456,7 +499,7 @@ public class DomainStorage extends Storage<DomainStorage> {
 
         stats.numDomains = domainEntries.size();
 
-        for (ConcurrentHashMap<Integer, DomainEntry> domainMap : domainEntries) {
+        for (IntObjMap<DomainEntry> domainMap : domainEntries) {
             int domainSize = domainMap.size();
 
             if (domainSize > stats.maxDomainSize) {

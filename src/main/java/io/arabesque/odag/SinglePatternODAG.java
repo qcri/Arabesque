@@ -1,16 +1,13 @@
 package io.arabesque.odag;
 
+import io.arabesque.compression.PrimitiveODAGDomainStorage;
 import io.arabesque.computation.Computation;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.odag.domain.DomainStorage;
-import io.arabesque.odag.domain.DomainStorageReadOnly;
+import io.arabesque.odag.domain.*;
 import io.arabesque.odag.domain.StorageReader;
-import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
-import org.apache.hadoop.io.Writable;
 
 import java.io.*;
-import java.util.concurrent.ExecutorService;
 
 public class SinglePatternODAG extends BasicODAG {
     private Pattern pattern;
@@ -18,7 +15,7 @@ public class SinglePatternODAG extends BasicODAG {
     public SinglePatternODAG(Pattern pattern, int numberOfDomains) {
         this.pattern = pattern;
         serializeAsReadOnly = false;
-        storage = new DomainStorage(numberOfDomains);
+        storage = new PrimitiveODAGDomainStorage(numberOfDomains);
     }
 
     public SinglePatternODAG(boolean readOnly) {

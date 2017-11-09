@@ -10,7 +10,6 @@ import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.odag.BasicODAGStash.EfficientReader
 import io.arabesque.report._
-
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
@@ -205,13 +204,13 @@ trait ODAGEngine[
     def accumulate[T : ClassTag](it: T, accum: Accumulator[_]) = {
       accum.asInstanceOf[Accumulator[T]] += it
     }
-    logInfo (s"Embeddings processed: ${numEmbeddingsProcessed}")
+    logInfo (s"Embeddings processed: ${numEmbeddingsProcessed} by partition($partitionId) in SuperStep($superstep)")
     accumulate (numEmbeddingsProcessed,
       accums(ODAGMasterEngine.AGG_EMBEDDINGS_PROCESSED))
-    logInfo (s"Embeddings generated: ${numEmbeddingsGenerated}")
+    logInfo (s"Embeddings generated: ${numEmbeddingsGenerated} by partition($partitionId) in SuperStep($superstep)")
     accumulate (numEmbeddingsGenerated,
       accums(ODAGMasterEngine.AGG_EMBEDDINGS_GENERATED))
-    logInfo (s"Embeddings output: ${numEmbeddingsOutput}")
+    logInfo (s"Embeddings output: ${numEmbeddingsOutput} by partition($partitionId) in SuperStep($superstep)")
     accumulate (numEmbeddingsOutput,
       accums(ODAGMasterEngine.AGG_EMBEDDINGS_OUTPUT))
     logInfo (s"Spurious Embeddings: ${numSpuriousEmbeddings} by partition($partitionId) in SuperStep($superstep)")

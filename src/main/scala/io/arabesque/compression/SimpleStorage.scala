@@ -15,14 +15,14 @@ import io.arabesque.utils.Logging
   * Created by ehussein on 6/28/17.
   */
 abstract class SimpleStorage extends Writable with java.io.Externalizable with Logging {
-  protected var storage:SimpleDomainStorage = _
+  protected var storage:UPSDomainStorage = _
   protected var serializeAsReadOnly: Boolean = false
 
-  protected def createDomainStorage(readOnly: Boolean): SimpleDomainStorage =
+  protected def createDomainStorage(readOnly: Boolean): UPSDomainStorage =
     if (readOnly)
-      new SimpleDomainStorageReadOnly
+      new UPSDomainStorageReadOnly
     else
-      new SimpleDomainStorage
+      new UPSDomainStorage
 
   def addEmbedding(embedding: Embedding): Unit
 
@@ -34,7 +34,7 @@ abstract class SimpleStorage extends Writable with java.io.Externalizable with L
 
   def getNumberOfDomains(): Int = storage.getNumberOfDomains
 
-  def getStorage: SimpleDomainStorage = storage
+  def getStorage: UPSDomainStorage = storage
 
   def getNumberOfEnumerations: Long = storage.getNumberOfEnumerations
 
@@ -63,7 +63,7 @@ abstract class SimpleStorage extends Writable with java.io.Externalizable with L
 
   def printAllEnumerations(filePath: String) = storage.printAllEnumerations(filePath)
 
-  def getStorageReport(): StorageReport = storage.getStorageReport()
+  //def getStorageReport(): StorageReport = storage.getStorageReport()
 
-  def getNumberSpuriousEmbeddings: Long = storage.getNumberSpuriousEmbeddings
+  //def getNumberSpuriousEmbeddings: Long = storage.getNumberSpuriousEmbeddings
 }

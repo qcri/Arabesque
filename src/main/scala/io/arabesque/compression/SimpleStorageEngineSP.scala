@@ -28,7 +28,7 @@ case class SimpleStorageEngineSP [E <: Embedding]
     if(generateReports) {
       partitionReport.partitionId = this.partitionId
       partitionReport.superstep = this.superstep
-      partitionReport.storageReports = storageReports
+      partitionReport.storageReports = storageReports.toArray
       partitionReport.saveReport(reportsFilePath)
     }
   }
@@ -93,7 +93,8 @@ case class SimpleStorageEngineSP [E <: Embedding]
     class ODAGPartsIterator(storage: SinglePatternSimpleStorage) extends Iterator[((Pattern,Int,Int),SinglePatternSimpleStorage)] {
       val domainIterator = storage.getStorage.getDomainEntries.iterator
       var domainId:Int = -1
-      var currEntriesIterator: Option[Iterator[(Int,Boolean)]] = None
+      //var currEntriesIterator: Option[Iterator[(Integer, java.lang.Boolean)]] = None
+      var currEntriesIterator: Option[Iterator[(Integer)]] = None
 
       val reusableOdag = new SinglePatternSimpleStorage(storage.getPattern, storage.getNumberOfDomains())
 
@@ -119,13 +120,21 @@ case class SimpleStorageEngineSP [E <: Embedding]
 
         case Some(entriesIterator) => // format domain entry as new BasicODAG
           val newOdag = new SinglePatternSimpleStorage(storage.getPattern, storage.getNumberOfDomains())
-          val (wordId, entry) = entriesIterator.next
+          //val (wordId, entry) = entriesIterator.next
+          val wordId = entriesIterator.next
           val domainEntries = newOdag.getStorage.getDomainEntries
 
-          domainEntries(domainId).put (wordId, entry)
+          //*
+          domainEntries(domainId).synchronized {
+            // for map based storage
+            //domainEntries(domainId).put(wordId, entry)
+            // for list based storage
+            domainEntries(domainId).add(wordId.intValue())
+          }
+          //*/
+          //domainEntries.get(domainId).put(wordId, entry)
 
           ((newOdag.getPattern,domainId,wordId.intValue), newOdag)
-
       }
 
       override def next = nextRec
