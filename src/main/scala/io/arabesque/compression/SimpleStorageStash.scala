@@ -55,7 +55,8 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
   private var currentReader: StorageReader = _
   private var currentPositionConsumed: Boolean = true
 
-  private var stashReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
+  // #reporting
+  //private var stashReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
 
   def this(stash: SimpleStorageStash[_ <: SimpleStorage, _], computation: Computation[_ <: Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int) = {
     this()
@@ -97,7 +98,8 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
       // building overhead).
       else {
         val reader = currentReader.asInstanceOf[UPSDomainStorageReadOnly#Reader]
-        stashReports += reader.getStorageReport()
+        // #reporting
+        //stashReports += reader.getStorageReport()
 
         currentReader.close()
         currentReader = null
@@ -116,5 +118,6 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
     throw new UnsupportedOperationException
   }
 
-  def getStashStorageReports(): ArrayBuffer[StorageReport] = stashReports
+  // #reporting
+  //def getStashStorageReports(): ArrayBuffer[StorageReport] = stashReports
 }

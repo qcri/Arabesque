@@ -35,11 +35,13 @@ trait SimpleStorageEngine [
   val accums: Map[String,Accumulator[_]]
   val previousAggregationsBc: Broadcast[_]
 
+  // #reporting
+  /*
   val partitionReport: PartitionReport = new PartitionReport
   val storageReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
   var reportsFilePath: String = _
   var generateReports: Boolean = false
-
+  */
   // update aggregations before flush
   def withNewAggregations(aggregationsBc: Broadcast[_]): C
 
@@ -82,6 +84,8 @@ trait SimpleStorageEngine [
   // TODO: tirar isso !!!
   def init(): Unit = {
     // set reports path
+    // #reporting
+    /*
     if(configuration.getBoolean("reports_active", false)) {
       reportsFilePath = configuration.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
       reportsFilePath += "/Partitions/"
@@ -91,6 +95,7 @@ trait SimpleStorageEngine [
     partitionReport.partitionId = this.partitionId
     partitionReport.superstep = this.superstep
     partitionReport.startTime = System.currentTimeMillis()
+    */
   }
 
   // output
@@ -196,7 +201,8 @@ trait SimpleStorageEngine [
       // no more embeddings to be read from current stash, try to get another
       // stash by recursive call
     } else {
-      storageReports.appendAll(stashReader.getStashStorageReports())
+      // #reporting
+      //storageReports.appendAll(stashReader.getStashStorageReports())
       currentEmbeddingStashOpt = None
       getNextInboundEmbedding(remainingStashes)
     }

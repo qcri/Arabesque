@@ -87,12 +87,13 @@ public class PrimitiveODAGDomainStorageReadOnly extends PrimitiveODAGDomainStora
         private EdgesConsumer edgesConsumer;
         private IntArrayList edgeIds;
 
-        //private final boolean debugCtor = false;
-
+        // #reporting
+        /*
         protected StorageReport report = new StorageReport();
         protected long numCompleteEnumerationsVisited = 0;
         // how many invalid embeddings this storage/partition generated
         protected long numSpuriousEmbeddings = 0L;
+        */
 
         public Reader(Pattern pattern, Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
             this.pattern = pattern;
@@ -119,19 +120,12 @@ public class PrimitiveODAGDomainStorageReadOnly extends PrimitiveODAGDomainStora
             edgesConsumer = new EdgesConsumer(Configuration.get().isGraphEdgeLabelled());
             edgesConsumer.setCollection(edgeIds);
 
-/*            if(debugCtor && computation.getStep() >= 2) {
-                System.out.println("\nInside ctor(partitionId=" + partitionId + " in SuperStep(" + computation.getStep() + " of SimpleDomainStorageReadOnly.Reader with \n{" +
-                        "\nnumberOfEnumerations=" + numberOfEnumerations +
-                        "\nnumberOfPartitions=" + numPartitions +
-                        "\nnumberOfBlocks=" + numBlocks +
-                        "\nmaxBlockSize=" + maxBlockSize +
-                        "\nblockSize=" + this.blockSize +
-                        "\n}");
-            }*/
-
-            report.initReport(numberOfDomains);
+            // #reporting
+            //report.initReport(numberOfDomains);
         }
 
+        // #reporting
+        /*
         protected void finalizeReport() {
             report.numEnumerations = numberOfEnumerations;
             report.numCompleteEnumerationsVisited = numCompleteEnumerationsVisited;
@@ -147,6 +141,7 @@ public class PrimitiveODAGDomainStorageReadOnly extends PrimitiveODAGDomainStora
             finalizeReport();
             return report;
         }
+        */
 
         @Override
         public boolean hasNext() {
@@ -371,13 +366,15 @@ public class PrimitiveODAGDomainStorageReadOnly extends PrimitiveODAGDomainStora
                             enumerationStack.push(domain0EnumerationStep);
 
                             if (invalid) {
+                                // #reporting
+                                /*
                                 numSpuriousEmbeddings += 1;
-                                //report.incrementPruned(domainOfLastEnumerationStep,1);
                                 report.pruned[domainOfLastEnumerationStep] += 1;
+                                */
                                 return false;
                             } else {
-                                //report.incrementExplored(domainOfLastEnumerationStep,1);
-                                report.explored[domainOfLastEnumerationStep] += 1;
+                                // #reporting
+                                //report.explored[domainOfLastEnumerationStep] += 1;
                                 // add new DomainNot0EnumerationStep with wordId = -1, and all possible ids for next domain
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForDomain0;
@@ -430,13 +427,15 @@ public class PrimitiveODAGDomainStorageReadOnly extends PrimitiveODAGDomainStora
                             enumerationStack.push(lastEnumerationStep);
 
                             if (invalid) {
+                                // #reporting
+                                /*
                                 numSpuriousEmbeddings += 1;
-                                //report.incrementPruned(domainOfLastEnumerationStep,1);
                                 report.pruned[domainOfLastEnumerationStep] += 1;
+                                */
                                 return false;
                             } else {
-                                //report.incrementExplored(domainOfLastEnumerationStep,1);
-                                report.explored[domainOfLastEnumerationStep] += 1;
+                                // #reporting
+                                //report.explored[domainOfLastEnumerationStep] += 1;
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForLastDomain;
                                     enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers()));
@@ -460,15 +459,19 @@ public class PrimitiveODAGDomainStorageReadOnly extends PrimitiveODAGDomainStora
                 }
             }
 
+            // #reporting
+            /*
             numCompleteEnumerationsVisited += 1;
             boolean isCompleteEmbeddingValid = testCompleteEmbedding();
             boolean isEmbeddingOfTargetSize = reusableEmbedding.getNumWords() == targetSize;
 
             if(!(isCompleteEmbeddingValid && isEmbeddingOfTargetSize))
                 numSpuriousEmbeddings += 1;
+            */
 
-            //return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
-            return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
+            return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
+            // #reporting
+            //return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
         }
 
         public String toStringResume() {

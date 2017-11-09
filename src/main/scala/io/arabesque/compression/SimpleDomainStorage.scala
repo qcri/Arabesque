@@ -10,7 +10,7 @@ import java.util
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors}
 import java.io._
 
-import io.arabesque.report2.StorageReport
+import io.arabesque.report.StorageReport
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._

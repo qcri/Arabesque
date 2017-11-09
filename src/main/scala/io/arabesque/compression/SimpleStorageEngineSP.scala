@@ -23,6 +23,8 @@ case class SimpleStorageEngineSP [E <: Embedding]
   // stashes
   nextEmbeddingStash = new SinglePatternSimpleStorageStash
 
+  // #reporting
+  /*
   def saveReports() = {
     partitionReport.endTime = System.currentTimeMillis()
     if(generateReports) {
@@ -32,6 +34,7 @@ case class SimpleStorageEngineSP [E <: Embedding]
       partitionReport.saveReport(reportsFilePath)
     }
   }
+  */
 
   /**
     * Returns a new execution engine from this with the aggregations/computation

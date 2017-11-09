@@ -67,9 +67,12 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
     val startTime = System.currentTimeMillis
 
     do {
+      // #reporting
+      /*
       val masterReport: MasterReport = new MasterReport
       masterReport.superstep = superstep
       masterReport.startTime = System.currentTimeMillis
+      */
 
       /*
       if(superstep == 3) {
@@ -196,7 +199,6 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
             for ((pattern,odag) <- aggregatedOdagsLocal.iterator) {
               val storage = odag.getStorage
               storage.finalizeConstruction
-//              odag.getStorage.getDomainEntries.foreach(domain => domain);
 
               val storageEstimate = SizeEstimator.estimate (odag.getStorage)
               val patternEstimate = SizeEstimator.estimate (pattern)
@@ -252,6 +254,8 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
         (name -> sc.accumulator [Long] (0L, name))
       }
 
+      // #reporting
+      /*
       // calc storage size/summary for master report for this superstep
       var i = 0
       aggregatedOdagsBc.value.foreach(entry => {
@@ -293,6 +297,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       masterReport.endTime = System.currentTimeMillis()
       if(generateReports)
         masterReport.saveReport(reportsFilePath)
+      */
 
       superstep += 1
 
@@ -330,7 +335,8 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       execEngine.init()
       val stash = new SinglePatternSimpleStorageStash(aggregatedOdagsBc.value)
       execEngine.compute (Iterator (stash))
-      execEngine.saveReports()
+      // #reporting
+      //execEngine.saveReports()
       execEngine.finalize()
       Iterator(execEngine)
     }

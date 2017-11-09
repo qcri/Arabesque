@@ -44,7 +44,8 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
       private StorageReader currentReader;
       private boolean currentPositionConsumed = true;
 
-      private ArrayList<StorageReport> stashReports = new ArrayList<>();
+      // #reporting
+      //private ArrayList<StorageReport> stashReports = new ArrayList<>();
 
       public EfficientReader(BasicODAGStash<?,?> stash, Computation<? extends Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
          this.numPartitions = numPartitions;
@@ -90,7 +91,8 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
             // building overhead).
             else {
                PrimitiveODAGDomainStorageReadOnly.Reader reader = (PrimitiveODAGDomainStorageReadOnly.Reader)currentReader;
-               stashReports.add(reader.getStorageReport());
+               // #reporting
+               //stashReports.add(reader.getStorageReport());
 
                currentReader.close();
                currentReader = null;
@@ -110,8 +112,11 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
          throw new UnsupportedOperationException();
       }
 
+      // #reporting
+      /*
       public ArrayList<StorageReport> getStashStorageReports() {
          return stashReports;
       }
+      */
    }
 }
