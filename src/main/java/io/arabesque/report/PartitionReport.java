@@ -30,7 +30,7 @@ public class PartitionReport extends EngineReport {
     public String toString() { return toJSONString(); }
 
     public String toJSONString() {
-        //calcCummulatives();
+        calcCummulatives();
 
         StringBuilder str = new StringBuilder();
 
@@ -38,10 +38,10 @@ public class PartitionReport extends EngineReport {
         str.append("\"start_time\":" + this.startTime + ", ");
         str.append("\"end_time\":" + this.endTime + ", ");
         str.append("\"runtime\":" + getRuntime() + ", ");
-        str.append("\"CummEnums\":" + this.cummEnums + ", ");
-        str.append("\"CummActual\":" + this.cummAct + ", ");
-        str.append("\"CummCmplt\":" + this.cummCmplt + ", ");
-        str.append("\"CummSprs\":" + this.cummSprs + ", ");
+        str.append("\"TotalEnums\":" + this.cummEnums + ", ");
+        str.append("\"TotalActual\":" + this.cummAct + ", ");
+        str.append("\"TotalCmplt\":" + this.cummCmplt + ", ");
+        str.append("\"TotalSprs\":" + this.cummSprs + ", ");
 
         str.append("\"StorageReports\":[");
 
@@ -66,7 +66,7 @@ public class PartitionReport extends EngineReport {
         cummCmplt = BigInteger.ZERO;
         cummSprs = BigInteger.ZERO;
 
-        for(int i = 0; i < storageReports.length;) {
+        for(int i = 0; i < storageReports.length; ++i) {
             cummEnums = cummEnums.add(BigInteger.valueOf(storageReports[i].numEnumerations));
             cummAct = cummAct.add(BigInteger.valueOf(storageReports[i].numActualEmbeddings));
             cummCmplt = cummCmplt.add(BigInteger.valueOf(storageReports[i].numCompleteEnumerationsVisited));

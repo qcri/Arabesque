@@ -8,7 +8,7 @@ import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.pattern.Pattern
-//import io.arabesque.utils.SerializableConfiguration
+import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.Writable
 import org.apache.log4j.{Level, Logger}
@@ -43,10 +43,10 @@ trait ODAGMasterEngine [
   def config: SparkConfiguration[E]
 
   // #reporting
-  /*
+  //*
   var reportsFilePath: String = _
   var generateReports: Boolean = false
-  */
+  //*/
 
   import ODAGMasterEngine._
 
@@ -80,14 +80,14 @@ trait ODAGMasterEngine [
     }
 
     // #reporting
-    /*
+    //*
     // set reports path
     if(config.getBoolean("reports_active", false)) {
       reportsFilePath = config.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
       reportsFilePath += "/Master/"
       generateReports = true
     }
-    */
+    //*/
 
     // master computation
     masterComputation = config.createMasterComputation()

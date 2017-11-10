@@ -139,12 +139,12 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
         private final boolean isItTargetSuperStep;
 
         // #reporting
-        /*
+        //*
         protected StorageReport report = new StorageReport();
         protected long numCompleteEnumerationsVisited = 0;
         // how many invalid embeddings this storage/partition generated
         protected long numSpuriousEmbeddings = 0L;
-        */
+        //*/
 
         // Logging
         private String logName = this.getClass().getSimpleName();
@@ -187,7 +187,7 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
             }
 
             // #reporting
-            //report.initReport(numberOfDomains);
+            report.initReport(numberOfDomains);
 
             // new enumeration
             //initDomain0Keys();
@@ -312,7 +312,7 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
         }
 
         // #reporting
-        /*
+        //*
         protected void finalizeReport() {
             report.numEnumerations = numberOfEnumerations;
             report.numCompleteEnumerationsVisited = numCompleteEnumerationsVisited;
@@ -328,7 +328,7 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
             finalizeReport();
             return report;
         }
-        */
+        //*/
 
         @Override
         public boolean hasNext() {
@@ -511,15 +511,15 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
 
                             if (invalid) {
                                 // #reporting
-                                /*
+                                //*
                                 report.pruned[domainOfLastEnumerationStep] += 1;
                                 numSpuriousEmbeddings += 1;
-                                */
+                                //*/
                                 return false;
                             }
                             else {
                                 // #reporting
-                                //report.explored[domainOfLastEnumerationStep] += 1;
+                                report.explored[domainOfLastEnumerationStep] += 1;
                                 // add new DomainNot0EnumerationStep with wordId = -1, and all possible ids for next domain
                                 if (enumerationStack.size() != targetSize) {
                                     int[] nextDomainPointers = getWordIdsOfDomain(1);
@@ -566,14 +566,14 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
 
                             if (invalid) {
                                 // #reporting
-                                /*
+                                //*
                                 numSpuriousEmbeddings += 1;
                                 report.pruned[domainOfLastEnumerationStep] += 1;
-                                */
+                                //*/
                                 return false;
                             } else {
                                 // #reporting
-                                //report.explored[domainOfLastEnumerationStep] += 1;
+                                report.explored[domainOfLastEnumerationStep] += 1;
 
                                 if (enumerationStack.size() != targetSize)
                                     enumerationStack.push( new DomainNot0EnumerationStep(-1, possibilitiesLastDomain) );
@@ -590,7 +590,7 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
             }
 
             // #reporting
-            /*
+            //*
             numCompleteEnumerationsVisited += 1;
             boolean isCompleteEmbeddingValid = testCompleteEmbedding();
             boolean isEmbeddingOfTargetSize = reusableEmbedding.getNumWords() == targetSize;
@@ -599,8 +599,8 @@ public class UPSDomainStorageReadOnly extends UPSDomainStorage {
                 numSpuriousEmbeddings += 1;
 
             return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
-            */
-            return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
+            //*/
+            //return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
         }
 
         public String toStringResume() {

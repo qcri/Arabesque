@@ -4,8 +4,9 @@ import io.arabesque.computation.Computation;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.domain.StorageReader;
 import org.apache.hadoop.io.Writable;
-
+import io.arabesque.report.StorageReport;
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
@@ -43,7 +44,7 @@ public abstract class SimpleStorageStash<O extends SimpleStorage, S extends Simp
       private boolean currentPositionConsumed = true;
 
       // #reporting
-      //private ArrayList<StorageReport> stashReports = new ArrayList<>();
+      private ArrayList<StorageReport> stashReports = new ArrayList<>();
 
       public EfficientReader(SimpleStorageStash<?,?> stash, Computation<? extends Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
          this.numPartitions = numPartitions;
@@ -90,7 +91,7 @@ public abstract class SimpleStorageStash<O extends SimpleStorage, S extends Simp
             else {
                UPSDomainStorageReadOnly.Reader reader = (UPSDomainStorageReadOnly.Reader)currentReader;
                // #reporting
-               //stashReports.add(reader.getStorageReport());
+               stashReports.add(reader.getStorageReport());
 
                currentReader.close();
                currentReader = null;
@@ -111,10 +112,10 @@ public abstract class SimpleStorageStash<O extends SimpleStorage, S extends Simp
       }
 
       // #reporting
-      /*
+      //*
       public ArrayList<StorageReport> getStashStorageReports() {
          return stashReports;
       }
-      */
+      //*/
    }
 }

@@ -46,7 +46,7 @@ abstract class ScalaSimpleStorageStash[O <: ScalaSimpleStorage, S <: ScalaSimple
 
 trait Reader[E <: Embedding] extends util.Iterator[E] {}
 
-class EfficientReader[E <: Embedding] extends Reader[E] {
+/*class EfficientReader[E <: Embedding] extends Reader[E] {
   private var numPartitions: Int = _
   private var numBlocks: Int = _
   private var maxBlockSize: Int = _
@@ -121,3 +121,4 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
   // #reporting
   //def getStashStorageReports(): ArrayBuffer[StorageReport] = stashReports
 }
+*/

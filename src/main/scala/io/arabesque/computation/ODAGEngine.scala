@@ -35,12 +35,12 @@ trait ODAGEngine[
 
   // #reporting
   // partition report
-  /*
+  //*
   val partitionReport: PartitionReport = new PartitionReport
   val storageReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
   var reportsFilePath: String = _
   var generateReports: Boolean = false
-  */
+  //*/
 
   // update aggregations before flush
   def withNewAggregations(aggregationsBc: Broadcast[_]): C
@@ -83,7 +83,7 @@ trait ODAGEngine[
   // TODO: tirar isso !!!
   def init(): Unit = {
     // #reporting
-    /*
+    //*
     // set reports path
     if(configuration.getBoolean("reports_active", false)) {
       reportsFilePath = configuration.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
@@ -93,7 +93,7 @@ trait ODAGEngine[
     partitionReport.partitionId = this.partitionId
     partitionReport.superstep = this.superstep
     partitionReport.startTime = System.currentTimeMillis()
-    */
+    //*/
   }
 
   // output
@@ -197,7 +197,7 @@ trait ODAGEngine[
     // stash by recursive call
     } else {
       // #reporting
-      //storageReports.appendAll(odagStashReader.getStashStorageReports())
+      storageReports.appendAll(odagStashReader.getStashStorageReports())
       currentEmbeddingStashOpt = None
       getNextInboundEmbedding(remainingStashes)
     }

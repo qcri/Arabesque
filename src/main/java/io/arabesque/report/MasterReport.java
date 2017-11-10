@@ -13,6 +13,24 @@ public class MasterReport extends EngineReport {
     public ArrayList<Long> calculatedSize = new ArrayList<Long>();
     public ArrayList<Long> numberOfWordsInDomains = new ArrayList<Long>();
     public ArrayList<Long> numberOfWordsInConnections = new ArrayList<Long>();
+    protected long superstepStorageSize = 0;
+    protected long superstepPatternSize = 0;
+    protected long superstepCalculatedSize = 0;
+    protected long superstepDomainEntriesCalculatedSize = 0;
+
+    protected void calcCummulatives() {
+        superstepStorageSize = 0;
+        superstepPatternSize = 0;
+        superstepCalculatedSize = 0;
+        superstepDomainEntriesCalculatedSize = 0;
+
+        for(int i = 0 ; i < storageSummary.size() ; ++i) {
+            superstepStorageSize += storageSize.get(i);
+            superstepPatternSize += patternSize.get(i);
+            superstepCalculatedSize += calculatedSize.get(i);
+            superstepDomainEntriesCalculatedSize += domainEntriesCalculatedSize.get(i);
+        }
+    }
 
     @Override
     public void saveReport(String path) throws IOException {
@@ -25,10 +43,16 @@ public class MasterReport extends EngineReport {
     public String toString() { return toJSONString(); }
 
     public String toJSONString() {
+        calcCummulatives();
+
         StringBuilder str = new StringBuilder();
 
         str.append("{\"super_step\":" + superstep + ", ");
         str.append("\"runtime\":" + getRuntime() + ", ");
+        str.append("\"TotalStorageSize\":" + superstepStorageSize + ", ");
+        str.append("\"TotalPatternSize\":" + superstepPatternSize + ", ");
+        str.append("\"TotalCalculatedSize\":" + superstepCalculatedSize + ", ");
+        str.append("\"TotalDomainEntriesCalculatedSize\":" + superstepDomainEntriesCalculatedSize + ", ");
         str.append("\"StorageSummary\":[");
 
         int i = 0;

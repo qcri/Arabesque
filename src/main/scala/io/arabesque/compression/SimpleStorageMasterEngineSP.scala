@@ -68,11 +68,11 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
 
     do {
       // #reporting
-      /*
+      //*
       val masterReport: MasterReport = new MasterReport
       masterReport.superstep = superstep
       masterReport.startTime = System.currentTimeMillis
-      */
+      //*/
 
       /*
       if(superstep == 3) {
@@ -255,7 +255,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       }
 
       // #reporting
-      /*
+      //*
       // calc storage size/summary for master report for this superstep
       var i = 0
       aggregatedOdagsBc.value.foreach(entry => {
@@ -297,7 +297,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       masterReport.endTime = System.currentTimeMillis()
       if(generateReports)
         masterReport.saveReport(reportsFilePath)
-      */
+      //*/
 
       superstep += 1
 
@@ -336,7 +336,7 @@ class SimpleStorageMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[
       val stash = new SinglePatternSimpleStorageStash(aggregatedOdagsBc.value)
       execEngine.compute (Iterator (stash))
       // #reporting
-      //execEngine.saveReports()
+      execEngine.saveReports()
       execEngine.finalize()
       Iterator(execEngine)
     }
