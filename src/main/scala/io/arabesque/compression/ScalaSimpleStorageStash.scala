@@ -16,7 +16,7 @@ import scala.collection.mutable.ArrayBuffer
   * Created by ehussein on 7/5/17.
   */
 
-abstract class SimpleStorageStash[O <: SimpleStorage, S <: SimpleStorageStash[O,S]] extends Writable with Logging {
+abstract class ScalaSimpleStorageStash[O <: ScalaSimpleStorage, S <: ScalaSimpleStorageStash[O,S]] extends Writable with Logging {
 
 
   def addEmbedding(embedding: Embedding): Unit
@@ -51,14 +51,14 @@ class EfficientReader[E <: Embedding] extends Reader[E] {
   private var numBlocks: Int = _
   private var maxBlockSize: Int = _
   private var computation: Computation[Embedding] = _
-  private var stashIterator: util.Iterator[_ <: SimpleStorage] = _
+  private var stashIterator: util.Iterator[_ <: ScalaSimpleStorage] = _
   private var currentReader: StorageReader = _
   private var currentPositionConsumed: Boolean = true
 
   // #reporting
   //private var stashReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
 
-  def this(stash: SimpleStorageStash[_ <: SimpleStorage, _], computation: Computation[_ <: Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int) = {
+  def this(stash: ScalaSimpleStorageStash[_ <: ScalaSimpleStorage, _], computation: Computation[_ <: Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int) = {
     this()
     this.numPartitions = numPartitions
     this.computation = computation.asInstanceOf[Computation[Embedding]]

@@ -12,7 +12,7 @@ import java.io._
 /**
   * Created by ehussein on 6/28/17.
   */
-class SinglePatternSimpleStorage extends SimpleStorage {
+class ScalaSinglePatternSimpleStorage extends ScalaSimpleStorage {
   private var pattern:Pattern = _
 
   def this(pattern: Pattern, numberOfDomains: Int) {
@@ -35,10 +35,10 @@ class SinglePatternSimpleStorage extends SimpleStorage {
     storage.addEmbedding(embedding)
   }
 
-  override def aggregate(embZip: SimpleStorage): Unit = {
+  override def aggregate(embZip: ScalaSimpleStorage): Unit = {
     //logInfo(s"Trying to aggregate storage ${embZip.toString}")
     if (embZip != null)
-      storage.aggregate(embZip.asInstanceOf[SinglePatternSimpleStorage].storage)
+      storage.aggregate(embZip.asInstanceOf[ScalaSinglePatternSimpleStorage].storage)
   }
 
   override def getReader(computation: Computation[Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int): StorageReader =

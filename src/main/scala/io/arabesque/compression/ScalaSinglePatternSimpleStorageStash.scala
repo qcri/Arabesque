@@ -20,13 +20,13 @@ import scala.runtime.Nothing$
 /**
   * Created by ehussein on 7/6/17.
   */
-class SinglePatternSimpleStorageStash
-  extends SimpleStorageStash[SinglePatternSimpleStorage,SinglePatternSimpleStorageStash] with Externalizable {
-  private val LOG = Logger.getLogger(classOf[SinglePatternSimpleStorageStash])
-  private var compressedEmbeddingsByPattern: Map[Pattern, SinglePatternSimpleStorage] = new util.HashMap[Pattern, SinglePatternSimpleStorage]()
+class ScalaSinglePatternSimpleStorageStash
+  extends ScalaSimpleStorageStash[ScalaSinglePatternSimpleStorage,ScalaSinglePatternSimpleStorageStash] with Externalizable {
+  private val LOG = Logger.getLogger(classOf[ScalaSinglePatternSimpleStorageStash])
+  private var compressedEmbeddingsByPattern: Map[Pattern, ScalaSinglePatternSimpleStorage] = new util.HashMap[Pattern, ScalaSinglePatternSimpleStorage]()
   private var reusablePattern: Pattern = Configuration.get[Configuration[Embedding]]().createPattern()
 
-  def this(storageByPattern: util.Map[Pattern, SinglePatternSimpleStorage]) = {
+  def this(storageByPattern: util.Map[Pattern, ScalaSinglePatternSimpleStorage]) = {
     this()
     this.compressedEmbeddingsByPattern = storageByPattern
     this.reusablePattern = Configuration.get[Configuration[Embedding]]().createPattern()
@@ -39,7 +39,7 @@ class SinglePatternSimpleStorageStash
       var embeddingsZip = compressedEmbeddingsByPattern.get(reusablePattern)
       if (embeddingsZip == null) {
         val patternCopy = reusablePattern.copy
-        embeddingsZip = new SinglePatternSimpleStorage(patternCopy, embedding.getNumWords)
+        embeddingsZip = new ScalaSinglePatternSimpleStorage(patternCopy, embedding.getNumWords)
         compressedEmbeddingsByPattern.put(patternCopy, embeddingsZip)
       }
       embeddingsZip.addEmbedding(embedding)
@@ -53,7 +53,7 @@ class SinglePatternSimpleStorageStash
   }
 
   @Override
-  override def aggregate(ezip: SinglePatternSimpleStorage): Unit = {
+  override def aggregate(ezip: ScalaSinglePatternSimpleStorage): Unit = {
     //logInfo(s"Trying to aggregate stash ${ezip.toString}")
     val pattern = ezip.getPattern
     val existingEzip = compressedEmbeddingsByPattern.get(pattern)
@@ -64,16 +64,16 @@ class SinglePatternSimpleStorageStash
   }
 
   @Override
-  override def aggregateUsingReusable(ezip: SinglePatternSimpleStorage): Unit = {
+  override def aggregateUsingReusable(ezip: ScalaSinglePatternSimpleStorage): Unit = {
     //logInfo(s"Trying to aggregate stash.aggregateUsingReusable ${ezip.toString}")
     val pattern: Pattern = ezip.getPattern
 
-    var existingEzip: SinglePatternSimpleStorage = compressedEmbeddingsByPattern.get(pattern)
+    var existingEzip: ScalaSinglePatternSimpleStorage = compressedEmbeddingsByPattern.get(pattern)
 
     if (existingEzip == null) { // this is a new pattern storage
       val patternCopy: Pattern = pattern.copy()
       ezip.setPattern(patternCopy)
-      existingEzip = new SinglePatternSimpleStorage(patternCopy, ezip.getNumberOfDomains())
+      existingEzip = new ScalaSinglePatternSimpleStorage(patternCopy, ezip.getNumberOfDomains())
       compressedEmbeddingsByPattern.put(patternCopy, existingEzip)
     }
 
@@ -81,7 +81,7 @@ class SinglePatternSimpleStorageStash
   }
 
   @Override
-  override def aggregateStash(value: SinglePatternSimpleStorageStash): Unit = {
+  override def aggregateStash(value: ScalaSinglePatternSimpleStorageStash): Unit = {
     //logInfo(s"Trying to aggregate stash.aggregateStash ${value.toStringDebug}")
     //logInfo(s"With ${this.toStringDebug}")
     for (otherCompressedEmbeddingsByPatternEntry <- value.compressedEmbeddingsByPattern.entrySet) {
@@ -132,7 +132,7 @@ class SinglePatternSimpleStorageStash
     while (i < numEntries) {
       val pattern = Configuration.get[Configuration[Embedding]]().createPattern
       pattern.readFields(dataInput)
-      val shrunkEmbeddings = new SinglePatternSimpleStorage(false)
+      val shrunkEmbeddings = new ScalaSinglePatternSimpleStorage(false)
       shrunkEmbeddings.setPattern(pattern)
       shrunkEmbeddings.readFields(dataInput)
       compressedEmbeddingsByPattern.put(pattern, shrunkEmbeddings)
@@ -158,10 +158,10 @@ class SinglePatternSimpleStorageStash
     compressedEmbeddingsByPattern.clear()
   }
 
-  def getEzip(pattern: Pattern): SinglePatternSimpleStorage = compressedEmbeddingsByPattern.get(pattern)
+  def getEzip(pattern: Pattern): ScalaSinglePatternSimpleStorage = compressedEmbeddingsByPattern.get(pattern)
 
   @Override
-  override def getEzips(): Collection[SinglePatternSimpleStorage] = compressedEmbeddingsByPattern.values
+  override def getEzips(): Collection[ScalaSinglePatternSimpleStorage] = compressedEmbeddingsByPattern.values
 
   @Override
   override def toString: String = "SinglePatternSimpleStorageStash{" + "compressedEmbeddingsByPattern=" + compressedEmbeddingsByPattern + '}'
@@ -178,7 +178,7 @@ class SinglePatternSimpleStorageStash
 
   def toStringDebug: String = {
     val sb = new StringBuilder
-    val orderedMap = new util.TreeMap[String, SinglePatternSimpleStorage]
+    val orderedMap = new util.TreeMap[String, ScalaSinglePatternSimpleStorage]
 
     for (entry <- compressedEmbeddingsByPattern.entrySet) {
       orderedMap.put(entry.getKey.toString, entry.getValue)
@@ -208,12 +208,12 @@ class SinglePatternSimpleStorageStash
     domainStorageStats.toString + "\n" + domainStorageStats.getSizeEstimations
   }
 
-  class Aggregator extends BasicAggregator[SinglePatternSimpleStorageStash] {
-    override def aggregate(value: SinglePatternSimpleStorageStash): Unit = {
+  class Aggregator extends BasicAggregator[ScalaSinglePatternSimpleStorageStash] {
+    override def aggregate(value: ScalaSinglePatternSimpleStorageStash): Unit = {
       getAggregatedValue.aggregateStash(value)
     }
 
-    override def createInitialValue = new SinglePatternSimpleStorageStash
+    override def createInitialValue = new ScalaSinglePatternSimpleStorageStash
   }
 
   /*
@@ -256,6 +256,6 @@ class SinglePatternSimpleStorageStash
   */
 }
 
-object SinglePatternSimpleStorageStash {
-  def apply() = new SinglePatternSimpleStorageStash
+object ScalaSinglePatternSimpleStorageStash {
+  def apply() = new ScalaSinglePatternSimpleStorageStash
 }

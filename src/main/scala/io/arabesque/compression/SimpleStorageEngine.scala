@@ -52,7 +52,7 @@ trait SimpleStorageEngine [
   //var previousEmbeddingStash: Stash = _
   var currentEmbeddingStashOpt: Option[Stash] = None
   var nextEmbeddingStash: Stash = _
-  @transient var stashReader: EfficientReader[E] = _
+  @transient var stashReader: SimpleStorageStash.EfficientReader[E] = _
 
   @transient lazy val computation: Computation[E] = {
     val computation = configuration.createComputation [E]
@@ -182,7 +182,7 @@ trait SimpleStorageEngine [
           numPartitionsPerWorker)
 
         // simple_storage stashes have an efficient reader for compressed embeddings
-        stashReader = new (EfficientReader[E])  (currentEmbeddingStash,
+        stashReader = new (SimpleStorageStash.EfficientReader[E])  (currentEmbeddingStash,
           computation,
           getNumberPartitions(),
           numBlocks,

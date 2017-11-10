@@ -14,7 +14,7 @@ import io.arabesque.utils.Logging
 /**
   * Created by ehussein on 6/28/17.
   */
-abstract class SimpleStorage extends Writable with java.io.Externalizable with Logging {
+abstract class ScalaSimpleStorage extends Writable with java.io.Externalizable with Logging {
   protected var storage:UPSDomainStorage = _
   protected var serializeAsReadOnly: Boolean = false
 
@@ -30,7 +30,7 @@ abstract class SimpleStorage extends Writable with java.io.Externalizable with L
 
   def getReader(computation: Computation[Embedding], numPartitions: Int, numBlocks: Int, maxBlockSize: Int): StorageReader
 
-  def aggregate(embZip: SimpleStorage): Unit
+  def aggregate(embZip: ScalaSimpleStorage): Unit
 
   def getNumberOfDomains(): Int = storage.getNumberOfDomains
 
@@ -61,7 +61,7 @@ abstract class SimpleStorage extends Writable with java.io.Externalizable with L
     storage.write(outputs, hasContent)
   }
 
-  def printAllEnumerations(filePath: String) = storage.printAllEnumerations(filePath)
+  //def printAllEnumerations(filePath: String) = storage.printAllEnumerations(filePath)
 
   //def getStorageReport(): StorageReport = storage.getStorageReport()
 
