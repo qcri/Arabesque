@@ -8,7 +8,7 @@ import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.pattern.Pattern
-import io.arabesque.utils.SerializableConfiguration
+//import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.Writable
 import org.apache.log4j.{Level, Logger}
