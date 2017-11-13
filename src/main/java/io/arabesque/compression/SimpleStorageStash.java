@@ -44,7 +44,7 @@ public abstract class SimpleStorageStash<O extends SimpleStorage, S extends Simp
       private boolean currentPositionConsumed = true;
 
       // #reporting
-      private ArrayList<StorageReport> stashReports = new ArrayList<>();
+      //private ArrayList<StorageReport> stashReports = new ArrayList<>();
 
       public EfficientReader(SimpleStorageStash<?,?> stash, Computation<? extends Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
          this.numPartitions = numPartitions;
@@ -91,7 +91,7 @@ public abstract class SimpleStorageStash<O extends SimpleStorage, S extends Simp
             else {
                UPSDomainStorageReadOnly.Reader reader = (UPSDomainStorageReadOnly.Reader)currentReader;
                // #reporting
-               stashReports.add(reader.getStorageReport());
+               //stashReports.add(reader.getStorageReport());
 
                currentReader.close();
                currentReader = null;
@@ -112,7 +112,7 @@ public abstract class SimpleStorageStash<O extends SimpleStorage, S extends Simp
       }
 
       // #reporting
-      //*
+      /*
       public ArrayList<StorageReport> getStashStorageReports() {
          return stashReports;
       }
