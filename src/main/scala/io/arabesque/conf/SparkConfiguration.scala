@@ -233,6 +233,7 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
 
     // input
     updateIfExists ("input_graph_path", CONF_MAINGRAPH_PATH)
+    updateIfExists ("input_graph_subgraphs_path", CONF_MAINGRAPH_SUBGRAPHS_PATH)
     updateIfExists ("input_graph_local", CONF_MAINGRAPH_LOCAL)
  
     // output

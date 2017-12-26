@@ -53,6 +53,8 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String CONF_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.BasicMainGraph";
     public static final String CONF_MAINGRAPH_PATH = "arabesque.graph.location";
     public static final String CONF_MAINGRAPH_PATH_DEFAULT = "main.graph";
+    public static final String CONF_MAINGRAPH_SUBGRAPHS_PATH = "arabesque.graph.subgraphs.location";
+    public static final String CONF_MAINGRAPH_SUBGRAPHS_PATH_DEFAULT = "None";
     public static final String CONF_MAINGRAPH_LOCAL = "arabesque.graph.local";
     public static final boolean CONF_MAINGRAPH_LOCAL_DEFAULT = false;
     public static final String CONF_MAINGRAPH_EDGE_LABELLED = "arabesque.graph.edge_labelled";
@@ -331,6 +333,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return getString(CONF_MAINGRAPH_PATH, CONF_MAINGRAPH_PATH_DEFAULT);
     }
 
+    public String getMainGraphSubgraphsPath() {
+        return getString(CONF_MAINGRAPH_SUBGRAPHS_PATH, CONF_MAINGRAPH_SUBGRAPHS_PATH_DEFAULT);
+    }
+
     public long getInfoPeriod() {
         return infoPeriod;
     }
@@ -360,13 +366,24 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
         try {
             Constructor<? extends MainGraph> constructor;
+            String subgraphsFile = getMainGraphSubgraphsPath();
 
             if (useLocalGraph) {
-                constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, boolean.class, boolean.class);
-                return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
+                if(subgraphsFile != "None") {
+                    constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, java.nio.file.Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(Paths.get(getMainGraphPath()), Paths.get(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
+                } else {
+                    constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
+                }
             } else {
-                constructor = mainGraphClass.getConstructor(Path.class, boolean.class, boolean.class);
-                return constructor.newInstance(new Path(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
+                if(subgraphsFile != "None") {
+                    constructor = mainGraphClass.getConstructor(Path.class, Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(new Path(getMainGraphPath()), new Path(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
+                } else {
+                    constructor = mainGraphClass.getConstructor(Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(new Path(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
+                }
             }
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new RuntimeException("Could not load main graph", e);

@@ -24,16 +24,16 @@ class BugsResolutionSuite extends FunSuite with BeforeAndAfterAll {
       setAppName(appName).
       set("num_workers", "1").
       set("num_compute_threads", "1").
-      set("output_active", "no")
+      set("output_active", "no").
+      set("input_graph_local", "true")
 
     sc = new SparkContext(conf)
     arab = new ArabesqueContext(sc, "warn")
 
 //    sampleGraphPath = "data/cl=46456_cf=101223_sf=101224_fa=227213.graph"
 //    sampleGraphPath = "data/fsm-test.graph"
-    sampleGraphPath = "data/fsm-minimal-test.graph"
 //    sampleGraphPath = "data/cl=53931_cf=56234_sf=56235_fa=56251.graph"
-    arabGraph = arab.textFile (sampleGraphPath)
+    arabGraph = arab.textFile ("data/cl=48724_cf=51068_sf=51069_fa=191576.graph", "data/cl=48724_cf=51068_sf=51069_fa=191576-subgraphs.graph", true)
 
   }
 

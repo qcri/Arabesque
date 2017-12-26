@@ -49,6 +49,26 @@ class ArabesqueContext(sc: SparkContext, logLevel: String = "info") extends Logg
   }
 
   /**
+    *  Indicates the path for input graph
+    *
+    * {{{
+    *  val file_path = "~/input.graph" // Set the input file path
+    *  graph = arab.textFile(file_path)
+    *  graph: io.arabesque.ArabesqueGraph = io.arabesque.ArabesqueGraph@2310a619
+    * }}}
+    *
+    *
+    * @param path a string indicating the path for input graph
+    * @param subgraphsPath a string indicating the path for the vertex to subgraph mapping file
+    * @param local TODO: Describe local variable
+    * @return an [[io.arabesque.ArabesqueGraph]]
+    * @see [[https://github.com/viniciusvdias/Arabesque/blob/master/README.md Arabesque README]] for how to prepare the input file
+    */
+  def textFile(path: String, subgraphsPath: String, local: Boolean): ArabesqueGraph = {
+    new ArabesqueGraph (path, subgraphsPath, local, this, logLevel)
+  }
+
+  /**
     * Stops an [[io.arabesque.ArabesqueContext]] application
     * {{{
     * arab.stop()

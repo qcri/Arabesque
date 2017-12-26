@@ -19,12 +19,17 @@ import scala.reflect.ClassTag
   */
 class ArabesqueGraph(
     path: String,
+    subgraphsPath: String,
     local: Boolean,
     arab: ArabesqueContext,
     logLevel: String) extends Logging {
 
   private val uuid: UUID = UUID.randomUUID
   def tmpPath: String = s"${arab.tmpPath}/graph-${uuid}"
+
+  def this(path: String, local: Boolean, arab: ArabesqueContext, logLevel: String) = {
+    this(path, "", local, arab, logLevel)
+  }
 
   def this(path: String, arab: ArabesqueContext, logLevel: String) = {
     this (path, false, arab, logLevel)
@@ -104,6 +109,7 @@ class ArabesqueGraph(
   def fsm(support: Int, maxSize: Int = Int.MaxValue): ArabesqueResult[_] = {
     val config = new SparkConfiguration [EdgeInducedEmbedding]
     config.set ("input_graph_path", path)
+    config.set ("input_graph_subgraphs_path", subgraphsPath)
     config.set ("input_graph_local", local)
     config.set ("output_path", s"${tmpPath}/fsm-${config.getUUID}")
     config.set ("arabesque.fsm.maxsize", maxSize)
