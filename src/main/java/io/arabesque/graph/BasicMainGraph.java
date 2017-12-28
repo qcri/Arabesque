@@ -29,6 +29,7 @@ public class BasicMainGraph implements MainGraph {
     private VertexNeighbourhood[] vertexNeighbourhoods;
     private HashMap<String, Integer> subgraphIdMap = new HashMap<>();
     private HashMap<Integer, Integer> vertexSubgraphIdMap = new HashMap<>();
+    private HashMap<Integer, Vertex> vertexIdToVertexMap = new HashMap<>();
 
     private boolean isEdgeLabelled;
     private boolean isMultiGraph;
@@ -265,6 +266,7 @@ public class BasicMainGraph implements MainGraph {
     public MainGraph addVertex(Vertex vertex) {
         ensureCanStoreNewVertex();
         vertexIndexF[numVertices++] = vertex;
+        vertexIdToVertexMap.put(vertex.getVertexId(), vertex);
 
         return this;
     }
@@ -278,6 +280,9 @@ public class BasicMainGraph implements MainGraph {
     public Vertex getVertex(int vertexId) {
         return vertexIndexF[vertexId];
     }
+//    public Vertex getVertex(int vertexId) {
+//        return vertexIdToVertexMap.get(vertexId);
+//    }
 
     @Override
     public int getNumberVertices() {

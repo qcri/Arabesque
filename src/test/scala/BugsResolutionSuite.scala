@@ -49,10 +49,10 @@ class BugsResolutionSuite extends FunSuite with BeforeAndAfterAll {
   test ("[fsm] arabesque API") {
     // Critical test
     // Test output for fsm with support 2 for embeddings with size 2 to 3
-    val support = 2
-    val size = 2
+    val support = 10
+    val size = 3
 
-      val fsmRes = arabGraph.fsm(support, size)
+      val fsmRes = arabGraph.disconnectedGraphFSM(support, size)
 
       fsmRes.embeddings.map(_.toOutputString).foreach(println)
 //      val embeddings = fsmRes.embeddings

@@ -109,13 +109,26 @@ class ArabesqueGraph(
   def fsm(support: Int, maxSize: Int = Int.MaxValue): ArabesqueResult[_] = {
     val config = new SparkConfiguration [EdgeInducedEmbedding]
     config.set ("input_graph_path", path)
-    config.set ("input_graph_subgraphs_path", subgraphsPath)
     config.set ("input_graph_local", local)
     config.set ("output_path", s"${tmpPath}/fsm-${config.getUUID}")
     config.set ("arabesque.fsm.maxsize", maxSize)
     config.set ("arabesque.fsm.support", support)
     config.set ("computation", "io.arabesque.gmlib.fsm.FSMComputation")
     config.set ("master_computation", "io.arabesque.gmlib.fsm.FSMMasterComputation")
+    fsm (config)
+  }
+
+  /** given that the input graph is a disconnected graph **/
+  def disconnectedGraphFSM(support: Int, maxSize: Int = Int.MaxValue): ArabesqueResult[_] = {
+    val config = new SparkConfiguration [EdgeInducedEmbedding]
+    config.set ("input_graph_path", path)
+    config.set ("input_graph_subgraphs_path", subgraphsPath)
+    config.set ("input_graph_local", local)
+    config.set ("output_path", s"${tmpPath}/fsm-${config.getUUID}")
+    config.set ("arabesque.fsm.maxsize", maxSize)
+    config.set ("arabesque.fsm.support", support)
+    config.set ("computation", "io.arabesque.gmlib.disconnectedGraphFSM.DisconnectedGraphFSMComputation")
+    config.set ("master_computation", "io.arabesque.gmlib.disconnectedGraphFSM.DisconnectedGraphFSMMasterComputation")
     fsm (config)
   }
 
