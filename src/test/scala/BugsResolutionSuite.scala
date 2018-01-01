@@ -21,11 +21,12 @@ class BugsResolutionSuite extends FunSuite with BeforeAndAfterAll {
     // spark conf and context
     val conf = new SparkConf().
       setMaster(master).
-      setAppName(appName).
-      set("num_workers", "1").
-      set("num_compute_threads", "1").
-      set("output_active", "no").
-      set("input_graph_local", "true")
+      setAppName(appName)
+//      .
+//      set("num_workers", "1").
+//      set("num_compute_threads", "1").
+//      set("output_active", "no").
+//      set("input_graph_local", "true")
 
     sc = new SparkContext(conf)
     arab = new ArabesqueContext(sc, "warn")
@@ -33,8 +34,8 @@ class BugsResolutionSuite extends FunSuite with BeforeAndAfterAll {
 //    sampleGraphPath = "data/cl=46456_cf=101223_sf=101224_fa=227213.graph"
 //    sampleGraphPath = "data/fsm-test.graph"
 //    sampleGraphPath = "data/cl=53931_cf=56234_sf=56235_fa=56251.graph"
-    arabGraph = arab.textFile ("data/cl=48724_cf=51068_sf=51069_fa=191576.graph", "data/cl=48724_cf=51068_sf=51069_fa=191576-subgraphs.graph", true)
-
+//    arabGraph = arab.textFile ("data/cl=48724_cf=51068_sf=51069_fa=191576.graph", "data/cl=48724_cf=51068_sf=51069_fa=191576-subgraphs.graph", true)
+    arabGraph = arab.textFile ("data/disconnected-graph.graph", "data/disconnected-graph.labels.graph", true)
   }
 
   /** stop spark context */
@@ -49,12 +50,13 @@ class BugsResolutionSuite extends FunSuite with BeforeAndAfterAll {
   test ("[fsm] arabesque API") {
     // Critical test
     // Test output for fsm with support 2 for embeddings with size 2 to 3
-    val support = 10
+    val support = 3
     val size = 3
 
       val fsmRes = arabGraph.disconnectedGraphFSM(support, size)
+//    val fsmRes = arabGraph.fsm(support, size)
 
-      fsmRes.embeddings.map(_.toOutputString).foreach(println)
+    fsmRes.embeddings.map(_.toOutputString).foreach(println)
 //      val embeddings = fsmRes.embeddings
 //
 //      embeddings.map(_.toOutputString).foreach(println)

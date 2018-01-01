@@ -1,7 +1,9 @@
 package io.arabesque.gmlib.disconnectedGraphFSM;
 
 import io.arabesque.aggregation.PatternAggregationAwareValue;
+import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
+import io.arabesque.graph.MainGraph;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.VertexPositionEquivalences;
 import io.arabesque.utils.ClearSetConsumer;
@@ -24,31 +26,21 @@ Counting the support for a pattern based on the embedding occurrences across sub
  */
 
 public class DisconnectedGraphSupport implements Writable, Externalizable, PatternAggregationAwareValue {
-    private static final ThreadLocal<ClearSetConsumer> clearSetConsumer =
-            new ThreadLocal<ClearSetConsumer>() {
-                @Override
-                protected ClearSetConsumer initialValue() {
-                    return new ClearSetConsumer();
-                }
-            };
 
-    private HashIntSet[] domainSets;
-    private HashIntSet domainsReachedSupport;
+    private HashIntSet subgraphsSupport;
     private boolean enoughSupport;
     private int support;
-    private int currentSupport;
-    private int numberOfDomains;
     private IntWriterConsumer intWriterConsumer;
     private IntCollectionAddConsumer intAdderConsumer;
     private boolean setFromEmbedding;
     private Embedding embedding;
+    private int patternSize;
 
     public DisconnectedGraphSupport() {
-        this.numberOfDomains = 0;
-        this.domainsReachedSupport = HashIntSets.newMutableSet();
+        this.subgraphsSupport = HashIntSets.newMutableSet();
         this.enoughSupport = false;
         this.setFromEmbedding = false;
-        this.currentSupport = 1;
+        this.patternSize = 0;
     }
 
     public DisconnectedGraphSupport(int support) {
@@ -72,96 +64,69 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
        }
     }
 
-    private boolean hasDomainReachedSupport(int i) {
-        return i < numberOfDomains && (enoughSupport || domainsReachedSupport.contains(i));
-    }
-
-    private void insertDomainsAsFrequent(int i) {
-        if (enoughSupport) {
-            return;
-        }
-
-        domainsReachedSupport.add(i);
-
-        if (domainSets[i] != null) {
-            domainSets[i].clear();
-        }
-
-        if (domainsReachedSupport.size() == numberOfDomains) {
-            this.clear();
-            enoughSupport = true;
-        }
-    }
-
-    private HashIntSet getDomainSet(int i) {
-        HashIntSet domainSet = domainSets[i];
-
-        if (domainSet == null) {
-            domainSet = domainSets[i] = HashIntSets.newMutableSet();
-        }
-
-        return domainSet;
-    }
-
-    public void ensureCanStoreNDomains(int size) {
-        if (domainSets == null) {
-            this.domainSets = new HashIntSet[size];
-        } else if (domainSets.length < size) {
-            domainSets = Arrays.copyOf(domainSets, size);
-        }
-    }
-
     public void clear() {
-        clearDomains();
+        this.clearSubgraphsSupport();
 
         setFromEmbedding = false;
         embedding = null;
     }
 
-    private void clearDomains() {
-        if (domainSets != null) {
-            for (int i = 0; i < domainSets.length; ++i) {
-                IntSet domain = domainSets[i];
+    private int getCurrentSupport() {
+        return subgraphsSupport.size();
+    }
 
-                if (domain != null) {
-                    domain.clear();
-                }
-            }
-        }
-
-        domainsReachedSupport.clear();
-
-        enoughSupport = false;
+    private void clearSubgraphsSupport() {
+        this.subgraphsSupport.clear();
+        this.enoughSupport = false;
     }
 
     public boolean hasEnoughSupport() {
         return enoughSupport;
     }
 
-    private void convertFromEmbeddingToNormal() {
-        numberOfDomains = embedding.getNumVertices();
-        ensureCanStoreNDomains(numberOfDomains);
+    private int getVertexSubgraph(int vertexId) {
+        MainGraph graph = Configuration.get().getMainGraph();
 
-        clearDomains();
+        int subgraph = graph.getVertex(vertexId).getSubgraphId();
 
+        return subgraph;
+    }
+
+    private boolean checkBelongToSameSubgraph(Embedding embedding) {
         IntArrayList vertexMap = embedding.getVertices();
 
-        for (int i = 0; i < numberOfDomains; i++) {
-            if (hasDomainReachedSupport(i)) {
-                continue;
-            }
+        int subgraph = getVertexSubgraph(vertexMap.getUnchecked(0));
 
-            HashIntSet domain = getDomainSet(i);
+        for (int i = 1; i < patternSize; i++) {
+            int vertexId = vertexMap.getUnchecked(i);
+            int vertexSubgraph = getVertexSubgraph(vertexId);
 
-            domain.add(vertexMap.getUnchecked(i));
-
-            if (domain.size() >= support) {
-                insertDomainsAsFrequent(i);
+            if(subgraph != vertexSubgraph) {
+                throw new RuntimeException("Incorrect Embedding: Vertices does not belong to the same subgraph");
             }
         }
 
-        setFromEmbedding = false;
-        embedding = null;
+        return true;
+    }
+
+    private void convertFromEmbeddingToNormal() {
+        patternSize = embedding.getNumVertices();
+
+        //this.clearSubgraphsSupport();
+
+        IntArrayList vertexMap = embedding.getVertices();
+
+        MainGraph graph = Configuration.get().getMainGraph();
+
+        int subgraph = graph.getVertex(vertexMap.getUnchecked(0)).getSubgraphId();
+
+        if(checkBelongToSameSubgraph(embedding)) {
+
+            this.addSubgraphToSupport(subgraph);
+
+            setFromEmbedding = false;
+            embedding = null;
+        }
     }
     
     public void writeExternal(ObjectOutput objOutput) throws IOException {
@@ -175,8 +140,7 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
         }
 
         dataOutput.writeInt(support);
-        dataOutput.writeInt(currentSupport);
-        dataOutput.writeInt(numberOfDomains);
+        dataOutput.writeInt(patternSize);
 
         if (enoughSupport) {
             dataOutput.writeBoolean(true);
@@ -189,17 +153,8 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
 
             intWriterConsumer.setDataOutput(dataOutput);
 
-            dataOutput.writeInt(domainsReachedSupport.size());
-            domainsReachedSupport.forEach(intWriterConsumer);
-
-            for (int i = 0; i < numberOfDomains; ++i) {
-                if (domainsReachedSupport.contains(i)) {
-                    continue;
-                }
-
-                dataOutput.writeInt(domainSets[i].size());
-                domainSets[i].forEach(intWriterConsumer);
-            }
+            dataOutput.writeInt(this.subgraphsSupport.size());
+            this.subgraphsSupport.forEach(intWriterConsumer);
         }
     }
 
@@ -213,35 +168,17 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
         this.clear();
 
         support = dataInput.readInt();
-        currentSupport = dataInput.readInt();
-        numberOfDomains = dataInput.readInt();
+        patternSize = dataInput.readInt();
 
         if (dataInput.readBoolean()) {
             enoughSupport = true;
         } else {
             enoughSupport = false;
 
-            ensureCanStoreNDomains(numberOfDomains);
-
-            int numDomainsReachedSupport = dataInput.readInt();
-            for (int i = 0; i < numDomainsReachedSupport; ++i) {
-                domainsReachedSupport.add(dataInput.readInt());
+            int numSubgraphs = dataInput.readInt();
+            for (int i = 0; i < numSubgraphs; ++i) {
+                this.subgraphsSupport.add(dataInput.readInt());
             }
-
-            for (int i = 0; i < numberOfDomains; ++i) {
-                if (domainsReachedSupport.contains(i)) {
-                    continue;
-                }
-
-                int domainSize = dataInput.readInt();
-
-                HashIntSet domainSet = getDomainSet(i);
-
-                for (int j = 0; j < domainSize; ++j) {
-                    domainSet.add(dataInput.readInt());
-                }
-            }
-
         }
     }
 
@@ -249,30 +186,16 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("GspanPatternSupportAggregation{" +
-                "domainsReachedSupport=" + domainsReachedSupport +
+                "subgraphsSupport=" + subgraphsSupport +
                 ", enoughSupport=" + enoughSupport +
                 ", support=" + support +
-                ", currentSupport=" + currentSupport +
-                ", numberOfDomains=" + numberOfDomains +
-                ", domainSets=" + domainSets +
+                ", patternSize=" + patternSize +
+                ", currentSupport=" + getCurrentSupport() +
                 ", intWriterConsumer=" + intWriterConsumer +
                 ", intAdderConsumer=" + intAdderConsumer +
                 ", setFromEmbedding=" + setFromEmbedding +
-                ", embedding=" + embedding);
-
-        if (domainSets != null) {
-            for (int i = 0; i < numberOfDomains; i++) {
-                HashIntSet domainSet = domainSets[i];
-
-                if (domainSet == null) {
-                    continue;
-                }
-
-                sb.append(",domain[" + i + "]=" + domainSets[i]);
-            }
-        }
-
-        sb.append('}');
+                ", embedding=" + embedding +
+                "}");
 
         return sb.toString();
     }
@@ -280,60 +203,24 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
     public String toStringResume() {
         StringBuilder sb = new StringBuilder();
         sb.append("GspanPatternSupportAggregation{" +
-                "domainsReachedSupport=" + domainsReachedSupport +
+                "subgraphsSupport=" + subgraphsSupport +
                 ", enoughSupport=" + enoughSupport +
                 ", support=" + support +
-                ", numberOfDomains=" + numberOfDomains);
-
-        if (domainSets != null) {
-            for (int i = 0; i < numberOfDomains; i++) {
-                HashIntSet domainSet = domainSets[i];
-
-                if (domainSet == null) {
-                    continue;
-                }
-
-                sb.append(",domain[" + i + "]=" + domainSet.size());
-            }
-        }
-
-        sb.append('}');
+                ", patternSize=" + patternSize +
+                "}");
 
         return sb.toString();
     }
 
-    public void aggregate(final HashIntSet[] domains) {
+    public void aggregate(final HashIntSet otherSubgraphsSupport) {
         if (enoughSupport)
             return;
 
-        for (int i = 0; i < numberOfDomains; ++i) {
-            aggregate(domains[i], i);
+        addAll(subgraphsSupport, otherSubgraphsSupport);
 
-            if (enoughSupport) {
-                break;
-            }
-        }
-    }
-
-    private void aggregate(HashIntSet otherDomain, int i) {
-        if (otherDomain == null) {
-            return;
-        }
-
-        if (hasDomainReachedSupport(i)) {
-            return;
-        }
-
-        HashIntSet domain = getDomainSet(i);
-
-        if (domain == otherDomain) {
-            return;
-        }
-
-        addAll(domain, otherDomain);
-
-        if (domain.size() >= support) {
-            insertDomainsAsFrequent(i);
+        if(subgraphsSupport.size() >= support) {
+            this.clear();
+            this.enoughSupport = true;
         }
     }
 
@@ -347,36 +234,33 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
         source.forEach(intAdderConsumer);
     }
 
-    private void embeddingAggregate(Embedding embedding) {
-        int numVertices = embedding.getNumVertices();
+    private void addSubgraphToSupport(int subgraph) {
+        this.subgraphsSupport.add(subgraph);
 
-        if (numVertices != numberOfDomains) {
-            throw new RuntimeException("Expected " + numberOfDomains + " vertices, got " + numVertices);
+        if (this.subgraphsSupport.size() >= this.support) {
+            this.clear();
+            this.enoughSupport = true;
         }
+    }
 
-        IntArrayList vertices = embedding.getVertices();
+    private void embeddingAggregate(Embedding embedding) {
+        if(hasEnoughSupport())
+            return;
 
-        for (int i = 0; i < numVertices; ++i) {
-            if (hasDomainReachedSupport(i)) {
-                continue;
-            }
+        if (checkBelongToSameSubgraph(embedding)) {
+            IntArrayList vertexMap = embedding.getVertices();
 
-            HashIntSet domain = getDomainSet(i);
+            MainGraph graph = Configuration.get().getMainGraph();
 
-            domain.add(vertices.getUnchecked(i));
+            int subgraph = graph.getVertex(vertexMap.getUnchecked(0)).getSubgraphId();
 
-            if (domain.size() >= support) {
-                insertDomainsAsFrequent(i);
-            }
+            this.addSubgraphToSupport(subgraph);
         }
     }
 
     public void aggregate(DisconnectedGraphSupport other) {
         if (this == other)
             return;
-
-        // current support
-        this.currentSupport += other.currentSupport;
 
         // If we already have support, do nothing
         if (this.enoughSupport) {
@@ -396,27 +280,16 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
             return;
         }
 
-        if (getNumberOfDomains() != other.getNumberOfDomains()) {
-            throw new RuntimeException("Incompatible aggregation of DomainSupports: # of domains differs");
-        }
+        addAll(subgraphsSupport, other.subgraphsSupport);
 
-        addAll(domainsReachedSupport, other.domainsReachedSupport);
-
-        if (domainsReachedSupport.size() == numberOfDomains) {
+        if (subgraphsSupport.size() >= support) {
             this.clear();
             this.enoughSupport = true;
-            return;
         }
-
-        ClearSetConsumer clearConsumer = clearSetConsumer.get();
-        clearConsumer.setSupportMatrix(this.domainSets);
-        other.domainsReachedSupport.forEach(clearConsumer);
-
-        aggregate(other.domainSets);
     }
 
-    public int getNumberOfDomains() {
-        return numberOfDomains;
+    public int getPatternSize() {
+        return patternSize;
     }
 
     @Override
@@ -427,44 +300,7 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
 
         // Taking into account automorphisms of the quick pattern, merge
         // equivalent positions
-        VertexPositionEquivalences vertexPositionEquivalences = quickPattern.getVertexPositionEquivalences();
-
-        if (vertexPositionEquivalences.getNumVertices() != numberOfDomains) {
-            throw new RuntimeException("Mismatch between # number domains and size of autovertexset");
-        }
-
-        for (int i = 0; i < numberOfDomains; ++i) {
-            IntSet equivalencesToDomainI = vertexPositionEquivalences.getEquivalences(i);
-            IntCursor cursor = equivalencesToDomainI.cursor();
-            HashIntSet currentDomainSet = getDomainSet(i);
-
-            while (cursor.moveNext()) {
-                int equivalentDomainIndex = cursor.elem();
-
-                if (hasDomainReachedSupport(i)) {
-                    insertDomainsAsFrequent(equivalentDomainIndex);
-                } else {
-                    aggregate(currentDomainSet, equivalentDomainIndex);
-                }
-            }
-        }
-
-        // Rearrange to match canonical pattern structure
-        IntIntMap canonicalLabeling = canonicalPattern.getCanonicalLabeling();
-
-        HashIntSet[] oldDomainSets = Arrays.copyOf(domainSets, numberOfDomains);
-        HashIntSet oldDomainsReachedSupport = HashIntSets.newMutableSet(domainsReachedSupport);
-        domainsReachedSupport.clear();
-
-        for (int i = 0; i < numberOfDomains; ++i) {
-            // Equivalent position in the canonical pattern to position i in the quick pattern
-            int minDomainIndex = canonicalLabeling.get(i);
-
-            domainSets[minDomainIndex] = oldDomainSets[i];
-
-            if (oldDomainsReachedSupport.contains(i)) {
-                domainsReachedSupport.add(minDomainIndex);
-            }
-        }
+        //No need to do anything here to handle the automorphism since counting is based on the number of subgraphs
+        //contributing to the frequent patterns. There is no domains to merge.
     }
 }
