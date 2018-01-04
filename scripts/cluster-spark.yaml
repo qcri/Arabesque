@@ -7,3 +7,8 @@ driver_memory: 8g
 max_result_size: 5g
 
 output_active: yes
+
+#log_level: debug
+
+comm_strategy: odag_sp
+#comm_strategy: simple_storage_sp
