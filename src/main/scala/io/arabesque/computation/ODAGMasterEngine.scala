@@ -1,17 +1,13 @@
 package io.arabesque.computation
 
-import java.io.{ByteArrayInputStream, DataInputStream}
+import java.nio.file.Paths
 
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
 import io.arabesque.odag._
-import io.arabesque.pattern.Pattern
-import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.Writable
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Accumulator, SparkContext}
 
@@ -21,25 +17,31 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
-import scala.reflect.runtime.universe.TypeTag
 import scala.util.{Failure, Success}
 
 /**
- * Underlying engine that runs the Arabesque master.
- * It interacts directly with the RDD interface in Spark by handling the
- * SparkContext.
- */
+  * Underlying engine that runs the Arabesque master.
+  * It interacts directly with the RDD interface in Spark by handling the
+  * SparkContext.
+  */
 trait ODAGMasterEngine [
-    E <: Embedding,
-    O <: BasicODAG,
-    S <: BasicODAGStash[O,S],
-    C <: ODAGEngine[E,O,S,C]
-  ] extends SparkMasterEngine [E] {
+E <: Embedding,
+O <: BasicODAG,
+S <: BasicODAGStash[O,S],
+C <: ODAGEngine[E,O,S,C]
+] extends SparkMasterEngine [E] {
 
   implicit def oTag: ClassTag[O] // workaround to pass classtags to traits
 
   // sub-classes must implement
   def config: SparkConfiguration[E]
+
+  // #reporting
+  /*
+  var reportsFilePath: String = _
+  var generateReports: Boolean = false
+  //
+  */
 
   import ODAGMasterEngine._
 
@@ -50,7 +52,7 @@ trait ODAGMasterEngine [
   // Ad-hoc arabesque approach for user-defined aggregations
   var aggAccums: Map[String,Accumulator[_]] = _
   var aggregations
-    : Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
+  : Map[String,AggregationStorage[_ <: Writable, _ <: Writable]] = _
 
   var superstep = 0
 
@@ -62,15 +64,25 @@ trait ODAGMasterEngine [
   def arabConfig: SparkConfiguration[_ <: Embedding] = config
 
   override def init() = {
-    // garantees that outputPath does not exist
+    // guarantees that outputPath does not exist
     if (config.isOutputActive) {
       val fs = FileSystem.get(sc.hadoopConfiguration)
       val outputPath = new Path(config.getOutputPath)
       if (fs.exists (outputPath))
         throw new RuntimeException (
           s"Output path ${config.getOutputPath} exists. Choose another one."
-          )
+        )
     }
+
+    // #reporting
+    /*
+    // set reports path
+    if(config.getBoolean("reports_active", false)) {
+      reportsFilePath = config.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
+      reportsFilePath += "/Master/"
+      generateReports = true
+    }
+    */
 
     // master computation
     masterComputation = config.createMasterComputation()
@@ -89,6 +101,8 @@ trait ODAGMasterEngine [
       sc.accumulator [Long] (0L, AGG_EMBEDDINGS_GENERATED))
     aggAccums.update (AGG_EMBEDDINGS_OUTPUT,
       sc.accumulator [Long] (0L, AGG_EMBEDDINGS_OUTPUT))
+    aggAccums.update (AGG_SPURIOUS_EMBEDDINGS,
+      sc.accumulator [Long] (0L, AGG_SPURIOUS_EMBEDDINGS))
 
     super.init()
   }
@@ -101,36 +115,36 @@ trait ODAGMasterEngine [
   override def getSuperstep(): Long = superstep
 
   /**
-   * Extracts and aggregate AggregationStorages from executionEngines
-   *
-   * @param execEngines rdd of spark execution engines
-   * @param numPartitions based on the number of partitions, we decide the
-   * depth of the aggregation tree
-   * @return a future with a map (name -> aggregationStorage) as entries
-   *
-   */
+    * Extracts and aggregate AggregationStorages from executionEngines
+    *
+    * @param execEngines rdd of spark execution engines
+    * @param numPartitions based on the number of partitions, we decide the
+    * depth of the aggregation tree
+    * @return a future with a map (name -> aggregationStorage) as entries
+    *
+    */
   def getAggregations(
-    execEngines: RDD[C],
-    numPartitions: Int) = Future {
+                       execEngines: RDD[C],
+                       numPartitions: Int) = Future {
 
     def reduce[K <: Writable, V <: Writable](
-        name: String,
-        metadata: AggregationStorageMetadata[K,V])
-      (implicit kt: ClassTag[K], vt: ClassTag[V]) =
-        Future[AggregationStorage[_ <: Writable, _ <: Writable]] {
+                                              name: String,
+                                              metadata: AggregationStorageMetadata[K,V])
+                                            (implicit kt: ClassTag[K], vt: ClassTag[V]) =
+      Future[AggregationStorage[_ <: Writable, _ <: Writable]] {
 
-      val keyValues = execEngines.flatMap (execEngine =>
+        val keyValues = execEngines.flatMap (execEngine =>
           execEngine.flushAggregationsByName(name).
             asInstanceOf[Iterator[AggregationStorage[K,V]]]
-          )
-      val aggStorage = keyValues.reduce { (agg1,agg2) =>
-        agg1.aggregate (agg2)
-        agg1
-      }
+        )
+        val aggStorage = keyValues.reduce { (agg1,agg2) =>
+          agg1.aggregate (agg2)
+          agg1
+        }
 
-      aggStorage.endedAggregation
-      aggStorage
-    }
+        aggStorage.endedAggregation
+        aggStorage
+      }
 
     val future = Future.sequence (
       config.getAggregationsMetadata.map { case (name, metadata) =>
@@ -170,12 +184,13 @@ trait ODAGMasterEngine [
     sc.union (odags.toSeq)
   }
 }
- 
+
 /**
- * Companion object: static methods and fields
- */
+  * Companion object: static methods and fields
+  */
 object ODAGMasterEngine {
   val AGG_EMBEDDINGS_PROCESSED = "embeddings_processed"
   val AGG_EMBEDDINGS_GENERATED = "embeddings_generated"
   val AGG_EMBEDDINGS_OUTPUT = "embeddings_output"
+  val AGG_SPURIOUS_EMBEDDINGS = "embeddings_spurious"
 }

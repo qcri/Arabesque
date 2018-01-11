@@ -2,10 +2,12 @@ package io.arabesque.odag;
 
 import io.arabesque.computation.Computation;
 import io.arabesque.conf.Configuration;
+import io.arabesque.conf.SparkConfiguration;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.odag.domain.StorageReader;
 import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
+import io.arabesque.report.StorageReport;
 import org.apache.giraph.aggregators.BasicAggregator;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
@@ -37,6 +39,7 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
 
    public interface Reader<O extends Embedding> extends Iterator<O> {
    }
+
    public static class EfficientReader<O extends Embedding> implements Reader<O> {
       private final int numPartitions;
       private final Computation<Embedding> computation;
@@ -47,6 +50,9 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
       private StorageReader currentReader;
       private boolean currentPositionConsumed = true;
 
+       // #reporting
+       //private ArrayList<StorageReport> stashReports = new ArrayList<>();
+       private String commStrategy;
       public EfficientReader(BasicODAGStash<?,?> stash, Computation<? extends Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
          this.numPartitions = numPartitions;
          this.computation = (Computation<Embedding>) computation;
@@ -55,6 +61,7 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
 
          stashIterator = stash.getEzips().iterator();
          currentReader = null;
+         commStrategy = Configuration.get().getCommStrategy();
       }
 
       @Override
@@ -90,6 +97,9 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
             // null and let the while begin again (simulate recursive call without the stack
             // building overhead).
             else {
+               // #reporting
+               //stashReports.add(currentReader.getStorageReport());
+
                currentReader.close();
                currentReader = null;
             }
@@ -107,5 +117,10 @@ public abstract class BasicODAGStash<O extends BasicODAG, S extends BasicODAGSta
       public void remove() {
          throw new UnsupportedOperationException();
       }
+
+      // #reporting
+      //*
+      //public ArrayList<StorageReport> getStashStorageReports() { return stashReports; }
+      //*/
    }
 }

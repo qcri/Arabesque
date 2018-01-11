@@ -1,5 +1,6 @@
 package io.arabesque.odag.domain;
 
+import com.koloboke.collect.map.IntObjMap;
 import io.arabesque.utils.WriterSetConsumer;
 import com.koloboke.collect.IntCursor;
 import com.koloboke.collect.set.hash.HashIntSet;
@@ -117,6 +118,16 @@ public class DomainEntrySet implements DomainEntry {
 
     @Override
     public void incrementCounterFrom(ConcurrentHashMap<Integer, DomainEntry> followingEntryMap) {
+        IntCursor pointersCursor = getPointersCursor();
+        while (pointersCursor.moveNext()) {
+            DomainEntry domainEntryOfPointer = followingEntryMap.get(pointersCursor.elem());
+            assert domainEntryOfPointer != null;
+            incrementCounter(domainEntryOfPointer.getCounter());
+        }
+    }
+
+    @Override
+    public void incrementCounterFrom(IntObjMap<DomainEntry> followingEntryMap) {
         IntCursor pointersCursor = getPointersCursor();
         while (pointersCursor.moveNext()) {
             DomainEntry domainEntryOfPointer = followingEntryMap.get(pointersCursor.elem());

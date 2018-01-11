@@ -13,6 +13,7 @@ import io.arabesque.pattern.LabelledPatternEdge;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
+import io.arabesque.report.StorageReport;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
 import com.koloboke.collect.IntCollection;
@@ -112,6 +113,14 @@ public class DomainStorageReadOnly extends DomainStorage {
             edgesConsumer = new EdgesConsumer(Configuration.get().isGraphEdgeLabelled());
             edgesConsumer.setCollection(edgeIds);
         }
+
+        // #reporting
+        /*
+        @Override
+        public StorageReport getStorageReport() {
+            return new StorageReport();
+        }
+        //*/
 
         @Override
         public boolean hasNext() {
@@ -604,6 +613,14 @@ public class DomainStorageReadOnly extends DomainStorage {
            numberOfEmbeddingsRead += 1; 
            return reusableEmbedding;
         }
+
+        // #reporting
+        /*
+        @Override
+        public StorageReport getStorageReport() {
+            return new StorageReport();
+        }
+        //*/
 
         @Override
         public void remove() {

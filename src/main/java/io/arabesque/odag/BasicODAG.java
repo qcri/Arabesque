@@ -1,11 +1,10 @@
 package io.arabesque.odag;
 
+import io.arabesque.conf.Configuration;
+import io.arabesque.conf.SparkConfiguration;
 import io.arabesque.computation.Computation;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.odag.domain.DomainStorage;
-import io.arabesque.odag.domain.DomainStorageReadOnly;
-import io.arabesque.odag.domain.StorageReader;
-import io.arabesque.odag.domain.StorageStats;
+import io.arabesque.odag.domain.*;
 import io.arabesque.pattern.Pattern;
 import org.apache.hadoop.io.Writable;
 
@@ -13,12 +12,24 @@ import java.io.*;
 import java.util.concurrent.ExecutorService;
 
 public abstract class BasicODAG implements Writable, Externalizable {
-    protected DomainStorage storage;
+    protected AbstractDomainStorage storage;
     protected boolean serializeAsReadOnly;
 
-    protected DomainStorage createDomainStorage(boolean readOnly) {
-        if (readOnly) return new DomainStorageReadOnly();
-        else return new DomainStorage();
+    protected AbstractDomainStorage createDomainStorage(boolean readOnly) {
+        String commStrategy = Configuration.get().getCommStrategy();
+
+        if (readOnly) {
+            if (commStrategy.equals(SparkConfiguration.COMM_ODAG_SP()) || commStrategy.equals(SparkConfiguration.COMM_ODAG_SP_PRIM()))
+                return new PrimitiveDomainStorageReadOnly();
+            else
+                return new GenericDomainStorageReadOnly();
+        }
+        else {
+            if (commStrategy.equals(SparkConfiguration.COMM_ODAG_SP()) || commStrategy.equals(SparkConfiguration.COMM_ODAG_SP_PRIM()))
+                return new PrimitiveDomainStorage();
+            else
+                return new GenericDomainStorage();
+        }
     }
 
     public abstract void addEmbedding(Embedding embedding);
@@ -34,7 +45,7 @@ public abstract class BasicODAG implements Writable, Externalizable {
         return storage.getNumberOfDomains();
     }
 
-    public DomainStorage getStorage() {
+    public AbstractDomainStorage getStorage() {
         return storage;
     }
 

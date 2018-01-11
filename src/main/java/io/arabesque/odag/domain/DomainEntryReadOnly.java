@@ -1,5 +1,6 @@
 package io.arabesque.odag.domain;
 
+import com.koloboke.collect.map.IntObjMap;
 import io.arabesque.utils.WriterSetConsumer;
 import com.koloboke.collect.IntCursor;
 
@@ -95,6 +96,15 @@ public class DomainEntryReadOnly extends DomainEntrySet {
             assert domainEntryOfPointer != null;
             incrementCounter(domainEntryOfPointer.getCounter());
 
+        }
+    }
+
+    @Override
+    public void incrementCounterFrom(IntObjMap<DomainEntry> followingEntryMap) {
+        for (int i = 0; i < pointers.length; i++) {
+            DomainEntry domainEntryOfPointer = followingEntryMap.get(pointers[i]);
+            assert domainEntryOfPointer != null;
+            incrementCounter(domainEntryOfPointer.getCounter());
         }
     }
 }

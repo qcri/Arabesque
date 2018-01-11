@@ -1,26 +1,18 @@
 package io.arabesque.computation
 
 import java.io._
-import java.util.concurrent.{ExecutorService, Executors}
 
-import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
-import io.arabesque.conf.{Configuration, SparkConfiguration}
+import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
-import io.arabesque.odag.domain.DomainEntry
+import io.arabesque.odag.domain.{DomainEntry, GenericDomainStorage, PrimitiveDomainStorage}
 import io.arabesque.odag._
-import io.arabesque.odag.BasicODAGStash.EfficientReader
 import io.arabesque.pattern.Pattern
-import io.arabesque.utils.SerializableConfiguration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
-import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
-import org.apache.log4j.{Level, Logger}
+
 import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{ListBuffer, Map}
-import scala.reflect.ClassTag
+import scala.collection.mutable.Map
 
 /**
  * Underlying engine that runs Arabesque workers in Spark.
@@ -38,7 +30,20 @@ case class ODAGEngineSP [E <: Embedding](
 
   // stashes
   nextEmbeddingStash = new SinglePatternODAGStash
-  
+
+  // #reporting
+  /*
+  def saveReports() = {
+    partitionReport.endTime = System.currentTimeMillis()
+    if(generateReports) {
+      partitionReport.partitionId = this.partitionId
+      partitionReport.superstep = this.superstep
+      partitionReport.storageReports = storageReports.toArray
+      partitionReport.saveReport(reportsFilePath)
+    }
+  }
+  */
+
   /**
    * Returns a new execution engine from this with the aggregations/computation
    * variables updated (immutability)
@@ -131,10 +136,16 @@ case class ODAGEngineSP [E <: Embedding](
           val (wordId, entry) = entriesIterator.next
           val domainEntries = newOdag.getStorage().getDomainEntries()
 
-          domainEntries.get (domainId).put (wordId, entry)
+          if(newOdag.getStorage.isInstanceOf[PrimitiveDomainStorage]) {
+            domainEntries(domainId).synchronized {
+              domainEntries(domainId).put(wordId,entry)
+            }
+          }
+          else
+            if(newOdag.getStorage.isInstanceOf[GenericDomainStorage])
+              domainEntries.get (domainId).put (wordId, entry)
 
           ((newOdag.getPattern(),domainId,wordId.intValue), newOdag)
-
       }
 
       override def next = nextRec
@@ -182,5 +193,4 @@ case class ODAGEngineSP [E <: Embedding](
           yield ((odag.getPattern(), partId), outputs(partId).toByteArray)
       }
   }
-  
 }

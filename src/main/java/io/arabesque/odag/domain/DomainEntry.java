@@ -1,5 +1,6 @@
 package io.arabesque.odag.domain;
 
+import com.koloboke.collect.map.IntObjMap;
 import io.arabesque.utils.WriterSetConsumer;
 import com.koloboke.collect.IntCursor;
 
@@ -27,4 +28,6 @@ public interface DomainEntry {
     int getWastedPointers();
 
     void incrementCounterFrom(ConcurrentHashMap<Integer, DomainEntry> followingEntryMap);
+    // for primitive maps
+    void incrementCounterFrom(IntObjMap<DomainEntry> followingEntryMap);
 }
