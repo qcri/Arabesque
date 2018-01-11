@@ -1,7 +1,5 @@
 package io.arabesque.computation
 
-import java.nio.file.Paths
-
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageMetadata}
 import io.arabesque.conf.SparkConfiguration
 import io.arabesque.embedding._
@@ -36,12 +34,6 @@ C <: ODAGEngine[E,O,S,C]
   // sub-classes must implement
   def config: SparkConfiguration[E]
 
-  // #reporting
-  //*
-  var reportsFilePath: String = _
-  var generateReports: Boolean = false
-  //*/
-
   import ODAGMasterEngine._
 
   // testing
@@ -72,16 +64,6 @@ C <: ODAGEngine[E,O,S,C]
           s"Output path ${config.getOutputPath} exists. Choose another one."
         )
     }
-
-    // #reporting
-    //*
-    // set reports path
-    if(config.getBoolean("reports_active", false)) {
-      reportsFilePath = config.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
-      reportsFilePath += "/Master/"
-      generateReports = true
-    }
-    //*/
 
     // master computation
     masterComputation = config.createMasterComputation()

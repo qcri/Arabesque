@@ -1,7 +1,6 @@
 package io.arabesque.computation
 
 import java.io._
-import java.nio.file.Paths
 import java.util.concurrent.{ExecutorService, Executors}
 
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
@@ -9,7 +8,6 @@ import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
 import io.arabesque.odag._
 import io.arabesque.odag.BasicODAGStash.EfficientReader
-import io.arabesque.report.{PartitionReport, StorageReport}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
@@ -17,7 +15,7 @@ import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{ArrayBuffer, Map}
+import scala.collection.mutable.Map
 import scala.reflect.ClassTag
 
 trait ODAGEngine[
@@ -32,15 +30,6 @@ trait ODAGEngine[
   val superstep: Int
   val accums: Map[String,Accumulator[_]]
   val previousAggregationsBc: Broadcast[_]
-
-  // #reporting
-  // partition report
-  //*
-  val partitionReport: PartitionReport = new PartitionReport
-  val storageReports: ArrayBuffer[StorageReport] = new ArrayBuffer[StorageReport]()
-  var reportsFilePath: String = _
-  var generateReports: Boolean = false
-  //*/
 
   // update aggregations before flush
   def withNewAggregations(aggregationsBc: Broadcast[_]): C
@@ -83,18 +72,6 @@ trait ODAGEngine[
 
   // TODO: tirar isso !!!
   def init(): Unit = {
-    // #reporting
-    //*
-    // set reports path
-    if(configuration.getBoolean("reports_active", false)) {
-      reportsFilePath = configuration.getString("reports_path", Paths.get("").toAbsolutePath.normalize.toString)
-      reportsFilePath += "/Partitions/"
-      generateReports = true
-    }
-    partitionReport.partitionId = this.partitionId
-    partitionReport.superstep = this.superstep
-    partitionReport.startTime = System.currentTimeMillis()
-    //*/
   }
 
   // output
@@ -197,9 +174,6 @@ trait ODAGEngine[
     // no more embeddings to be read from current stash, try to get another
     // stash by recursive call
     } else {
-      // #reporting
-      storageReports.appendAll(odagStashReader.getStashStorageReports())
-
       currentEmbeddingStashOpt = None
       getNextInboundEmbedding(remainingStashes)
     }

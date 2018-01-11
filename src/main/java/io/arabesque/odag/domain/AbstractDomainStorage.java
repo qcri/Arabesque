@@ -22,7 +22,6 @@ import io.arabesque.pattern.LabelledPatternEdge;
 import io.arabesque.pattern.Pattern;
 import io.arabesque.pattern.PatternEdge;
 import io.arabesque.pattern.PatternEdgeArrayList;
-import io.arabesque.report.StorageReport;
 import io.arabesque.utils.WriterSetConsumer;
 import io.arabesque.utils.collection.IntArrayList;
 import io.arabesque.utils.collection.IntCollectionAddConsumer;
@@ -473,14 +472,6 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
         protected EdgesConsumer edgesConsumer;
         protected IntArrayList edgeIds;
 
-        // #reporting
-        //*
-        protected StorageReport report = new StorageReport();
-        protected long numCompleteEnumerationsVisited = 0;
-        // how many invalid embeddings this storage/partition generated
-        protected long numSpuriousEmbeddings = 0L;
-        //*/
-
         public SinglePatternReader(Pattern pattern, Computation<Embedding> computation, int numPartitions, int numBlocks, int maxBlockSize) {
             this.pattern = pattern;
             this.computation = computation;
@@ -505,32 +496,7 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
 
             edgesConsumer = new EdgesConsumer(Configuration.get().isGraphEdgeLabelled(), mainGraph);
             edgesConsumer.setCollection(edgeIds);
-
-            // #reporting
-            report.initReport(numberOfDomains);
         }
-
-        // #reporting
-        //*
-        protected void finalizeReport() {
-            ArrayList<Map> domains = (ArrayList<Map>)domainEntries;
-
-            report.numEnumerations = numberOfEnumerations;
-            report.numCompleteEnumerationsVisited = numCompleteEnumerationsVisited;
-            report.numSpuriousEmbeddings = numSpuriousEmbeddings;
-            report.numActualEmbeddings = numEmbeddings;
-
-            for(int i = 0; i < numberOfDomains; ++i) {
-                report.domainSize[i] = domains.get(i).size();
-            }
-        }
-
-        @Override
-        public StorageReport getStorageReport() {
-            finalizeReport();
-            return report;
-        }
-        //*/
 
         @Override
         public boolean hasNext() {
@@ -800,15 +766,8 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
                             enumerationStack.push(domain0EnumerationStep);
 
                             if (invalid) {
-                                // #reporting
-                                //*
-                                numSpuriousEmbeddings += 1;
-                                report.pruned[domainOfLastEnumerationStep] += 1;
-                                //*/
                                 return false;
                             } else {
-                                // #reporting
-                                report.explored[domainOfLastEnumerationStep] += 1;
                                 // add new DomainNot0EnumerationStep with wordId = -1, and all possible ids for next domain
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForDomain0;
@@ -861,15 +820,8 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
                             enumerationStack.push(lastEnumerationStep);
 
                             if (invalid) {
-                                // #reporting
-                                //*
-                                numSpuriousEmbeddings += 1;
-                                report.pruned[domainOfLastEnumerationStep] += 1;
-                                //*/
                                 return false;
                             } else {
-                                // #reporting
-                                report.explored[domainOfLastEnumerationStep] += 1;
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForLastDomain;
                                     enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers()));
@@ -893,18 +845,9 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
                 }
             }
 
-            // #reporting
-            //*
-            numCompleteEnumerationsVisited += 1;
             boolean isCompleteEmbeddingValid = testCompleteEmbedding();
             boolean isEmbeddingOfTargetSize = reusableEmbedding.getNumWords() == targetSize;
 
-            if(!(isCompleteEmbeddingValid && isEmbeddingOfTargetSize))
-                numSpuriousEmbeddings += 1;
-            //*/
-
-            //return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
-            // #reporting
             return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
         }
     }
@@ -968,15 +911,8 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
                             enumerationStack.push(domain0EnumerationStep);
 
                             if (invalid) {
-                                // #reporting
-                                //*
-                                numSpuriousEmbeddings += 1;
-                                report.pruned[domainOfLastEnumerationStep] += 1;
-                                //*/
                                 return false;
                             } else {
-                                // #reporting
-                                report.explored[domainOfLastEnumerationStep] += 1;
                                 // add new DomainNot0EnumerationStep with wordId = -1, and all possible ids for next domain
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForDomain0;
@@ -1028,15 +964,8 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
                             enumerationStack.push(lastEnumerationStep);
 
                             if (invalid) {
-                                // #reporting
-                                //*
-                                report.pruned[domainOfLastEnumerationStep] += 1;
-                                numSpuriousEmbeddings += 1;
-                                //*/
                                 return false;
                             } else {
-                                // #reporting
-                                report.explored[domainOfLastEnumerationStep] += 1;
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForLastDomain;
                                     enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers()));
@@ -1063,12 +992,6 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
             boolean isCompleteEmbeddingValid = testCompleteEmbedding();
             boolean isEmbeddingOfTargetSize = reusableEmbedding.getNumWords() == targetSize;
 
-            // #reporting
-            //*
-            numCompleteEnumerationsVisited += 1;
-            if(!(isCompleteEmbeddingValid && isEmbeddingOfTargetSize))
-                numSpuriousEmbeddings += 1;
-            //*/
             return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
         }
     }
@@ -1416,15 +1339,6 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
                         " enumerations: " + localEnumerations);
             }
         }
-
-        // #reporting
-        //*
-        @Override
-        public StorageReport getStorageReport() {
-            //finalizeReport();
-            return new StorageReport();
-        }
-        //*/
     }
 
     public class PrimitiveMultiPatternReader extends MultiPatternReader {
