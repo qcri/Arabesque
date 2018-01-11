@@ -71,11 +71,11 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
 
     do {
       // #reporting
-      /*
+      //*
       val masterReport: MasterReport = new MasterReport
       masterReport.superstep = superstep
       masterReport.startTime = System.currentTimeMillis
-      */
+      //*/
       /*
       if(superstep == 4) {
         // Printing ODAGs at the beginning of each super step
@@ -248,7 +248,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       }
 
       // #reporting
-      /*
+      //*
       // calc storage size/summary for master report for this superstep
       var i = 0
       aggregatedOdagsBc.value.foreach(entry => {
@@ -272,7 +272,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       masterReport.endTime = System.currentTimeMillis()
       if(generateReports)
         masterReport.saveReport(reportsFilePath)
-      */
+      //*/
 
       superstep += 1
     } while (!sc.isStopped && !aggregatedOdagsBc.value.isEmpty) // while there are ODAGs to be processed
@@ -309,7 +309,7 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
       val stash = new SinglePatternODAGStash (aggregatedOdagsBc.value)
       execEngine.compute (Iterator (stash))
       // #reporting
-      //execEngine.saveReports()
+      execEngine.saveReports()
       execEngine.finalize()
       Iterator(execEngine)
     }

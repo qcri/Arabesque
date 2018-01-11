@@ -115,7 +115,7 @@ public class DomainStorageReadOnly extends DomainStorage {
         }
 
         // #reporting
-        /*
+        //*
         @Override
         public StorageReport getStorageReport() {
             return new StorageReport();
@@ -615,7 +615,7 @@ public class DomainStorageReadOnly extends DomainStorage {
         }
 
         // #reporting
-        /*
+        //*
         @Override
         public StorageReport getStorageReport() {
             return new StorageReport();

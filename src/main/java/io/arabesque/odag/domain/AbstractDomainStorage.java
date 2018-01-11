@@ -474,7 +474,7 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
         protected IntArrayList edgeIds;
 
         // #reporting
-        /*
+        //*
         protected StorageReport report = new StorageReport();
         protected long numCompleteEnumerationsVisited = 0;
         // how many invalid embeddings this storage/partition generated
@@ -507,11 +507,11 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
             edgesConsumer.setCollection(edgeIds);
 
             // #reporting
-            //report.initReport(numberOfDomains);
+            report.initReport(numberOfDomains);
         }
 
         // #reporting
-        /*
+        //*
         protected void finalizeReport() {
             ArrayList<Map> domains = (ArrayList<Map>)domainEntries;
 
@@ -801,14 +801,14 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
 
                             if (invalid) {
                                 // #reporting
-                                /*
+                                //*
                                 numSpuriousEmbeddings += 1;
                                 report.pruned[domainOfLastEnumerationStep] += 1;
                                 //*/
                                 return false;
                             } else {
                                 // #reporting
-                                //report.explored[domainOfLastEnumerationStep] += 1;
+                                report.explored[domainOfLastEnumerationStep] += 1;
                                 // add new DomainNot0EnumerationStep with wordId = -1, and all possible ids for next domain
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForDomain0;
@@ -862,14 +862,14 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
 
                             if (invalid) {
                                 // #reporting
-                                /*
+                                //*
                                 numSpuriousEmbeddings += 1;
                                 report.pruned[domainOfLastEnumerationStep] += 1;
                                 //*/
                                 return false;
                             } else {
                                 // #reporting
-                                //report.explored[domainOfLastEnumerationStep] += 1;
+                                report.explored[domainOfLastEnumerationStep] += 1;
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForLastDomain;
                                     enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers()));
@@ -894,7 +894,7 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
             }
 
             // #reporting
-            /*
+            //*
             numCompleteEnumerationsVisited += 1;
             boolean isCompleteEmbeddingValid = testCompleteEmbedding();
             boolean isEmbeddingOfTargetSize = reusableEmbedding.getNumWords() == targetSize;
@@ -903,9 +903,9 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
                 numSpuriousEmbeddings += 1;
             //*/
 
-            return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
+            //return reusableEmbedding.getNumWords() == targetSize && testCompleteEmbedding();
             // #reporting
-            //return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
+            return isEmbeddingOfTargetSize && isCompleteEmbeddingValid;
         }
     }
 
@@ -969,14 +969,14 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
 
                             if (invalid) {
                                 // #reporting
-                                /*
+                                //*
                                 numSpuriousEmbeddings += 1;
                                 report.pruned[domainOfLastEnumerationStep] += 1;
                                 //*/
                                 return false;
                             } else {
                                 // #reporting
-                                //report.explored[domainOfLastEnumerationStep] += 1;
+                                report.explored[domainOfLastEnumerationStep] += 1;
                                 // add new DomainNot0EnumerationStep with wordId = -1, and all possible ids for next domain
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForDomain0;
@@ -1029,14 +1029,14 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
 
                             if (invalid) {
                                 // #reporting
-                                /*
+                                //*
                                 report.pruned[domainOfLastEnumerationStep] += 1;
                                 numSpuriousEmbeddings += 1;
                                 //*/
                                 return false;
                             } else {
                                 // #reporting
-                                //report.explored[domainOfLastEnumerationStep] += 1;
+                                report.explored[domainOfLastEnumerationStep] += 1;
                                 if (enumerationStack.size() != targetSize) {
                                     final DomainEntryReadOnly oneee = (DomainEntryReadOnly) newPossibilityForLastDomain;
                                     enumerationStack.push(new DomainNot0EnumerationStep(currentId, -1, oneee.getPointers()));
@@ -1064,7 +1064,7 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
             boolean isEmbeddingOfTargetSize = reusableEmbedding.getNumWords() == targetSize;
 
             // #reporting
-            /*
+            //*
             numCompleteEnumerationsVisited += 1;
             if(!(isCompleteEmbeddingValid && isEmbeddingOfTargetSize))
                 numSpuriousEmbeddings += 1;
@@ -1418,7 +1418,7 @@ public abstract class AbstractDomainStorage<S extends Storage> extends Storage<S
         }
 
         // #reporting
-        /*
+        //*
         @Override
         public StorageReport getStorageReport() {
             //finalizeReport();

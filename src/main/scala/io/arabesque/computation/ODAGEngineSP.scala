@@ -32,7 +32,7 @@ case class ODAGEngineSP [E <: Embedding](
   nextEmbeddingStash = new SinglePatternODAGStash
 
   // #reporting
-  /*
+  //*
   def saveReports() = {
     partitionReport.endTime = System.currentTimeMillis()
     if(generateReports) {
@@ -42,7 +42,7 @@ case class ODAGEngineSP [E <: Embedding](
       partitionReport.saveReport(reportsFilePath)
     }
   }
-  */
+  //*/
 
   /**
    * Returns a new execution engine from this with the aggregations/computation

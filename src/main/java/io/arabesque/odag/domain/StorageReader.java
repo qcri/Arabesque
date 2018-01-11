@@ -8,5 +8,6 @@ import java.util.Iterator;
 public interface StorageReader extends Iterator<Embedding> {
     void close();
 
-    //public StorageReport getStorageReport();
+    // #reporting
+    public StorageReport getStorageReport();
 }
