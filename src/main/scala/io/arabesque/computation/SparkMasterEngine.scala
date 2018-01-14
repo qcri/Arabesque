@@ -107,11 +107,11 @@ object SparkMasterEngine {
   import SparkConfiguration._
   def apply[E <: Embedding] (sc: SparkContext, config: SparkConfiguration[E]) =
       config.getString(CONF_COMM_STRATEGY, CONF_COMM_STRATEGY_DEFAULT) match {
-    case COMM_ODAG_SP =>
-      new ODAGMasterEngineSP [E] (sc, config)
-    case COMM_ODAG_MP =>
-      new ODAGMasterEngineMP [E] (sc, config)
-    case COMM_EMBEDDING =>
-      new SparkEmbeddingMasterEngine [E] (sc, config)
+        case (COMM_ODAG_SP | COMM_ODAG_SP_PRIM | COMM_ODAG_SP_GEN) =>
+          new ODAGMasterEngineSP [E] (sc, config)
+        case (COMM_ODAG_MP | COMM_ODAG_MP_PRIM | COMM_ODAG_MP_GEN) =>
+          new ODAGMasterEngineMP [E] (sc, config)
+        case COMM_EMBEDDING =>
+          new SparkEmbeddingMasterEngine [E] (sc, config)
   }
 }

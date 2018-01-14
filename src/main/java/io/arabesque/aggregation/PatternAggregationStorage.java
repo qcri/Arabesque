@@ -429,7 +429,7 @@ public class PatternAggregationStorage<K extends Pattern, V extends Writable> ex
 //        super.transferKeyFrom(key, otherAggregationStorage);
 //    }
 
-    public K getValueOnly (K quick){
+    public K getCanonicalPatternValueOnly (K quick){
         return quick2CanonicalMap.get(quick);
     }
 

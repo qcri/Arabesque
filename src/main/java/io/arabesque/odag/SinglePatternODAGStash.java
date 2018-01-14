@@ -1,12 +1,9 @@
 package io.arabesque.odag;
 
-import io.arabesque.computation.Computation;
 import io.arabesque.conf.Configuration;
 import io.arabesque.embedding.Embedding;
-import io.arabesque.odag.domain.StorageReader;
 import io.arabesque.odag.domain.StorageStats;
 import io.arabesque.pattern.Pattern;
-import io.arabesque.odag.BasicODAGStash.EfficientReader;
 import org.apache.giraph.aggregators.BasicAggregator;
 import org.apache.log4j.Logger;
 
@@ -128,9 +125,6 @@ public class SinglePatternODAGStash extends BasicODAGStash<SinglePatternODAG,Sin
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
-        //if (true) {
-        //    throw new RuntimeException("Shouldn't be used any more");
-        //}
         compressedEmbeddingsByPattern.clear();
         int numEntries = dataInput.readInt();
         for (int i = 0; i < numEntries; ++i) {

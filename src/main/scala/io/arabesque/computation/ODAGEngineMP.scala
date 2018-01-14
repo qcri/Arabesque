@@ -1,24 +1,12 @@
 package io.arabesque.computation
 
-import java.io._
-import java.util.concurrent.{ExecutorService, Executors}
 
-import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
-import io.arabesque.odag.domain.DomainEntry
 import io.arabesque.odag._
-import io.arabesque.odag.BasicODAGStash.EfficientReader
-import io.arabesque.pattern.Pattern
-import io.arabesque.utils.SerializableConfiguration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
-import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
-import scala.collection.JavaConversions._
 import scala.collection.mutable.{ListBuffer, Map}
 import scala.reflect.ClassTag
 

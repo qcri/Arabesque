@@ -7,3 +7,11 @@ optimizations:
 
 # Custom parameters
 arabesque.clique.maxsize: 4
+
+# reports params
+#reports_active: yes
+#reports_path: Reports_Path
+
+#flush_method: flush_by_pattern
+#flush_method: flush_by_entries
+#flush_method: flush_by_parts

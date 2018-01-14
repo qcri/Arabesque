@@ -33,7 +33,7 @@ public class CliqueComputation extends VertexInducedComputation<VertexInducedEmb
     @Override
     public void process(VertexInducedEmbedding embedding) {
         if (embedding.getNumVertices() == maxsize) {
-            output(embedding);
+            output(embedding.toOutputString());
         }
     }
 }

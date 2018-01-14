@@ -6,20 +6,16 @@ import java.util.concurrent.{ExecutorService, Executors}
 import io.arabesque.aggregation.{AggregationStorage, AggregationStorageFactory}
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 import io.arabesque.embedding._
-import io.arabesque.odag.domain.DomainEntry
 import io.arabesque.odag._
 import io.arabesque.odag.BasicODAGStash.EfficientReader
-import io.arabesque.pattern.Pattern
-import io.arabesque.utils.SerializableConfiguration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{LongWritable, NullWritable, SequenceFile, Writable}
 import org.apache.hadoop.io.SequenceFile.{Writer => SeqWriter}
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.Accumulator
 import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.Map
 import scala.reflect.ClassTag
 
 trait ODAGEngine[
@@ -34,7 +30,7 @@ trait ODAGEngine[
   val superstep: Int
   val accums: Map[String,Accumulator[_]]
   val previousAggregationsBc: Broadcast[_]
- 
+
   // update aggregations before flush
   def withNewAggregations(aggregationsBc: Broadcast[_]): C
 
@@ -72,9 +68,11 @@ trait ODAGEngine[
   var numEmbeddingsProcessed: Long = 0
   var numEmbeddingsGenerated: Long = 0
   var numEmbeddingsOutput: Long = 0
+  var numSpuriousEmbeddings: Long = 0
 
   // TODO: tirar isso !!!
-  def init(): Unit = {}
+  def init(): Unit = {
+  }
 
   // output
   @transient var embeddingWriterOpt: Option[SeqWriter] = None
@@ -198,6 +196,9 @@ trait ODAGEngine[
     logInfo (s"Embeddings output: ${numEmbeddingsOutput}")
     accumulate (numEmbeddingsOutput,
       accums(ODAGMasterEngine.AGG_EMBEDDINGS_OUTPUT))
+    logInfo (s"Spurious Embeddings: ${numSpuriousEmbeddings} by partition($partitionId) in SuperStep($superstep)")
+    accumulate (numSpuriousEmbeddings,
+      accums(ODAGMasterEngine.AGG_SPURIOUS_EMBEDDINGS))
   }
 
   /**
@@ -373,10 +374,10 @@ object ODAGEngine {
       accums: Map[String,Accumulator[_]],
       previousAggregationsBc: Broadcast[_]): C = 
     config.getString(CONF_COMM_STRATEGY, CONF_COMM_STRATEGY_DEFAULT) match {
-      case COMM_ODAG_SP =>
+      case (COMM_ODAG_SP | COMM_ODAG_SP_PRIM | COMM_ODAG_SP_GEN) =>
         new ODAGEngineSP [E] (partitionId, superstep,
           accums, previousAggregationsBc).asInstanceOf[C]
-      case COMM_ODAG_MP =>
+      case (COMM_ODAG_MP | COMM_ODAG_MP_PRIM | COMM_ODAG_MP_GEN) =>
         new ODAGEngineMP [E] (partitionId, superstep,
           accums, previousAggregationsBc).asInstanceOf[C]
   }

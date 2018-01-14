@@ -2,10 +2,10 @@ package io.arabesque.odag
 
 import io.arabesque.embedding.Embedding
 import io.arabesque.computation.Computation
+import io.arabesque.odag.domain.PrimitiveDomainStorage
+import io.arabesque.odag.domain.GenericDomainStorage
 import io.arabesque.odag.domain.StorageReader
-import io.arabesque.odag.domain.{DomainStorage, DomainStorageReadOnly}
 import io.arabesque.pattern.Pattern
-
 import io.arabesque.conf.{Configuration, SparkConfiguration}
 
 import java.io._
@@ -22,7 +22,14 @@ class MultiPatternODAG extends BasicODAG {
 
   def this(numDomains: Int) = {
     this()
-    storage = new DomainStorage(numDomains)
+
+    val commStrategy = Configuration.get[Configuration[Embedding]]().getCommStrategy()
+
+    if (commStrategy.equals(SparkConfiguration.COMM_ODAG_SP) || commStrategy.equals(SparkConfiguration.COMM_ODAG_SP_PRIM))
+      storage = new PrimitiveDomainStorage(numDomains)
+    else
+      storage = new GenericDomainStorage(numDomains)
+
     serializeAsReadOnly = false
   }
 
@@ -58,7 +65,15 @@ class MultiPatternODAG extends BasicODAG {
       // do quick pattern union
       patterns = this.patterns union mpOdag.patterns
       // do domain aggregation (like single pattern)
-      storage.aggregate(mpOdag.storage)
+      if(storage.isInstanceOf[PrimitiveDomainStorage]) {
+        val castedStorage = storage.asInstanceOf[PrimitiveDomainStorage]
+        castedStorage.aggregate(mpOdag.storage.asInstanceOf[PrimitiveDomainStorage])
+      }
+      else
+        if(storage.isInstanceOf[GenericDomainStorage]) {
+          val castedStorage = storage.asInstanceOf[GenericDomainStorage]
+          castedStorage.aggregate(mpOdag.storage.asInstanceOf[GenericDomainStorage])
+        }
     case _ =>
       throw new RuntimeException (s"Must aggregate odags of the same type")
   }
