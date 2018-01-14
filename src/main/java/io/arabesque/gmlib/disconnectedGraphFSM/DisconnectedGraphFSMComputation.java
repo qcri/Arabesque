@@ -72,7 +72,7 @@ public class DisconnectedGraphFSMComputation extends EdgeInducedComputation<Edge
 
     @Override
     public void aggregationProcess(EdgeInducedEmbedding embedding) {
-        Pattern p = ((PatternAggregationStorage)previousStepAggregation).getValueOnly(embedding.getPattern());
+        Pattern p = ((PatternAggregationStorage)previousStepAggregation).getCanonicalPatternValueOnly(embedding.getPattern());
 //        output(embedding.toOutputString() + " _ " + p.toOutputString() + " _ " + embedding.getPattern().toOutputString());
         output(embedding);
     }
