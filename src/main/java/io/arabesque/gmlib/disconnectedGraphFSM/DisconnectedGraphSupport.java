@@ -102,7 +102,8 @@ public class DisconnectedGraphSupport implements Writable, Externalizable, Patte
             int vertexSubgraph = getVertexSubgraph(vertexId);
 
             if(subgraph != vertexSubgraph) {
-                throw new RuntimeException("Incorrect Embedding: Vertices does not belong to the same subgraph");
+                throw new RuntimeException("Incorrect Embedding: Vertices does not belong to the same subgraph. \nEmbedding: " + embedding.toOutputString() +
+                "\nvertexId: " + vertexId + " subgraphId: " + vertexSubgraph);
             }
         }
 
