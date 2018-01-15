@@ -370,6 +370,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
             if (useLocalGraph) {
                 if(subgraphsFile != "None") {
+                    LOG.info("Creating disconnected graph");
                     constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, java.nio.file.Path.class, boolean.class, boolean.class);
                     return constructor.newInstance(Paths.get(getMainGraphPath()), Paths.get(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
                 } else {
@@ -378,6 +379,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
                 }
             } else {
                 if(subgraphsFile != "None") {
+                    LOG.info("Creating disconnected graph");
                     constructor = mainGraphClass.getConstructor(Path.class, Path.class, boolean.class, boolean.class);
                     return constructor.newInstance(new Path(getMainGraphPath()), new Path(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
                 } else {
