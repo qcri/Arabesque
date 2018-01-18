@@ -12,11 +12,8 @@ i.e. The frequency is the number of subgraphs where a pattern exists
 public class DisconnectedGraphFSMMasterComputation extends MasterComputation {
     @Override
     public void compute() {
-        System.out.println ("Master computing");
         AggregationStorage<Pattern, DisconnectedGraphSupport> aggregationStorage =
                 readAggregation(DisconnectedGraphFSMComputation.AGG_SUPPORT);
-            
-        System.out.println("Aggregation Storage: " + aggregationStorage);
 
         if (aggregationStorage.getNumberMappings() > 0) {
             System.out.println("Frequent patterns:");

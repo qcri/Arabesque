@@ -10,7 +10,7 @@ public class Vertex implements Writable, java.io.Serializable {
 
     private int vertexId;
     private int vertexLabel;
-    private int subgraphId;
+    private int subgraphId = -1;
 
     public Vertex() {
         this(0, 0, 0);

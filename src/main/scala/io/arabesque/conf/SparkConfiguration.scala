@@ -245,7 +245,6 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    
     // max number of odags in case of odag communication strategy
     updateIfExists ("max_odags", CONF_COMM_STRATEGY_ODAGMP_MAX)
-
   }
 
   /**

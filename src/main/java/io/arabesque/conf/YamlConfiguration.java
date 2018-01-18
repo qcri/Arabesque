@@ -101,6 +101,7 @@ public class YamlConfiguration {
 
                     // Input
                     .put("input_graph_path", new GiraphStringConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_PATH))
+                    .put("input_graph_subgraphs_path", new GiraphStringConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_SUBGRAPHS_PATH))
                     .put("input_graph_local", new GiraphBooleanConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_LOCAL))
                     .put("input_graph_edgelabelled", new GiraphBooleanConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_EDGE_LABELLED))
                     .put("input_graph_multigraph", new GiraphBooleanConfigurationAssignment(io.arabesque.conf.Configuration.CONF_MAINGRAPH_MULTIGRAPH))
@@ -274,6 +275,7 @@ public class YamlConfiguration {
 
             Yaml yaml = new Yaml();
             Map<String, Object> result = (Map<String, Object>) yaml.load(new ByteArrayInputStream(configBytes));
+
             properties.putAll(result);
         } catch (YAMLException e) {
             throw new RuntimeException("Invalid yaml", e);
