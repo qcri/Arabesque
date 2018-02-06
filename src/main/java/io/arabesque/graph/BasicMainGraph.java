@@ -124,7 +124,7 @@ public class BasicMainGraph implements MainGraph {
             readFromFile(filePath, subgraphsFilePath);
         } else if (path instanceof org.apache.hadoop.fs.Path) {
             org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
-            org.apache.hadoop.fs.Path hadoopSubgraphsPath = (org.apache.hadoop.fs.Path) path;
+            org.apache.hadoop.fs.Path hadoopSubgraphsPath = (org.apache.hadoop.fs.Path) subgraphsPath;
             readFromHdfs(hadoopPath, hadoopSubgraphsPath);
         } else {
             throw new RuntimeException("Invalid path: " + path);

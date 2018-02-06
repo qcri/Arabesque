@@ -1,10 +1,13 @@
-computation: io.arabesque.gmlib.fsm.FSMComputation
-master_computation: io.arabesque.gmlib.fsm.FSMMasterComputation
-input_graph_path: citeseer.graph
-output_path: FSM_Output
+
+master_computation: io.arabesque.gmlib.disconnectedGraphFSM.DisconnectedGraphFSMMasterComputation
+computation: io.arabesque.gmlib.disconnectedGraphFSM.DisconnectedGraphFSMComputation
+input_graph_path: /Users/ghanemabdo/Work/DS/Arabesque/data/cl=53931_cf=55908_sf=55909_fa=111155.graph
+input_graph_subgraphs_path: /Users/ghanemabdo/Work/DS/Arabesque/data/cl=53931_cf=55908_sf=55909_fa=111155.labels.graph
+output_path: hdfs:///output/pdb/cl=53931_cf=55908_sf=55909_fa=111155
+input_graph_local: yes
 
 # Custom parameters
-arabesque.fsm.support: 300
+arabesque.fsm.support: 9
 arabesque.fsm.maxsize: 7
 
 # Split all aggregations in 10 parts for parallel aggregation

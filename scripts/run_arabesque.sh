@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SPARK_EXEC_ENGINE="spark"; SPARK_CMD="$DIR/run_arabesque_spark.sh"
 GIRAPH_EXEC_ENGINE="giraph"; GIRAPH_CMD="$DIR/run_arabesque_giraph.sh"
 
-execution_engine=$(echo -n `cat $@ | grep execution_engine | cut -d":" -f2`)
+execution_engine=$(echo `cat $@ | grep execution_engine | cut -d":" -f2`)
 
 case $execution_engine in
    $SPARK_EXEC_ENGINE)
