@@ -31,6 +31,8 @@ public class Vertex implements Writable, java.io.Serializable {
         return vertexId;
     }
 
+    public void setSubgraphId(int subgraphId) { this.subgraphId = subgraphId; }
+
     public int getVertexLabel() {
         return vertexLabel;
     }

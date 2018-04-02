@@ -16,53 +16,25 @@ import java.util.HashSet;
 import java.util.StringTokenizer;
 
 public class BasicMainGraph implements MainGraph {
-    private static final Logger LOG = Logger.getLogger(BasicMainGraph.class);
+    protected static final Logger LOG = Logger.getLogger(BasicMainGraph.class);
 
-    private static final int INITIAL_ARRAY_SIZE = 4096;
+    protected static final int INITIAL_ARRAY_SIZE = 4096;
 
-    private Vertex[] vertexIndexF;
-    private Edge[] edgeIndexF;
+    protected Vertex[] vertexIndexF;
+    protected Edge[] edgeIndexF;
 
-    private int numVertices;
-    private int numEdges;
+    protected int numVertices;
+    protected int numEdges;
 
-    private VertexNeighbourhood[] vertexNeighbourhoods;
-    private HashMap<String, Integer> subgraphIdMap = new HashMap<>();
-    private HashMap<Integer, Integer> vertexSubgraphIdMap = new HashMap<>();
-    private HashMap<Integer, Vertex> vertexIdToVertexMap = new HashMap<>();
+    protected VertexNeighbourhood[] vertexNeighbourhoods;
+    protected HashMap<Integer, Vertex> vertexIdToVertexMap = new HashMap<>();
 
-    private boolean isEdgeLabelled;
-    private boolean isMultiGraph;
-    private String name;
-    private String subgraphsName = null;
+    protected boolean isEdgeLabelled;
+    protected boolean isMultiGraph;
+    protected String name;
 
     private void init(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
         this.name = name;
-        long start = 0;
-
-        if (LOG.isInfoEnabled()) {
-            start = System.currentTimeMillis();
-            LOG.info("Initializing");
-        }
-
-        vertexIndexF = null;
-        edgeIndexF = null;
-
-        vertexNeighbourhoods = null;
-
-        reset();
-
-        this.isEdgeLabelled = isEdgeLabelled;
-        this.isMultiGraph = isMultiGraph;
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Done in " + (System.currentTimeMillis() - start));
-        }
-    }
-
-    private void init(String name, String subgraphsName, boolean isEdgeLabelled, boolean isMultiGraph) {
-        this.name = name;
-        this.subgraphsName = subgraphsName;
         long start = 0;
 
         if (LOG.isInfoEnabled()) {
@@ -99,33 +71,6 @@ public class BasicMainGraph implements MainGraph {
         } else if (path instanceof org.apache.hadoop.fs.Path) {
             org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
             readFromHdfs(hadoopPath);
-        } else {
-            throw new RuntimeException("Invalid path: " + path);
-        }
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Done in " + (System.currentTimeMillis() - start));
-            LOG.info("Number vertices: " + numVertices);
-            LOG.info("Number edges: " + numEdges);
-        }
-    }
-
-    private void init(Object path, Object subgraphsPath) throws IOException {
-        long start = 0;
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Reading graph");
-            start = System.currentTimeMillis();
-        }
-
-        if (path instanceof Path && subgraphsPath instanceof Path) {
-            Path filePath = (Path) path;
-            Path subgraphsFilePath = (Path) subgraphsPath;
-            readFromFile(filePath, subgraphsFilePath);
-        } else if (path instanceof org.apache.hadoop.fs.Path) {
-            org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
-            org.apache.hadoop.fs.Path hadoopSubgraphsPath = (org.apache.hadoop.fs.Path) subgraphsPath;
-            readFromHdfs(hadoopPath, hadoopSubgraphsPath);
         } else {
             throw new RuntimeException("Invalid path: " + path);
         }
@@ -215,16 +160,8 @@ public class BasicMainGraph implements MainGraph {
         this(name, false, false);
     }
 
-    public BasicMainGraph(String name, String subgraphsName) {
-        this(name, subgraphsName, false, false);
-    }
-
     public BasicMainGraph(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
         init(name, isEdgeLabelled, isMultiGraph);
-    }
-
-    public BasicMainGraph(String name, String subgraphsName, boolean isEdgeLabelled, boolean isMultiGraph) {
-        init(name, subgraphsName, isEdgeLabelled, isMultiGraph);
     }
 
     public BasicMainGraph(Path filePath, boolean isEdgeLabelled, boolean isMultiGraph)
@@ -233,22 +170,10 @@ public class BasicMainGraph implements MainGraph {
         init(filePath);
     }
 
-    public BasicMainGraph(Path filePath, Path subgraphsfilePath, boolean isEdgeLabelled, boolean isMultiGraph)
-            throws IOException {
-        this(filePath.getFileName().toString(), subgraphsfilePath.getFileName().toString(), isEdgeLabelled, isMultiGraph);
-        init(filePath, subgraphsfilePath);
-    }
-
     public BasicMainGraph(org.apache.hadoop.fs.Path hdfsPath, boolean isEdgeLabelled, boolean isMultiGraph)
             throws IOException {
         this(hdfsPath.getName(), isEdgeLabelled, isMultiGraph);
         init(hdfsPath);
-    }
-
-    public BasicMainGraph(org.apache.hadoop.fs.Path hdfsPath, org.apache.hadoop.fs.Path hdfsSubgraphsPath, boolean isEdgeLabelled, boolean isMultiGraph)
-            throws IOException {
-        this(hdfsPath.getName(), hdfsSubgraphsPath.getName(), isEdgeLabelled, isMultiGraph);
-        init(hdfsPath, hdfsSubgraphsPath);
     }
 
     @Override
@@ -404,59 +329,10 @@ public class BasicMainGraph implements MainGraph {
         is.close();
     }
 
-    protected void readFromHdfs(org.apache.hadoop.fs.Path hdfsPath, org.apache.hadoop.fs.Path hdfsSubgraphsPath) throws IOException {
-        FileSystem fs = FileSystem.get(new org.apache.hadoop.conf.Configuration());
-        InputStream gis = fs.open(hdfsPath);
-        InputStream sgis = fs.open(hdfsSubgraphsPath);
-        parseSubgraphFile(sgis);
-        readFromInputStream(gis);
-        gis.close();
-        sgis.close();
-    }
-
     protected void readFromFile(Path filePath) throws IOException {
         InputStream is = Files.newInputStream(filePath);
         readFromInputStream(is);
         is.close();
-    }
-
-    protected void readFromFile(Path filePath, Path subgraphsFilePath) throws IOException {
-        InputStream gis = Files.newInputStream(filePath);
-        InputStream sgis = Files.newInputStream(subgraphsFilePath);
-        parseSubgraphFile(sgis);
-        readFromInputStream(gis);
-        gis.close();
-        sgis.close();
-    }
-
-    protected void parseSubgraphFile(InputStream sgis) {
-        try {
-            HashSet<String> subgraphNames = new HashSet<>();
-            int subgraphsCounter = 0;
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(sgis)));
-
-            String line = reader.readLine();
-
-            while(line != null) {
-                String[] lineComponents = line.split(" ");
-                if(lineComponents.length > 0) {
-                    int vertexId = Integer.parseInt(lineComponents[0]);
-                    String graphId = lineComponents[lineComponents.length - 1];
-
-                    if(!subgraphNames.contains(graphId)) {
-                        subgraphNames.add(graphId);
-                        subgraphIdMap.put(graphId, subgraphsCounter++);
-                    }
-
-                    vertexSubgraphIdMap.put(vertexId, subgraphIdMap.get(graphId));
-                }
-
-                line = reader.readLine();
-            }
-        } catch(IOException ex) {
-            throw new RuntimeException(ex);
-        }
     }
 
     protected void readFromInputStream(InputStream is) {
@@ -532,11 +408,6 @@ public class BasicMainGraph implements MainGraph {
     protected Vertex parseVertex(StringTokenizer tokenizer) {
         int vertexId = Integer.parseInt(tokenizer.nextToken());
         int vertexLabel = Integer.parseInt(tokenizer.nextToken());
-        Integer vertexSubgraph = vertexSubgraphIdMap.get(vertexId);
-
-        if(vertexSubgraph != null) {
-            return createVertex(vertexId, vertexLabel, vertexSubgraph);
-        }
 
         return createVertex(vertexId, vertexLabel);
     }

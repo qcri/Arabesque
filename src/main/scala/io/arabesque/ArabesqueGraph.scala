@@ -123,6 +123,7 @@ class ArabesqueGraph(
     val config = new SparkConfiguration [EdgeInducedEmbedding]
     config.set ("input_graph_path", path)
     config.set ("input_graph_subgraphs_path", subgraphsPath)
+    config.set ("arabesque.graph.class", "io.arabesque.graph.DisconnectedGraph")
     config.set ("input_graph_local", local)
     config.set ("output_path", s"${tmpPath}/fsm-${config.getUUID}")
     config.set ("arabesque.fsm.maxsize", maxSize)

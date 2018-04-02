@@ -35,7 +35,7 @@ class BugsResolutionSuite extends FunSuite with BeforeAndAfterAll {
 //    sampleGraphPath = "data/fsm-test.graph"
 //    sampleGraphPath = "data/cl=53931_cf=56234_sf=56235_fa=56251.graph"
 //    arabGraph = arab.textFile ("data/cl=48724_cf=51068_sf=51069_fa=191576.graph", "data/cl=48724_cf=51068_sf=51069_fa=191576-subgraphs.graph", true)
-    arabGraph = arab.textFile ("data/disconnected-graph.graph", "data/disconnected-graph.labels.graph", true)
+    arabGraph = arab.textFile ("data/cl=58231_cf=58712.graph", "data/cl=58231_cf=58712-subgraphs.graph", true)
   }
 
   /** stop spark context */
@@ -50,8 +50,8 @@ class BugsResolutionSuite extends FunSuite with BeforeAndAfterAll {
   test ("[fsm] arabesque API") {
     // Critical test
     // Test output for fsm with support 2 for embeddings with size 2 to 3
-    val support = 3
-    val size = 3
+    val support = 5
+    val size = 5
 
       val fsmRes = arabGraph.disconnectedGraphFSM(support, size)
 //    val fsmRes = arabGraph.fsm(support, size)
