@@ -72,9 +72,6 @@ public class TreeBuilding
         this.configBC = configBC;
         this.queryGraphBC = queryGraphBC;
 
-//        bufferSize = Configuration.get().getInteger("arabesque.writebuffer.size", 8192);
-//        writeInBinary = Configuration.get().getBoolean("arabesque.outputBinary",false);
-//        output_is_active = Configuration.get().isOutputActive();
         this.minMatches = conf.getInteger(conf.SEARCH_OUTLIERS_MIN_MATCHES, conf.SEARCH_OUTLIERS_MIN_MATCHES_DEFAULT).intValue();
 
         try {
@@ -106,17 +103,9 @@ public class TreeBuilding
 
         // Modified from QFrag
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();
-        UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
+        //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
+        UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(conf.getMainGraph());
         QueryGraph queryGraph = queryGraphBC.getValue();
-
-/*        LOG.info(
-                "I am partition " + partitionId
-                + ", configBC hashcode = " + configBC.hashCode()
-                + ", config hashcode = " + conf.hashCode()
-                + ", queryGraphBC hashcode = " + queryGraphBC.hashCode()
-                + ", queryGraph hashcode = " + queryGraph.hashCode()
-                + ", dataGraph hashcode = " + dataGraph.hashCode()
-                );*/
 
         // get the initialization finish time stamp
         init_Finish_Time = System.currentTimeMillis();

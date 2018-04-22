@@ -320,6 +320,14 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     fixAssignments
 
     // common configs
+/*
+    setMainGraphClass(
+      getClass(SEARCH_MAINGRAPH_CLASS, SEARCH_MAINGRAPH_CLASS_DEFAULT).
+        asInstanceOf[Class[_ <: MainGraph]]
+    )
+*/
+
+    // common configs
     println("CONF_MAINGRAPH_CLASS = " + CONF_MAINGRAPH_CLASS)
     println("CONF_MAINGRAPH_CLASS_DEFAULT = " + CONF_MAINGRAPH_CLASS_DEFAULT)
     println("CONF_MAINGRAPH_PATH = " + CONF_MAINGRAPH_PATH)
@@ -329,6 +337,16 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     println("SEARCH_OUTPUT_PATH_ACTIVE = " + getBoolean(SEARCH_OUTPUT_PATH_ACTIVE, SEARCH_OUTPUT_PATH_ACTIVE_DEFAULT))
 
     setOutputPath (getString(Configuration.CONF_OUTPUT_PATH, Configuration.CONF_OUTPUT_PATH_DEFAULT))
+
+    // main graph
+/*
+    if ( (getMainGraph() == null && initialized)
+      || (getString ("spark_master", "local[*]") startsWith "local[")
+    ) {
+      logInfo ("Main graph is null, gonna read it")
+      setMainGraph (createSearchGraph())
+    }
+*/
 
     initialized = true
   }

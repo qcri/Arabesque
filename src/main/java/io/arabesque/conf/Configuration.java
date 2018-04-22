@@ -158,6 +158,9 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final String SEARCH_MAINGRAPH_CLASS = "search.graph.class";
     public static final String SEARCH_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.UnsafeCSRGraphSearch";
 
+/*    public static final String SEARCH_QUERYGRAPH_CLASS = "search.query.graph.class";
+    public static final String SEARCH_QUERYGRAPH_CLASS_DEFAULT = "io.arabesque.graph.UnsafeCSRGraphSearch";*/
+
     public static final String SEARCH_MAINGRAPH_PATH = "search_input_graph_path"; // no default - done
     public static final String SEARCH_MAINGRAPH_PATH_DEFAULT = null;
 
@@ -433,44 +436,35 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
     protected MainGraph createGraph() {
         boolean useLocalGraph = getBoolean(CONF_MAINGRAPH_LOCAL, CONF_MAINGRAPH_LOCAL_DEFAULT);
-        //String system = getString(CONF_SYSTEM_TYPE, CONF_SYSTEM_TYPE_DEFAULT);
 
         System.out.println("useLocalGraph = " + useLocalGraph);
-        //System.out.println("system = " + system);
 
         try {
             Constructor<? extends MainGraph> constructor;
 
-/*            // QFrag
-            if (system.equals("search")) {
-                return createSearchGraph();
-            }
-            // Arabesque
-            else {*/
-                String subgraphsFile = getMainGraphSubgraphsPath();
+            String subgraphsFile = getMainGraphSubgraphsPath();
 
-                System.out.println("subgraphsFile = " + subgraphsFile);
+            System.out.println("subgraphsFile = " + subgraphsFile);
 
-                if (useLocalGraph) {
-                    if (subgraphsFile != "None") {
-                        LOG.info("Creating disconnected graph");
-                        constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, java.nio.file.Path.class, boolean.class, boolean.class);
-                        return constructor.newInstance(Paths.get(getMainGraphPath()), Paths.get(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
-                    } else {
-                        constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, boolean.class, boolean.class);
-                        return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
-                    }
+            if (useLocalGraph) {
+                if (subgraphsFile != "None") {
+                    LOG.info("Creating disconnected graph");
+                    constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, java.nio.file.Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(Paths.get(getMainGraphPath()), Paths.get(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
                 } else {
-                    if (subgraphsFile != "None") {
-                        LOG.info("Creating disconnected graph");
-                        constructor = mainGraphClass.getConstructor(Path.class, Path.class, boolean.class, boolean.class);
-                        return constructor.newInstance(new Path(getMainGraphPath()), new Path(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
-                    } else {
-                        constructor = mainGraphClass.getConstructor(Path.class, boolean.class, boolean.class);
-                        return constructor.newInstance(new Path(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
-                    }
+                    constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
                 }
-           // }
+            } else {
+                if (subgraphsFile != "None") {
+                    LOG.info("Creating disconnected graph");
+                    constructor = mainGraphClass.getConstructor(Path.class, Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(new Path(getMainGraphPath()), new Path(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
+                } else {
+                    constructor = mainGraphClass.getConstructor(Path.class, boolean.class, boolean.class);
+                    return constructor.newInstance(new Path(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
+                }
+            }
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             e.printStackTrace();
             throw new RuntimeException("Could not load main graph", e);
@@ -482,6 +476,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
 
         System.out.println("useLocalGraph = " + useLocalGraph);
         System.out.println("SearchMainGraphPath = " + getSearchMainGraphPath());
+        System.out.println("mainGraphClass = " + mainGraphClass.getCanonicalName());
 
         Constructor<? extends MainGraph> constructor;
 
