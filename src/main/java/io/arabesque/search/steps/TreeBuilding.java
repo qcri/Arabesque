@@ -16,6 +16,7 @@ import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.util.AccumulatorV2;
 import org.apache.spark.util.CollectionAccumulator;
+import org.mortbay.log.Log;
 import scala.Tuple2;
 
 import java.util.*;
@@ -98,8 +99,14 @@ public class TreeBuilding
         // ###### Initialization of thread-local variables ######
 //        LOG.info("I am partition " + partitionId + " running on thread " + Thread.currentThread().getName());
 
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
+        Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
+
         Configuration conf = configBC.value();
         conf.initialize();
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
+
 
         // Modified from QFrag
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();

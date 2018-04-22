@@ -139,12 +139,15 @@ public class QfragRunner implements Tool {
 
         queryGraphBuildingTime = System.currentTimeMillis() - queryGraphBuildingTime;
 
-        config.getMainGraph();
         // This also broadcasts the data graph, which is in the closure of the configuration
         configBC = sc.broadcast(config);
         queryGraphBC = sc.broadcast(queryGraph);
 
+        System.out.println("@DEBUG_CONF In QfragRunner.init() -> config.getMainGraph() before init = " + (config.getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In QfragRunner.init() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
         configBC.value().initialize();
+        System.out.println("@DEBUG_CONF In QfragRunner.init() -> config.getMainGraph() After init = " + (config.getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In QfragRunner.init() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
 
         // Initializing the accumulator
         initAccums();
