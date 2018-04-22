@@ -59,7 +59,7 @@ public class TreeBuilding
         String log_level = conf.getLogLevel();
         LOG.fatal("Setting log level to " + log_level);
         LOG.setLevel(Level.toLevel(log_level));
-        LogManager.getRootLogger().setLevel(Level.FATAL);
+/*        LogManager.getRootLogger().setLevel(Level.FATAL);
         Logger.getLogger("org").setLevel(Level.FATAL);
         Logger.getLogger("akka").setLevel(Level.FATAL);
         Logger.getLogger("spark").setLevel(Level.FATAL);
@@ -67,7 +67,7 @@ public class TreeBuilding
         Logger.getLogger("memory").setLevel(Level.FATAL);
         Logger.getLogger("steps").setLevel(Level.FATAL);
         Logger.getLogger("storage").setLevel(Level.FATAL);
-        Logger.getLogger("util").setLevel(Level.FATAL);
+        Logger.getLogger("util").setLevel(Level.FATAL);*/
 
         this.totalPartitions = totalPartitions;
         this.configBC = configBC;

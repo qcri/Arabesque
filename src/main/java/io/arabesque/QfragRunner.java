@@ -104,9 +104,9 @@ public class QfragRunner implements Tool {
         LOG.setLevel(Level.toLevel(log_level));
         sc.setLogLevel(log_level.toUpperCase());
         config.setIfUnset ("num_partitions", sc.defaultParallelism());
-        LogManager.getRootLogger().setLevel(Level.FATAL);
-        Logger.getLogger("org").setLevel(Level.FATAL);
-        Logger.getLogger("akka").setLevel(Level.FATAL);
+        //LogManager.getRootLogger().setLevel(Level.FATAL);
+        //Logger.getLogger("org").setLevel(Level.FATAL);
+        //Logger.getLogger("akka").setLevel(Level.FATAL);
 
 
         config.setHadoopConfig (sc.hadoopConfiguration());
