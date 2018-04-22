@@ -41,4 +41,15 @@ public interface MainGraph {
     boolean isMultiGraph();
 
     void forEachEdgeId(int v1, int v2, IntConsumer intConsumer);
+
+    //***** QFrag
+    int getVertexLabel(int v);
+    int getEdgeLabel(int edgeId);
+    int getEdgeSource(int edgeId);
+    int getEdgeDst(int edgeId);
+    int neighborhoodSize(int vertexId);
+    void processEdgeNeighbors(int vertexId,IntConsumer intAddConsumer);
+    void processVertexNeighbors(int vertexId,IntConsumer intAddConsumer);
+
+    //***** End of QFrag
 }

@@ -4,6 +4,10 @@ import io.arabesque.utils.collection.ReclaimableIntCollection;
 import com.koloboke.collect.IntCollection;
 import com.koloboke.function.IntConsumer;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+
 public interface VertexNeighbourhood {
     IntCollection getNeighbourVertices();
     IntCollection getNeighbourEdges();
@@ -14,4 +18,7 @@ public interface VertexNeighbourhood {
     void addEdge(int neighbourVertexId, int edgeId);
 
     void forEachEdgeId(int nId, IntConsumer intConsumer);
+
+    void write (ObjectOutput out) throws IOException;
+    void read (ObjectInput in) throws IOException;
 }
