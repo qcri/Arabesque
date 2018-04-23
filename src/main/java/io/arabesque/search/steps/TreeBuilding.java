@@ -109,13 +109,15 @@ public class TreeBuilding
         // ###### Initialization of thread-local variables ######
 //        LOG.info("I am partition " + partitionId + " running on thread " + Thread.currentThread().getName());
 
-        Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
+        //Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
 
         Configuration conf = configBC.value();
         conf.initialize();
-        Log.info("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
-
+//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
+//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
 
         // Modified from QFrag
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();
@@ -123,8 +125,10 @@ public class TreeBuilding
         UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(conf.getMainGraph());
         QueryGraph queryGraph = queryGraphBC.getValue();
 
-        Log.info("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
+//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));
+//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
 
         // get the initialization finish time stamp
         init_Finish_Time = System.currentTimeMillis();
