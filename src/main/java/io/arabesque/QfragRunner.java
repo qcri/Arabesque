@@ -268,6 +268,7 @@ public class QfragRunner implements Tool {
 
         // ######### STEP 1 ##########
 
+        LOG.info("@DEBUG_INFO In Process: spark_master = " + sc.master());
         // create the partitions RDD
         JavaRDD globalRDD = sc.parallelize(new ArrayList<Tuple2<Integer, String>>(numPartitions), numPartitions).cache();
 
