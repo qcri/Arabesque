@@ -64,6 +64,7 @@ public class TreeBuilding
 
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC After init = " + (configBC == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value() After init = " + (configBC.value() == null));
+        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC After init = " + (queryGraphBC == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
 
@@ -119,6 +120,7 @@ public class TreeBuilding
 //        Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> Configuration.get().getMainGraph() After init = " + (Configuration.get().getMainGraph() == null));
 
         // Modified from QFrag
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();

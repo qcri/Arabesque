@@ -261,10 +261,13 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     if (Configuration.isUnset || uuid != Configuration.get[SparkConfiguration[O]].uuid) {
       val system: String = getString(CONF_SYSTEM_TYPE, CONF_SYSTEM_TYPE_DEFAULT)
 
+      println("@DEBUG_CONF In SparkConf.init() System_Type = " + system)
       if(system.equals(CONF_ARABESQUE_SYSTEM_TYPE)) {
+        println("@DEBUG_CONF In SparkConf.init().initializeInJvm()")
         initializeInJvm()
       }
       else {
+        println("@DEBUG_CONF In SparkConf.init().initializeInJvmQFrag()")
         initializeInJvmQFrag()
       }
 
