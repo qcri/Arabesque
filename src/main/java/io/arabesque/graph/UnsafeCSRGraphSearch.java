@@ -573,6 +573,8 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
 
     public void readExternal (ObjectInput in) throws IOException, ClassNotFoundException {
 
+        System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal()");
+
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
         numVertices = in.readLong();
