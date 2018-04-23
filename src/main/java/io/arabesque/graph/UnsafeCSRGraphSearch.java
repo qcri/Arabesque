@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.nio.file.Path;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
@@ -475,9 +476,18 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
             throw new RuntimeException("Shouldn't be used");
         }
     }
+    public void write (ObjectOutput out)
+            throws IOException {
+        this.writeExternal(out);
+    }
+
+    public void read(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.readExternal(in);
+    }
 
     public void writeExternal(java.io.ObjectOutput out)
             throws IOException {
+        System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.writeExternal()");
 
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
