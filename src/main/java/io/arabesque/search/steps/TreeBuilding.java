@@ -55,6 +55,7 @@ public class TreeBuilding
 
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC Before init = " + (configBC == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value() Before init = " + (configBC.value() == null));
+        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getMainGraph() Before init = " + (configBC.value().getMainGraph() == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC Before init = " + (queryGraphBC == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC.value() Before init = " + (queryGraphBC.value() == null));
 
