@@ -49,10 +49,13 @@ public class TreeBuilding
     private long computation_Finish_Time = 0;
 
     public void printConf(Configuration conf, String status) {
-        System.out.println(status);
-        System.out.println(conf.SEARCH_MAINGRAPH_PATH + " -> " + conf.getSearchMainGraphPath());
-        System.out.println("System_Type -> " + conf.getString(conf.CONF_SYSTEM_TYPE, conf.CONF_SYSTEM_TYPE_DEFAULT));
-        System.out.println("search_num_vertices -> " + conf.getInteger(conf.SEARCH_NUM_VERTICES, conf.SEARCH_NUM_VERTICES_DEFAULT));
+        String msg = "\n" + status
+                + "\n" + conf.SEARCH_MAINGRAPH_PATH + " -> " + conf.getSearchMainGraphPath()
+                + "\nSystem_Type -> " + conf.getString(conf.CONF_SYSTEM_TYPE, conf.CONF_SYSTEM_TYPE_DEFAULT)
+                + "\nsearch_num_vertices -> " + conf.getInteger(conf.SEARCH_NUM_VERTICES, conf.SEARCH_NUM_VERTICES_DEFAULT)
+                + "\n";
+
+        System.out.println(msg);
     }
 
     public TreeBuilding(int totalPartitions, Broadcast<SparkConfiguration> configBC, Broadcast<QueryGraph> queryGraphBC, Map<String, CollectionAccumulator<Long>> _accums) {
