@@ -66,7 +66,8 @@ public class EmbeddingEnumeration
 
             // Modified from QFrag
             // UnsafeCSRGraphSearch dataGraph = io.arabesque.conf.Configuration.get().getMainGraph();
-            UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(io.arabesque.conf.Configuration.get().getMainGraph());
+            //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(io.arabesque.conf.Configuration.get().getMainGraph());
+            UnsafeCSRGraphSearch dataGraph = io.arabesque.conf.Configuration.get().getSearchMainGraph();
             QueryGraph queryGraph = queryGraphBC.getValue();
 
             init_Finish_Time = System.currentTimeMillis();

@@ -222,7 +222,8 @@ public class QueryGraph implements Externalizable {
         IntArrayList rootMatchingVertices = new IntArrayList();
         int k = 3;
 
-        SearchGraph dataGraph = (SearchGraph) Configuration.get().getMainGraph();
+        //SearchGraph dataGraph = (SearchGraph) Configuration.get().getMainGraph();
+        SearchGraph dataGraph = (SearchGraph) Configuration.get().getSearchMainGraph();
 
         // select top-k query vertices with highest rank
         int numQueryVertices = queryGraph.getNumberVertices();
@@ -731,7 +732,8 @@ public class QueryGraph implements Externalizable {
 
     IntArrayList getRootMatchingVertices(){
         int rootLabel = queryGraph.getVertexLabel(root.queryVertexId);
-        SearchGraph dataGraph = (SearchGraph) Configuration.get().getMainGraph();
+        //SearchGraph dataGraph = (SearchGraph) Configuration.get().getMainGraph();
+        SearchGraph dataGraph = (SearchGraph) Configuration.get().getSearchMainGraph();
         return dataGraph.getVerticesWithLabel(rootLabel);
     }
 

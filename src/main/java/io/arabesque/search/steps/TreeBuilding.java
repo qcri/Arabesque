@@ -134,7 +134,8 @@ public class TreeBuilding
         // Modified from QFrag
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();
         //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
-        UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
+        //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
+        UnsafeCSRGraphSearch dataGraph = Configuration.get().getSearchMainGraph();
         QueryGraph queryGraph = queryGraphBC.getValue();
 
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));

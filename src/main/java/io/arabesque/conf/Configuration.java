@@ -12,6 +12,7 @@ import io.arabesque.computation.comm.CommunicationStrategy;
 import io.arabesque.computation.comm.CommunicationStrategyFactory;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.MainGraph;
+import io.arabesque.graph.UnsafeCSRGraphSearch;
 import io.arabesque.optimization.OptimizationSet;
 import io.arabesque.optimization.OptimizationSetDescriptor;
 import io.arabesque.pattern.Pattern;
@@ -152,6 +153,13 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     private boolean isGraphEdgeLabelled;
     protected boolean initialized = false;
     private boolean isGraphMulti = false;
+
+    private transient UnsafeCSRGraphSearch searchMainGraph;
+
+    public UnsafeCSRGraphSearch getSearchMainGraph() { return searchMainGraph; }
+    public void setSearchMainGraph(UnsafeCSRGraphSearch _searchMainGraph) {
+        this.searchMainGraph = _searchMainGraph;
+    }
 
     //***** QFrag paramters
 

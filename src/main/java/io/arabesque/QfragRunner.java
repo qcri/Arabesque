@@ -129,7 +129,8 @@ public class QfragRunner implements Tool {
 
         dataGraphBuildingTime = System.currentTimeMillis() - dataGraphBuildingTime;
 
-        config.setMainGraph(dataGraph);
+        //config.setMainGraph(dataGraph);
+        config.setSearchMainGraph(dataGraph);
 
         queryGraphBuildingTime = System.currentTimeMillis();
 
