@@ -68,6 +68,7 @@ public class TreeBuilding
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getMainGraph() Before init = " + (configBC.value().getMainGraph() == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC Before init = " + (queryGraphBC == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC.value() Before init = " + (queryGraphBC.value() == null));
+        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getSearchMainGraph() Before init = " + (configBC.value().getSearchMainGraph() == null));
 
         configBC.value().initialize();
         Configuration conf = Configuration.get();
@@ -77,6 +78,7 @@ public class TreeBuilding
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC After init = " + (queryGraphBC == null));
         Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
+        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getSearchMainGraph() After init = " + (configBC.value().getSearchMainGraph() == null));
 
         String log_level = conf.getLogLevel();
         LOG.fatal("Setting log level to " + log_level);
@@ -121,6 +123,7 @@ public class TreeBuilding
 //        LOG.info("I am partition " + partitionId + " running on thread " + Thread.currentThread().getName());
 
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getSearchMainGraph() before init = " + (configBC.value().getSearchMainGraph() == null));
 
         Configuration conf = configBC.value();
         //printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After Configuration conf = configBC.value();");
@@ -130,6 +133,7 @@ public class TreeBuilding
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> Configuration.get().getMainGraph() After init = " + (Configuration.get().getMainGraph() == null));
+        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getSearchMainGraph() After init = " + (configBC.value().getSearchMainGraph() == null));
 
         // Modified from QFrag
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();
