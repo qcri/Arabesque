@@ -476,6 +476,7 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
             throw new RuntimeException("Shouldn't be used");
         }
     }
+
     public void write (ObjectOutput out)
             throws IOException {
         this.writeExternal(out);

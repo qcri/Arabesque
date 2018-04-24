@@ -48,6 +48,13 @@ public class TreeBuilding
     private long computation_Start_Time = 0;
     private long computation_Finish_Time = 0;
 
+    public void printConf(Configuration conf, String status) {
+        System.out.println(status);
+        System.out.println(conf.SEARCH_MAINGRAPH_PATH + " -> " + conf.getSearchMainGraphPath());
+        System.out.println("System_Type -> " + conf.getString(conf.CONF_SYSTEM_TYPE, conf.CONF_SYSTEM_TYPE_DEFAULT));
+        System.out.println("search_num_vertices -> " + conf.getInteger(conf.SEARCH_NUM_VERTICES, conf.SEARCH_NUM_VERTICES_DEFAULT));
+    }
+
     public TreeBuilding(int totalPartitions, Broadcast<SparkConfiguration> configBC, Broadcast<QueryGraph> queryGraphBC, Map<String, CollectionAccumulator<Long>> _accums) {
         super();
 
@@ -107,17 +114,16 @@ public class TreeBuilding
     @Override
     public Iterator<Tuple2<Integer, SearchDataTree>> call(Integer partitionId,
                                                           Iterator<Tuple2<Integer, SearchDataTree>> v2) {
-
         // ###### Initialization of thread-local variables ######
 //        LOG.info("I am partition " + partitionId + " running on thread " + Thread.currentThread().getName());
 
-        //Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
 
         Configuration conf = configBC.value();
+        printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After Configuration conf = configBC.value();");
         conf.initialize();
-//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
-//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
+        printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After conf.initialize();");
+
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> Configuration.get().getMainGraph() After init = " + (Configuration.get().getMainGraph() == null));
@@ -125,11 +131,9 @@ public class TreeBuilding
         // Modified from QFrag
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();
         //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
-        UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(conf.getMainGraph());
+        UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
         QueryGraph queryGraph = queryGraphBC.getValue();
 
-//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));
-//        Log.info("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
 
