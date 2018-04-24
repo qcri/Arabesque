@@ -123,9 +123,9 @@ public class TreeBuilding
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
 
         Configuration conf = configBC.value();
-        printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After Configuration conf = configBC.value();");
+        //printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After Configuration conf = configBC.value();");
         conf.initialize();
-        printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After conf.initialize();");
+        //printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After conf.initialize();");
 
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));

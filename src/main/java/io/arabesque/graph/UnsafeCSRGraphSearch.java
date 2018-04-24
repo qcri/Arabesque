@@ -489,6 +489,8 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     public void writeExternal(java.io.ObjectOutput out)
             throws IOException {
         System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.writeExternal()");
+        if(true)
+            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal(), reading the graph");
 
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
@@ -585,6 +587,8 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     public void readExternal (ObjectInput in) throws IOException, ClassNotFoundException {
 
         System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal()");
+        if(true)
+            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal(), reading the graph");
 
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
