@@ -35,7 +35,7 @@ public class TreeBuilding
     private final int totalPartitions;
     private Broadcast<SparkConfiguration> configBC;
     private Broadcast<QueryGraph> queryGraphBC;
-    private Broadcast<UnsafeCSRGraphSearch> dataGraphBC;
+    //private Broadcast<UnsafeCSRGraphSearch> dataGraphBC;
     private final boolean injective;
 
     private double outlierPct;
@@ -59,7 +59,7 @@ public class TreeBuilding
         System.out.println(msg);
     }
 
-    public TreeBuilding(int totalPartitions, Broadcast<SparkConfiguration> configBC, Broadcast<UnsafeCSRGraphSearch> dataGraphBC, Broadcast<QueryGraph> queryGraphBC, Map<String, CollectionAccumulator<Long>> _accums) {
+    public TreeBuilding(int totalPartitions, Broadcast<SparkConfiguration> configBC, Broadcast<QueryGraph> queryGraphBC, Map<String, CollectionAccumulator<Long>> _accums) {
         super();
 
         init_Start_Time = System.currentTimeMillis();
@@ -97,7 +97,7 @@ public class TreeBuilding
         this.totalPartitions = totalPartitions;
         this.configBC = configBC;
         this.queryGraphBC = queryGraphBC;
-        this.dataGraphBC = dataGraphBC;
+        //this.dataGraphBC = dataGraphBC;
 
         this.minMatches = conf.getInteger(conf.SEARCH_OUTLIERS_MIN_MATCHES, conf.SEARCH_OUTLIERS_MIN_MATCHES_DEFAULT).intValue();
 
@@ -141,8 +141,8 @@ public class TreeBuilding
         // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();
         //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
         //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
-        //UnsafeCSRGraphSearch dataGraph = Configuration.get().getSearchMainGraph();
-        UnsafeCSRGraphSearch dataGraph = dataGraphBC.getValue();
+        UnsafeCSRGraphSearch dataGraph = Configuration.get().getSearchMainGraph();
+        //UnsafeCSRGraphSearch dataGraph = dataGraphBC.getValue();
         QueryGraph queryGraph = queryGraphBC.getValue();
 
         System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));

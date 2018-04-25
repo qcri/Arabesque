@@ -154,7 +154,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     protected boolean initialized = false;
     private boolean isGraphMulti = false;
 
-    private transient UnsafeCSRGraphSearch searchMainGraph;
+    private UnsafeCSRGraphSearch searchMainGraph;
 
     public UnsafeCSRGraphSearch getSearchMainGraph() { return searchMainGraph; }
     public void setSearchMainGraph(UnsafeCSRGraphSearch _searchMainGraph) {
