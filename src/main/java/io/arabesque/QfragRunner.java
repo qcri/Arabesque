@@ -52,6 +52,7 @@ public class QfragRunner implements Tool {
 
     Broadcast<SparkConfiguration> configBC;
     Broadcast<QueryGraph> queryGraphBC;
+    Broadcast<UnsafeCSRGraphSearch> dataGraphBC;
 
     private String inputGraphPath;
     private String queryGraphPath;
@@ -131,6 +132,8 @@ public class QfragRunner implements Tool {
 
         //config.setMainGraph(dataGraph);
         config.setSearchMainGraph(dataGraph);
+
+        dataGraphBC = sc.broadcast(dataGraph);
 
         queryGraphBuildingTime = System.currentTimeMillis();
 
@@ -276,7 +279,7 @@ public class QfragRunner implements Tool {
         globalRDD.setName("parallelize");
         // create the computation that will be executed by each partition
         // First step computation
-        TreeBuilding step1 = new TreeBuilding(numPartitions, configBC, queryGraphBC, this.aggAccums);
+        TreeBuilding step1 = new TreeBuilding(numPartitions, configBC, dataGraphBC, queryGraphBC, this.aggAccums);
 
         // pass the the first computation function to each partition to be executed
         JavaRDD<Tuple2<Integer, SearchDataTree>> step1Output = globalRDD.mapPartitionsWithIndex(step1,false);

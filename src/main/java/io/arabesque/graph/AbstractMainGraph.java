@@ -24,7 +24,7 @@ public abstract class AbstractMainGraph implements MainGraph {
 
   protected String name;
 
-  public AbstractMainGraph() {}
+  public AbstractMainGraph() { System.out.println("@DEBUG_CONF In AbstractMainGraph.defaultCtor()"); }
 
   public AbstractMainGraph(String name) {
     init(name);

@@ -46,7 +46,7 @@ public class UnsafeCSRMainGraph extends AbstractMainGraph {
 
     boolean isMultigraph;
 
-    public UnsafeCSRMainGraph() { };
+    public UnsafeCSRMainGraph() { System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.defaultCtor()"); }
 
     public UnsafeCSRMainGraph(String name) {
         super(name);

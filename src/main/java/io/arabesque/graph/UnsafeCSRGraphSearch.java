@@ -12,10 +12,7 @@ import com.koloboke.function.IntConsumer;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nonnull;
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.io.*;
 import java.nio.file.Path;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
@@ -49,7 +46,9 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     protected int                         numLabels; // no default
     private boolean fastNeighbors = true;
 
-    public UnsafeCSRGraphSearch() {};
+    public UnsafeCSRGraphSearch() {
+        System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.defaultCtor()");
+    }
 
     public UnsafeCSRGraphSearch(String name) {
         super(name);
@@ -88,6 +87,15 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
 
         return UNSAFE.getInt(vertexNeighLabelPos + (index * numLabels * INT_SIZE_IN_BYTES +
                                                     index2 * INT_SIZE_IN_BYTES));
+    }
+
+    @Override
+    protected void readFromInputStream(InputStream is) throws IOException {
+        if (isBinary && isMultiGraph) {
+            readFromInputStreamBinary(is);
+        } else {
+            readFromInputStreamText(is);
+        }
     }
 
     @Override
@@ -489,8 +497,8 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     public void writeExternal(java.io.ObjectOutput out)
             throws IOException {
         System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.writeExternal()");
-        if(true)
-            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal(), reading the graph");
+/*        if(true)
+            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.writeExternal(), writing the graph");*/
 
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
@@ -587,8 +595,8 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     public void readExternal (ObjectInput in) throws IOException, ClassNotFoundException {
 
         System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal()");
-        if(true)
-            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal(), reading the graph");
+/*        if(true)
+            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal(), reading the graph");*/
 
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
