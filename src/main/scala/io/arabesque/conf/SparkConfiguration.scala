@@ -264,6 +264,8 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
       println("@DEBUG_CONF In SparkConf.init() System_Type = " + system)
       if(system.equals(CONF_ARABESQUE_SYSTEM_TYPE)) {
         println("@DEBUG_CONF In SparkConf.init().initializeInJvm()")
+        Configuration.set (this)
+        initialized = true
         initializeInJvm()
       }
       else {

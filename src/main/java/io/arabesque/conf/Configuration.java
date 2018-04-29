@@ -474,7 +474,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
                 }
             }
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             throw new RuntimeException("Could not load main graph", e);
         }
     }
