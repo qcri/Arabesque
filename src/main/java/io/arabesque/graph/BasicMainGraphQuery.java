@@ -83,19 +83,6 @@ public class BasicMainGraphQuery extends BasicMainGraph {
         return count;
     }
 
-//    public IntArrayList getEdgesLabel(int one, int two) {
-//        ReclaimableIntCollection edgeIds = getEdgeIds(one, two);
-//        if (edgeIds == null){
-//            return null;
-//        }
-//
-//        IntArrayList edgeLabelsToParent = new IntArrayList();
-//        for (int edgeId : edgeIds) {
-//            edgeLabelsToParent.add(getEdgeLabel(edgeId));
-//        }
-//        return edgeLabelsToParent;
-//    }
-
     @Override
     public MainGraph addVertex(Vertex vertex) {
         ensureCanStoreNewVertex();
@@ -132,7 +119,6 @@ public class BasicMainGraphQuery extends BasicMainGraph {
     protected void readFromInputStreamText(InputStream is) {
         long start = 0;
 
-        System.out.println("BasicMainGraphQuery.readFromInputStreamText");
         if (LOG.isInfoEnabled()) {
             start = System.currentTimeMillis();
             LOG.info("Initializing");
@@ -247,7 +233,6 @@ public class BasicMainGraphQuery extends BasicMainGraph {
 
     public void read(ObjectInput in) throws IOException, ClassNotFoundException {
         super.read(in);
-        System.out.println("BasicMainGraphQuery.read");
         int size = in.readInt();
         if (size < 0){
             smallerIds = null;
@@ -267,17 +252,4 @@ public class BasicMainGraphQuery extends BasicMainGraph {
             }
         }
     }
-
-
-//    public void checkMe(){
-//        for (int i = 0;i < numVertices; i++){
-//            System.out.println("Vertex:"+i);
-//            IntCollection vertexNeighbors = getVertexNeighbors(i);
-//            System.out.print("\t");
-//            for (int k:vertexNeighbors){
-//                System.out.print(k+" ");
-//            }
-//            System.out.println("\n");
-//        }
-//    }
 }

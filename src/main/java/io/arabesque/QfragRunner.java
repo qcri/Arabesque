@@ -52,7 +52,6 @@ public class QfragRunner implements Tool {
 
     Broadcast<SparkConfiguration> configBC;
     Broadcast<QueryGraph> queryGraphBC;
-    //Broadcast<UnsafeCSRGraphSearch> dataGraphBC;
 
     private String inputGraphPath;
     private String queryGraphPath;
@@ -84,37 +83,19 @@ public class QfragRunner implements Tool {
         YamlConfiguration yamlConfig = new YamlConfiguration(args);
         yamlConfig.load();
 
-        System.out.println("Printing loaded YAML configs:");
-        for(Map.Entry<String, Object> entry: yamlConfig.getProperties().entrySet())
-        {
-            System.out.println(entry.getKey() + " = " + entry.getValue().toString());
-        }
-
         config = new SparkConfiguration(JavaConversions.mapAsScalaMap(yamlConfig.getProperties()));
         sc = new JavaSparkContext(config.sparkConf());
-
-        // Spark stage listener that prints the stage details
-        //StageListener stageListener = new StageListener();
-        //JobProgressListener jobListener = new JobProgressListener(sc.getConf());
-
-        //sc.sc().addSparkListener(stageListener);
-        //sc.sc().addSparkListener(jobListener);
 
         String log_level = config.getLogLevel();
         LOG.fatal("Setting log level to " + log_level);
         LOG.setLevel(Level.toLevel(log_level));
         sc.setLogLevel(log_level.toUpperCase());
         config.setIfUnset ("num_partitions", sc.defaultParallelism());
-        //LogManager.getRootLogger().setLevel(Level.FATAL);
-        //Logger.getLogger("org").setLevel(Level.FATAL);
-        //Logger.getLogger("akka").setLevel(Level.FATAL);
-
 
         config.setHadoopConfig (sc.hadoopConfiguration());
         numPartitions = config.numPartitions();
         inputGraphPath = config.getString(config.SEARCH_MAINGRAPH_PATH,config.SEARCH_MAINGRAPH_PATH_DEFAULT);
         queryGraphPath = config.getString(config.SEARCH_QUERY_GRAPH_PATH,config.SEARCH_QUERY_GRAPH_PATH_DEFAULT);
-        //config.get
 
         dataGraphBuildingTime = System.currentTimeMillis();
 
@@ -130,10 +111,7 @@ public class QfragRunner implements Tool {
 
         dataGraphBuildingTime = System.currentTimeMillis() - dataGraphBuildingTime;
 
-        //config.setMainGraph(dataGraph);
         config.setSearchMainGraph(dataGraph);
-
-        //dataGraphBC = sc.broadcast(dataGraph);
 
         queryGraphBuildingTime = System.currentTimeMillis();
 
@@ -147,11 +125,7 @@ public class QfragRunner implements Tool {
         configBC = sc.broadcast(config);
         queryGraphBC = sc.broadcast(queryGraph);
 
-        System.out.println("@DEBUG_CONF In QfragRunner.init() -> config.getMainGraph() before init = " + (config.getMainGraph() == null));
-        System.out.println("@DEBUG_CONF In QfragRunner.init() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
         configBC.value().initialize();
-        System.out.println("@DEBUG_CONF In QfragRunner.init() -> config.getMainGraph() After init = " + (config.getMainGraph() == null));
-        System.out.println("@DEBUG_CONF In QfragRunner.init() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
 
         // Initializing the accumulator
         initAccums();
@@ -218,9 +192,7 @@ public class QfragRunner implements Tool {
         shuffleTime = eeCompStartTime - tbCompFinishTime;
 
         treeBuildingComputationTime = tbCompFinishTime - tbCompStartTime;
-        //LOG.fatal("\n\nTBCompFinishTime = " + tbCompFinishTime + ", TBCompStartTime = " + tbCompStartTime);
         embeddingEnumerationComputationTime = eeCompFinishTime - eeCompStartTime;
-        //LOG.fatal("\n\nEECompFinishTime = " + eeCompFinishTime + ", EECompStartTime = " + eeCompStartTime);
         totalComputationTime = eeCompFinishTime - tbCompStartTime;
     }
 
@@ -272,7 +244,6 @@ public class QfragRunner implements Tool {
 
         // ######### STEP 1 ##########
 
-        LOG.info("@DEBUG_CONF In Process: spark_master = " + sc.master());
         // create the partitions RDD
         JavaRDD globalRDD = sc.parallelize(new ArrayList<Tuple2<Integer, String>>(numPartitions), numPartitions).cache();
 
@@ -314,8 +285,6 @@ public class QfragRunner implements Tool {
 
             step1Flattened.setName("step1.flatMapToPair");
 
-            //JavaPairRDD<Integer, SearchDataTree> step1Flattened = step1Output.mapToPair(tuple -> tuple).setName("mapToPair");
-
             // ######### STEP 2 ##########
 
             // Second step computation
@@ -338,30 +307,5 @@ public class QfragRunner implements Tool {
 
     public static void main(String[] args) throws Exception {
         System.exit(ToolRunner.run(new QfragRunner(), args));
-    }
-
-    class StageListener extends SparkListener {
-        @Override
-        public void onStageCompleted(SparkListenerStageCompleted stageCompleted) {
-            StringBuilder msg = new StringBuilder();
-            TaskMetrics metrics = stageCompleted.stageInfo().taskMetrics();
-            StageInfo info = stageCompleted.stageInfo();
-            ShuffleWriteMetrics shuffWriteMetrics = metrics.shuffleWriteMetrics();
-            ShuffleReadMetrics shuffReadMetrics = metrics.shuffleReadMetrics();
-
-
-
-            msg.append("\n\nSparkListeners - Stage" + info.stageId() + " completed, Stage details: {");
-            msg.append("\n  executorRunTime = " + metrics.executorRunTime());
-            msg.append("\n  executorDeserializeTime = " + metrics.executorDeserializeTime());
-            msg.append("\n  jvmGCTime = " + metrics.jvmGCTime());
-            msg.append("\n  resultSerializationTime = " + metrics.resultSerializationTime());
-            msg.append("\n  shuffleWrite.writeTime() = " + shuffWriteMetrics.writeTime());
-            msg.append("\n  shuffleWrite.shuffleWriteTime() = " + shuffWriteMetrics.shuffleWriteTime());
-            msg.append("\n  shuffleRead.fetchWaitTime() = " + shuffReadMetrics.fetchWaitTime());
-            msg.append("\n}\n");
-
-            LOG.fatal(msg);
-        }
     }
 }

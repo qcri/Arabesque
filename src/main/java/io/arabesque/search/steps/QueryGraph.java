@@ -37,7 +37,6 @@ public class QueryGraph implements Externalizable {
     private boolean has_star_label_on_edge;
     private BasicMainGraphQuery queryGraph;
     private boolean              isGraphEdgeLabelled;
-//    private boolean isGraphMulti;
 
     // ######################### ROOT SELECTION #########################
 
@@ -49,7 +48,6 @@ public class QueryGraph implements Externalizable {
     private ArrayList<IntArrayList> fatherToChildrenDFS;
     private ArrayList<Node> DFSPosToNode;
     private Int2IntOpenHashMap vertexIdToDFSPos;
-//    private IntArrayList DFSPosInBFSOrder = new IntArrayList();
 
     // ######################### CROSS EDGE INDEXES  #########################
 
@@ -105,13 +103,9 @@ public class QueryGraph implements Externalizable {
             throw new RuntimeException("Problem reading query file " + queryFileName + ": " + e.toString());
         }
         has_star_label_on_edge = queryGraph.has_star_on_edges();
-        //LOG.info("QFrag: Query graph has size " + queryGraph.getNumberVertices());
 
         int numVertices = queryGraph.getNumberVertices();
         int numEdges = queryGraph.getNumberEdges();
-
-        //queryGraph.checkMe();
-
         int maxSizeEmbedding = Math.max(numVertices, numEdges);
 
         fatherToChildrenDFS = new ArrayList<>();
@@ -124,8 +118,6 @@ public class QueryGraph implements Externalizable {
         // determine root vertex and its matches
 
         int rootVertexId = findRootVertexAndMatches(full_start);
-
-        //LOG.info("QFrag: Query start vertex: " + rootVertexId);
 
         // create root node in the query tree and init DFS search
         root = new Node(rootVertexId, null, -1, numVertices);
@@ -143,16 +135,10 @@ public class QueryGraph implements Externalizable {
 
         currentNodes.add(root);
 
-        //LOG.info("QFrag: building the DFS tree");
-
         while (currentNodes.size() > 0) {
-
-            //LOG.info("QFrag: CurrNodes:"+currentNodes);
 
             for (Node node : currentNodes) {
                 int currVertexId = node.queryVertexId;
-
-                //LOG.info("\tQFrag: vertex " + currVertexId);
 
                 IntCollection neighborVertices =
                     queryGraph.getVertexNeighbours(currVertexId);
@@ -163,8 +149,6 @@ public class QueryGraph implements Externalizable {
 
                 for (int destinationVertexId : neighborVertices) {
 
-                    //LOG.info("\t\tQFrag: neighbor " + destinationVertexId);
-
                     if (node.parent != null && destinationVertexId == node.parent.queryVertexId) {
                         continue;
                     }
@@ -172,10 +156,7 @@ public class QueryGraph implements Externalizable {
                     boolean isNewVertex = visitedQueryVertices.add(destinationVertexId);
 
                     if (isNewVertex) {
-
                         nodeIsLeaf = false;
-
-                        //LOG.info("\t\t\tQFrag: is new vertex");
 
                         int nextSiblingId = node.children.size() + 1; // could use a simple counter here
 
@@ -186,8 +167,6 @@ public class QueryGraph implements Externalizable {
 
                         nextNodes.add(newNode);
                     } else {
-                        //LOG.info("\t\t\tQFrag: is not new vertex");
-
                         Node otherNode = queryVertexIdToNode.get(destinationVertexId);
                         addCrossEdge(node, otherNode);
                         node.crossEdgesNum++;
@@ -207,7 +186,6 @@ public class QueryGraph implements Externalizable {
         }
 
         visitDFS();
-//        computeDFSPosInBFSOrder();
         LOG.info("QFrag: Time for query tree and candidates: " + (System.currentTimeMillis()-start));
     }
 
@@ -217,12 +195,10 @@ public class QueryGraph implements Externalizable {
 
     // used in constructor - careful!
     private int findRootVertexAndMatches(boolean full_start) {
-        //long startTime = System.currentTimeMillis();
 
         IntArrayList rootMatchingVertices = new IntArrayList();
         int k = 3;
 
-        //SearchGraph dataGraph = (SearchGraph) Configuration.get().getMainGraph();
         SearchGraph dataGraph = (SearchGraph) Configuration.get().getSearchMainGraph();
 
         // select top-k query vertices with highest rank
@@ -352,9 +328,6 @@ public class QueryGraph implements Externalizable {
                 queryGraph.getVertexLabel(currQueryVertex));
 
             if (candidates == null) {
-//                LOG.info("no vertex with label " +
-//                        queryGraph.getVertexLabel(currQueryVertex) + " exists");
-                //System.exit(0);
                 continue;
             }
 
@@ -366,10 +339,6 @@ public class QueryGraph implements Externalizable {
             currStartCandidates.clear();
 
             int currNumberRegions = 0;
-//            int numDataVertices = dataGraph.getNumberVertices();
-
-            //LOG.info("QFrag: Candidates for query vertex " + currQueryVertex);
-            //LOG.info("QFrag: candidates:"+candidates);
 
             int queryVertexNeighborhoodSize
                     = queryGraph.neighborhoodSize(currQueryVertex);
@@ -379,15 +348,7 @@ public class QueryGraph implements Externalizable {
                 int candidateNeighborhoodSize
                     = dataGraph.neighborhoodSize(candidate);
 
-//                if (candidateNeighborhoodSize / numDataVertices < 0.05){
-//                    LOG.info("Candidate has too little support");
-//                    continue;
-//                }
-
-                //LOG.info("Data Candidate:"+candidate+"  neigh size:"+
-                //    candidateNeighborhoodSize+" target:"+queryVertexNeighborhoodSize);
                 if (candidateNeighborhoodSize < queryVertexNeighborhoodSize) {
-                    //LOG.info("QFrag: Candidate has too few neighbors");
                     continue;
                 }
 
@@ -411,8 +372,6 @@ public class QueryGraph implements Externalizable {
                 if (!NLFPilterPass) {
                     continue;
                 }
-
-                //LOG.info("QFrag: Adding candidate " + candidate);
 
                 currNumberRegions++;
                 currStartCandidates.add(candidate);
@@ -443,9 +402,6 @@ public class QueryGraph implements Externalizable {
         childToFatherDFS = new IntArrayList();
         vertexIdToDFSPos = new Int2IntOpenHashMap();
 
-        //LOG.info("QFrag: Advancing DFS ");
-
-
         while(!DFSVisitCompleted) {
 
             // ##### record order of current node #####
@@ -471,13 +427,10 @@ public class QueryGraph implements Externalizable {
 
             DFSPosToNode.add(DFSCurrNode);
 
-//        LOG.info("QFrag: DFS edge position is " + node.DFSLastEdgeFromParent);
-
             // ##### advance DFS search #####
 
             if (!DFSCurrNode.children.isEmpty()) {
                 DFSCurrNode = DFSCurrNode.children.get(0);
-                //            LOG.info("QFrag: moving to child. Current query vertex: " + child.queryVertexId);
             } else {
 
                 leafDFSPos.add(DFSCurrNode.DFSOrder);
@@ -495,12 +448,9 @@ public class QueryGraph implements Externalizable {
 
                     int nextSiblingId = DFSCurrNode.nextSiblingId;
                     DFSCurrNode = DFSCurrNode.parent.children.get(nextSiblingId);
-                    //                LOG.info("QFrag: moving to sibling. Current query vertex: " + sibling.queryVertexId);
                 }
             }
         }
-
-        //LOG.info("QFrag: Terminating DFS ");
 
         // ##### terminate DFS search #####
 
@@ -512,9 +462,6 @@ public class QueryGraph implements Externalizable {
     }
 
     private void addCrossEdge(Node sourceNode, Node destinationNode) {
-        //LOG.info("QFrag: Adding cross edge to node: " + sourceNode.queryVertexId
-        //    + " edge is " + sourceNode.queryVertexId + "-" +
-        //    destinationNode.queryVertexId);
         ArrayList<Node> edges = crossEdges.get(sourceNode);
         if (edges == null) {
             edges = new ArrayList<>();
@@ -542,12 +489,6 @@ public class QueryGraph implements Externalizable {
                 new ArrayList<IntArrayList>(maxSizeEmbedding));
         }
 
-        //LOG.info("QFrag: Building cross edge array! (vertex-based)");
-
-        //if (crossEdges == null) {
-            //LOG.info("QFrag: crossEdges is null!");
-        //}
-
         crossEdgesKeys = new ArrayList<>();
         crossEdgesValues = new ArrayList<>();
         for (Map.Entry<Node, ArrayList<Node>> entry : crossEdges.entrySet()) {
@@ -565,7 +506,6 @@ public class QueryGraph implements Externalizable {
 
                 int destDFSPos = destination.DFSOrder;
 
-                //LOG.info("QFrag: Considering destination " + destination.queryVertexId + " with DFS position " + destDFSPos);
                 crossEdgesDFSIndex.get(sourceDFSPos).add(destDFSPos);
                 if (isGraphEdgeLabelled){
                     ReclaimableIntCollection edgeIds = queryGraph.getEdgeIds(crossEdgesKeys.get(i).queryVertexId,
@@ -576,8 +516,6 @@ public class QueryGraph implements Externalizable {
         }
 
         // TODO free up the data structures
-//            crossEdges = null;
-//            queryVertexToDFSPos = null;
     }
 
     private void buildSmallerIdIndex(){
@@ -593,7 +531,6 @@ public class QueryGraph implements Externalizable {
                     smallerIdsDFS.add(vertexIdToDFSPos.get(smallerVertexId));
                 }
             }
-//            LOG.info("QFrag: smallerIdDFSIndex: " + smallerIdsDFS);
         }
     }
 
@@ -705,35 +642,9 @@ public class QueryGraph implements Externalizable {
         return fatherToChildrenDFS.get(fatherDFSPos);
     }
 
-//    private void computeDFSPosInBFSOrder(){
-//
-//        //TODO check and use this order to scan the domains in the split
-//
-//        int arraySize = queryGraph.getNumberVertices();
-//
-//        DFSPosInBFSOrder = new IntArrayList(arraySize);
-//        ArrayList<Node> currDepth = new ArrayList<>(arraySize);
-//        ArrayList<Node> nextDepth = new ArrayList<>(arraySize);
-//
-//        currDepth.add(root);
-//        while(!currDepth.isEmpty()) {
-//            for (Node node : currDepth) {
-//                DFSPosInBFSOrder.add(node.DFSOrder);
-//                nextDepth.addAll(node.children);
-//            }
-//            currDepth = nextDepth;
-//            nextDepth = new ArrayList<>(arraySize);
-//        }
-//    }
-
-//    public int getDFSPosAtBFSOrder (int BFSPos){
-//        return DFSPosInBFSOrder.getUnchecked(BFSPos);
-//    }
-
     IntArrayList getRootMatchingVertices(){
         int rootLabel = queryGraph.getVertexLabel(root.queryVertexId);
-        //SearchGraph dataGraph = (SearchGraph) Configuration.get().getMainGraph();
-        SearchGraph dataGraph = (SearchGraph) Configuration.get().getSearchMainGraph();
+        SearchGraph dataGraph = Configuration.get().getSearchMainGraph();
         return dataGraph.getVerticesWithLabel(rootLabel);
     }
 
@@ -859,17 +770,6 @@ public class QueryGraph implements Externalizable {
         out.writeInt(STAR_LABEL);
         out.writeBoolean(has_star_label_on_edge);
         out.writeBoolean(isGraphEdgeLabelled);
-
-//        //### rootMatchingVertices
-//        if (rootMatchingVertices == null){
-//            out.writeInt(-1);
-//        } else {
-//            int size = rootMatchingVertices.size();
-//            out.writeInt(size);
-//            for (int i=0; i < size; i++){
-//                out.writeInt(rootMatchingVertices.get(i));
-//            }
-//        }
 
         //### root
         out.writeInt(queryGraph.getNumberVertices());
@@ -1099,7 +999,6 @@ public class QueryGraph implements Externalizable {
             }
         }
 
-
         //### queryGraph
         queryGraph.write(out);
     }
@@ -1109,16 +1008,6 @@ public class QueryGraph implements Externalizable {
         STAR_LABEL = in.readInt();
         has_star_label_on_edge = in.readBoolean();
         isGraphEdgeLabelled = in.readBoolean();
-
-//        //### rootMatchingVertices
-//        rootMatchingVertices = null;
-//        int size = in.readInt();
-//        if (size >= 0){
-//            rootMatchingVertices = new IntArrayList(size);
-//            for (int i=0; i < size; i++) {
-//                rootMatchingVertices.add(in.readInt());
-//            }
-//        }
 
         //### query spanning tree (root)
         HashMap<Integer, Node> readNodes = new HashMap<>();

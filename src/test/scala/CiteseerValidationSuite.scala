@@ -17,6 +17,7 @@ class CiteseerValidationSuite extends FunSuite with BeforeAndAfterAll {
  private var arab: ArabesqueContext = _
  private var arabGraph: ArabesqueGraph = _
   private var validator: EmbeddingsValidator = _
+  private val fsScheme = "hdfs://localhost:8020"
 
  /** set up spark context */
  override def beforeAll: Unit = {
@@ -28,13 +29,17 @@ class CiteseerValidationSuite extends FunSuite with BeforeAndAfterAll {
    sc = new SparkContext(conf)
    arab = new ArabesqueContext(sc, "info")
 
-/*   val loader = classOf[CiteseerValidationSuite].getClassLoader
-   val url = loader.getResource("hdfs:///input/citeseer.unsafe.graph")
-   sampleGraphPath = url.getPath*/
+   /*
+   val loader = classOf[CiteseerValidationSuite].getClassLoader
+   val url = loader.getResource("hdfs://localhost:8020/input/citeseer.unsafe.graph")
+   sampleGraphPath = url.getPath
+   */
 
    //"hdfs://localhost:8020/output/citeseer_motifs4_original/*"
-   sampleGraphPath = "hdfs://localhost:8020/input/citeseer.unsafe.graph"
-   arabGraph = arab.textFile (sampleGraphPath)
+   sampleGraphPath = fsScheme + "/input/citeseer.unsafe.graph"
+   //sampleGraphPath = "file:///input/citeseer.unsafe.graph"
+   //sampleGraphPath = "hdfs:///input/citeseer.unsafe.graph"
+   arabGraph = arab.textFile (sampleGraphPath, false)
 
    validator = new EmbeddingsValidator(sc)
  }
@@ -49,8 +54,12 @@ class CiteseerValidationSuite extends FunSuite with BeforeAndAfterAll {
 
   def deleteIfExists(hdfsPath: String) = {
     //val hdfs = fs.FileSystem.get(sc.hadoopConfiguration)
-    val hdfs = fs.FileSystem.get(new java.net.URI("hdfs://localhost:8020"), sc.hadoopConfiguration)
+    val hdfs = fs.FileSystem.get(new java.net.URI(fsScheme), sc.hadoopConfiguration)
     val path = new fs.Path(hdfsPath)
+
+    println("Path to delete: " + hdfsPath)
+    println("Scheme: " + path.getFileSystem(sc.hadoopConfiguration).getScheme)
+    println("Scheme: " + path.getFileSystem(sc.hadoopConfiguration).getUri)
 
     if(hdfs.exists(path))
       hdfs.delete(path,true)
@@ -100,15 +109,14 @@ class CiteseerValidationSuite extends FunSuite with BeforeAndAfterAll {
   val motifsNumEmbeddings = 24546
 
   test (s"[motifs($motifsSize)]") {
-    val groundTruthPath = "hdfs://localhost:8020/output/citeseer_motifs4_original"
-    val outputPath = "hdfs://localhost:8020/output/citeseer_motifs4"
+    val groundTruthPath = fsScheme +  "/output/citeseer_motifs4_original"
+    val outputPath = fsScheme + "/output/citeseer_motifs4"
 
-    deleteIfExists(groundTruthPath)
     deleteIfExists(outputPath)
 
    val motifsRes = arabGraph.motifs (motifsSize)
      .set ("comm_strategy", COMM_ODAG_SP)
-     .set ("output_active", "yes")
+     .set ("output_active", true)
      .set ("flush_method", FLUSH_BY_PATTERN)
      .set ("output_path", outputPath)
      .set ("input_graph_local", false)

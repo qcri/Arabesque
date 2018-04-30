@@ -29,62 +29,10 @@ public class BasicMainGraph extends AbstractMainGraph {
 
     protected boolean negative_edge_label; //Used for search.
 
-
-/*    private void init(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
-        this.name = name;
-        long start = 0;
-
-        if (LOG.isInfoEnabled()) {
-            start = System.currentTimeMillis();
-            LOG.info("Initializing");
-        }
-
-        vertexIndexF = null;
-        edgeIndexF = null;
-        vertexNeighbourhoods = null;
-
-        reset();
-
-        this.isEdgeLabelled = isEdgeLabelled;
-        this.isMultiGraph = isMultiGraph;
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Done in " + (System.currentTimeMillis() - start));
-        }
-    }
-*/
-
-/*    private void init(Object path) throws IOException {
-        long start = 0;
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Reading graph");
-            start = System.currentTimeMillis();
-        }
-
-        if (path instanceof Path) {
-            Path filePath = (Path) path;
-            readFromFile(filePath);
-        } else if (path instanceof org.apache.hadoop.fs.Path) {
-            org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
-            readFromHdfs(hadoopPath);
-        } else {
-            throw new RuntimeException("Invalid path: " + path);
-        }
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Done in " + (System.currentTimeMillis() - start));
-            LOG.info("Number vertices: " + numVertices);
-            LOG.info("Number edges: " + numEdges);
-        }
-    }
-*/
-
     public BasicMainGraph() {}
 
     public BasicMainGraph(String name) {
         super(name);
-        //this(name, false, false);
     }
 
     public BasicMainGraph(Path filePath) throws IOException {
@@ -97,7 +45,6 @@ public class BasicMainGraph extends AbstractMainGraph {
 
     public BasicMainGraph(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
         super(name, isEdgeLabelled, isMultiGraph);
-        //init(name, isEdgeLabelled, isMultiGraph);
     }
 
     public BasicMainGraph(Path filePath, boolean isEdgeLabelled, boolean isMultiGraph)
@@ -218,9 +165,6 @@ public class BasicMainGraph extends AbstractMainGraph {
     public Vertex getVertex(int vertexId) {
         return vertexIndexF[vertexId];
     }
-//    public Vertex getVertex(int vertexId) {
-//        return vertexIdToVertexMap.get(vertexId);
-//    }
 
     @Override
     public Edge[] getEdges() {
@@ -334,7 +278,7 @@ public class BasicMainGraph extends AbstractMainGraph {
                 while (tokenizer.hasMoreTokens()) {
                     Edge edge = parseEdge(tokenizer, vertexId);
 
-		    //halt if vertex self loop is found
+		            //halt if vertex self loop is found
                     if( edge.getSourceId() == edge.getDestinationId()) {
                         LOG.error("The input graph contains vertices having self loops. Arabesque does not support self loops");
                         LOG.error("Self loop at vertex #: " + edge.getSourceId());
@@ -352,22 +296,7 @@ public class BasicMainGraph extends AbstractMainGraph {
             throw new RuntimeException(e);
         }
     }
-//*/
-    // old parseEdge from Arabesque
-    /*
-    protected Edge parseEdge(StringTokenizer tokenizer, int vertexId) {
-        int neighborId = Integer.parseInt(tokenizer.nextToken());
 
-        if (isEdgeLabelled) {
-            int edgeLabel = Integer.parseInt(tokenizer.nextToken());
-            return createEdge(vertexId, neighborId, edgeLabel);
-        }
-        else {
-            return createEdge(vertexId, neighborId);
-        }
-    }
-    */
-    // new parseEdge from QFrag
     protected Edge parseEdge(StringTokenizer tokenizer, int vertexId) {
         int neighborId = Integer.parseInt(tokenizer.nextToken());
 
@@ -390,7 +319,6 @@ public class BasicMainGraph extends AbstractMainGraph {
             }
             return createEdge(vertexId, neighborId, edgeLabel);
         } else {
-            //System.out.println("Adding edge:"+vertexId+" "+neighborId);
             return createEdge(vertexId, neighborId);
         }
     }
@@ -556,12 +484,9 @@ public class BasicMainGraph extends AbstractMainGraph {
             LOG.info("Number vertices: " + numVertices);
             LOG.info("Number edges: " + numEdges);
         }
-        //System.out.println("Finish reading:"+negative_edge_label);
-        //*/
     }
 
     protected void readFromInputStreamBinary(InputStream is) throws IOException {
-//*
         long start = 0;
 
         if (LOG.isInfoEnabled()) {
@@ -606,7 +531,6 @@ public class BasicMainGraph extends AbstractMainGraph {
             LOG.info("Number vertices: " + numVertices);
             LOG.info("Number edges: " + numEdges);
         }
-        //*/
     }
 
     protected void addToNeighborhood(Edge edge) {
@@ -716,7 +640,6 @@ public class BasicMainGraph extends AbstractMainGraph {
                 String className = vertexNeighbourhoods[0].getClass().getName();
                 switch (className){
                     case "io.arabesque.graph.BasicVertexNeighbourhood": out.writeInt(0); break;
-//                    case "io.arabesque.graph.MultiVertexNeighbourhood": out.writeInt(1); break;
                     default: throw new RuntimeException ("Cannot serialize graph: no serialization support for the vertex neighbourhood class " + className);
                 }
                 for (int i=0; i < size; i++) {

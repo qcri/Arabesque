@@ -19,24 +19,20 @@ public class SerializableConfiguration implements Serializable {
     }
 
     private void writeObject(ObjectOutputStream out) {
-        System.out.println("@DEBUG_CONF SerializableConfiguration.writeObject() Start");
         try {
             out.defaultWriteObject();
             value.write(out);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.println("@DEBUG_CONF SerializableConfiguration.writeObject() Finish, value = " + (value == null));
     }
 
     private void readObject(ObjectInputStream in) {
-        System.out.println("@DEBUG_CONF SerializableConfiguration.readObject() Start");
         try {
             value = new Configuration(false);
             value.readFields(in);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.println("@DEBUG_CONF SerializableConfiguration.readObject() Finish, value = " + (value == null));
     }
 }

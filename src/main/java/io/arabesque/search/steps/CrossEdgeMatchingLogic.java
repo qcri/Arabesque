@@ -43,16 +43,8 @@ class CrossEdgeMatchingLogic {
 
         while (embedding != null){
 
-//            if((embedding.getAtPos(0) == 26885 || embedding.getAtPos(0) == 98534 || embedding.getAtPos(0) == 99445 || embedding.getAtPos(0) == 99982) &&
-//                    (embedding.getAtPos(1) == 26885 || embedding.getAtPos(1) == 98534 || embedding.getAtPos(1) == 99445 || embedding.getAtPos(1) == 99982) &&
-//                    (embedding.getAtPos(2) == 26885 || embedding.getAtPos(2) == 98534 || embedding.getAtPos(2) == 99445 || embedding.getAtPos(2) == 99982) &&
-//                    (embedding.getAtPos(3) == 26885 || embedding.getAtPos(3) == 98534 || embedding.getAtPos(3) == 99445 || embedding.getAtPos(3) == 99982)){
-//                LOG.info("QFrag: looking at embedding 26885 98534 99445 99982");
-//            }
-//
             if(!isCanonical(embedding, matchingOrder, inverseMatchingOrder) || !matchCrossEdgesLastVertex(embedding, matchingOrder, inverseMatchingOrder)){
                 searchDataTree.pruneLastEmbeddingMatching();
-//                LOG.info("QFrag: pruned embedding 26885 98534 99445 99982");
                 //TODO recursive pruning if we want to split the tree again after a few matches
             }
             else if(embedding.getSize() == queryVertices) {
@@ -60,13 +52,6 @@ class CrossEdgeMatchingLogic {
                 if (outputStream!=null) {
                     //If null output is disabled.
                     try {
-//                        if((embedding.getAtPos(0) == 26885 || embedding.getAtPos(0) == 98534 || embedding.getAtPos(0) == 99445 || embedding.getAtPos(0) == 99982) &&
-//                                (embedding.getAtPos(1) == 26885 || embedding.getAtPos(1) == 98534 || embedding.getAtPos(1) == 99445 || embedding.getAtPos(1) == 99982) &&
-//                                (embedding.getAtPos(2) == 26885 || embedding.getAtPos(2) == 98534 || embedding.getAtPos(2) == 99445 || embedding.getAtPos(2) == 99982) &&
-//                                (embedding.getAtPos(3) == 26885 || embedding.getAtPos(3) == 98534 || embedding.getAtPos(3) == 99445 || embedding.getAtPos(3) == 99982)){
-//                            LOG.info("QFrag: outputting embedding 26885 98534 99445 99982");
-//                        }
-
                         outputStream.write(embedding);
                     } catch (IOException e) {
                         System.out.println("Could not write embeddings to Thread Output. Exiting.");
@@ -108,12 +93,9 @@ class CrossEdgeMatchingLogic {
         int sourceDFSPos = matchingOrder.getUnchecked(sourceEmbeddingPos);
         int sourceVertexId = embedding.getLast();
 
-//        LOG.info("QFrag: Going to match from "+sourceVertexId);
-
         IntArrayList destArrayDFSPos = queryGraph.getCrossEdgesDestVertex(sourceDFSPos);
         ArrayList<IntArrayList> labelsArrayDFSPos = queryGraph.getLabelsCrossEdgesDestVertex(sourceDFSPos);
 
-        //System.out.println(labelsArrayDFSPos.size());
         if (destArrayDFSPos == null ) {
             return true;
         }

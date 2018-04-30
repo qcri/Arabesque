@@ -44,15 +44,6 @@ public class EmbeddingEnumeration
         String log_level = this.configBC.value().getLogLevel();
         LOG.fatal("Setting log level to " + log_level);
         LOG.setLevel(Level.toLevel(log_level));
-/*        LogManager.getRootLogger().setLevel(Level.FATAL);
-        Logger.getLogger("org").setLevel(Level.FATAL);
-        Logger.getLogger("akka").setLevel(Level.FATAL);
-        Logger.getLogger("spark").setLevel(Level.FATAL);
-        Logger.getLogger("executor").setLevel(Level.FATAL);
-        Logger.getLogger("memory").setLevel(Level.FATAL);
-        Logger.getLogger("steps").setLevel(Level.FATAL);
-        Logger.getLogger("storage").setLevel(Level.FATAL);
-        Logger.getLogger("util").setLevel(Level.FATAL);*/
     }
 
     @Override
@@ -64,9 +55,6 @@ public class EmbeddingEnumeration
             Tuple2<Integer, Iterable<SearchDataTree>> iter = v2.next();
             Iterator<SearchDataTree> msgs = iter._2().iterator();
 
-            // Modified from QFrag
-            // UnsafeCSRGraphSearch dataGraph = io.arabesque.conf.Configuration.get().getMainGraph();
-            //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(io.arabesque.conf.Configuration.get().getMainGraph());
             UnsafeCSRGraphSearch dataGraph = io.arabesque.conf.Configuration.get().getSearchMainGraph();
             QueryGraph queryGraph = queryGraphBC.getValue();
 

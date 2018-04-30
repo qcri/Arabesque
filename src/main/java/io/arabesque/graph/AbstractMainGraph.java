@@ -24,7 +24,7 @@ public abstract class AbstractMainGraph implements MainGraph {
 
   protected String name;
 
-  public AbstractMainGraph() { System.out.println("@DEBUG_CONF In AbstractMainGraph.defaultCtor()"); }
+  public AbstractMainGraph() { }
 
   public AbstractMainGraph(String name) {
     init(name);
@@ -153,10 +153,19 @@ public abstract class AbstractMainGraph implements MainGraph {
   }
 
   protected void readFromHdfs(org.apache.hadoop.fs.Path hdfsPath) throws IOException {
+
+    //*
+    FileSystem fs = hdfsPath.getFileSystem(new org.apache.hadoop.conf.Configuration());
+    InputStream is = fs.open(hdfsPath);
+    readFromInputStream(is);
+    is.close();
+    //*/
+    /*
     FileSystem fs = FileSystem.get(new org.apache.hadoop.conf.Configuration());
     InputStream is = fs.open(hdfsPath);
     readFromInputStream(is);
     is.close();
+    //*/
   }
 
   protected void readFromFile(Path filePath) throws IOException {

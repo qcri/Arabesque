@@ -35,11 +35,9 @@ public class TreeBuilding
     private final int totalPartitions;
     private Broadcast<SparkConfiguration> configBC;
     private Broadcast<QueryGraph> queryGraphBC;
-    //private Broadcast<UnsafeCSRGraphSearch> dataGraphBC;
     private final boolean injective;
 
     private double outlierPct;
-//    private final double outlierPct = 0;
     private final int minMatches;
 
     // accumulators
@@ -49,55 +47,21 @@ public class TreeBuilding
     private long computation_Start_Time = 0;
     private long computation_Finish_Time = 0;
 
-    public void printConf(Configuration conf, String status) {
-        String msg = "\n" + status
-                + "\n" + conf.SEARCH_MAINGRAPH_PATH + " -> " + conf.getSearchMainGraphPath()
-                + "\nSystem_Type -> " + conf.getString(conf.CONF_SYSTEM_TYPE, conf.CONF_SYSTEM_TYPE_DEFAULT)
-                + "\nsearch_num_vertices -> " + conf.getInteger(conf.SEARCH_NUM_VERTICES, conf.SEARCH_NUM_VERTICES_DEFAULT)
-                + "\n";
-
-        System.out.println(msg);
-    }
-
     public TreeBuilding(int totalPartitions, Broadcast<SparkConfiguration> configBC, Broadcast<QueryGraph> queryGraphBC, Map<String, CollectionAccumulator<Long>> _accums) {
         super();
 
         init_Start_Time = System.currentTimeMillis();
 
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC Before init = " + (configBC == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value() Before init = " + (configBC.value() == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getMainGraph() Before init = " + (configBC.value().getMainGraph() == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC Before init = " + (queryGraphBC == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC.value() Before init = " + (queryGraphBC.value() == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getSearchMainGraph() Before init = " + (configBC.value().getSearchMainGraph() == null));
-
         configBC.value().initialize();
         Configuration conf = Configuration.get();
-
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC After init = " + (configBC == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value() After init = " + (configBC.value() == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC After init = " + (queryGraphBC == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
-        Log.info("@DEBUG_CONF In TreeBuilding.ctor() -> configBC.value().getSearchMainGraph() After init = " + (configBC.value().getSearchMainGraph() == null));
 
         String log_level = conf.getLogLevel();
         LOG.fatal("Setting log level to " + log_level);
         LOG.setLevel(Level.toLevel(log_level));
-/*        LogManager.getRootLogger().setLevel(Level.FATAL);
-        Logger.getLogger("org").setLevel(Level.FATAL);
-        Logger.getLogger("akka").setLevel(Level.FATAL);
-        Logger.getLogger("spark").setLevel(Level.FATAL);
-        Logger.getLogger("executor").setLevel(Level.FATAL);
-        Logger.getLogger("memory").setLevel(Level.FATAL);
-        Logger.getLogger("steps").setLevel(Level.FATAL);
-        Logger.getLogger("storage").setLevel(Level.FATAL);
-        Logger.getLogger("util").setLevel(Level.FATAL);*/
 
         this.totalPartitions = totalPartitions;
         this.configBC = configBC;
         this.queryGraphBC = queryGraphBC;
-        //this.dataGraphBC = dataGraphBC;
 
         this.minMatches = conf.getInteger(conf.SEARCH_OUTLIERS_MIN_MATCHES, conf.SEARCH_OUTLIERS_MIN_MATCHES_DEFAULT).intValue();
 
@@ -119,34 +83,13 @@ public class TreeBuilding
     }
 
     @Override
-    public Iterator<Tuple2<Integer, SearchDataTree>> call(Integer partitionId,
-                                                          Iterator<Tuple2<Integer, SearchDataTree>> v2) {
-        // ###### Initialization of thread-local variables ######
-//        LOG.info("I am partition " + partitionId + " running on thread " + Thread.currentThread().getName());
-
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() before init = " + (configBC.value().getMainGraph() == null));
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getSearchMainGraph() before init = " + (configBC.value().getSearchMainGraph() == null));
+    public Iterator<Tuple2<Integer, SearchDataTree>> call(Integer partitionId, Iterator<Tuple2<Integer, SearchDataTree>> v2) {
 
         Configuration conf = configBC.value();
-        //printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After Configuration conf = configBC.value();");
         conf.initialize();
-        //printConf(conf, "@DEBUG_CONF In TreeBuilding.call() After conf.initialize();");
 
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> conf.getMainGraph() After init = " + (conf.getMainGraph() == null));
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getMainGraph() After init = " + (configBC.value().getMainGraph() == null));
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> Configuration.get().getMainGraph() After init = " + (Configuration.get().getMainGraph() == null));
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> configBC.getSearchMainGraph() After init = " + (configBC.value().getSearchMainGraph() == null));
-
-        // Modified from QFrag
-        // UnsafeCSRGraphSearch dataGraph = Configuration.get().getMainGraph();
-        //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
-        //UnsafeCSRGraphSearch dataGraph = (UnsafeCSRGraphSearch)(Configuration.get().getMainGraph());
         UnsafeCSRGraphSearch dataGraph = Configuration.get().getSearchMainGraph();
-        //UnsafeCSRGraphSearch dataGraph = dataGraphBC.getValue();
         QueryGraph queryGraph = queryGraphBC.getValue();
-
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC After init = " + (queryGraphBC == null));
-        System.out.println("@DEBUG_CONF In TreeBuilding.call() -> queryGraphBC.value() After init = " + (queryGraphBC.value() == null));
 
         // get the initialization finish time stamp
         init_Finish_Time = System.currentTimeMillis();
@@ -433,44 +376,5 @@ public class TreeBuilding
         accumulate(init_Finish_Time, accums.get(QfragRunner.TREE_BUILDING_INIT_FINISH_TIME));
         accumulate(computation_Start_Time, accums.get(QfragRunner.TREE_BUILDING_COMPUTATION_START_TIME));
         accumulate(computation_Finish_Time, accums.get(QfragRunner.TREE_BUILDING_COMPUTATION_FINISH_TIME));
-    }
-
-    public class RuntimeAccumulator extends AccumulatorV2<Long, Long> {
-
-        private long _value = 0;
-
-        public RuntimeAccumulator() {
-            this(0);
-        }
-
-        public RuntimeAccumulator(long initialValue) {
-            if (initialValue != 0) {
-                _value = initialValue;
-            }
-        }
-
-        public void add(Long value) {
-            _value = value() + value;
-        }
-
-        public RuntimeAccumulator copy() {
-            return (new RuntimeAccumulator(value()));
-        }
-
-        public boolean isZero() {
-            return (value() == 0);
-        }
-
-        public void merge(AccumulatorV2<Long, Long> other) {
-            add(other.value());
-        }
-
-        public void reset() {
-            _value = 0;
-        }
-
-        public Long value() {
-            return _value;
-        }
     }
 }

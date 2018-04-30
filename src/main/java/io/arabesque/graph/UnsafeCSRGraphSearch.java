@@ -47,7 +47,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     private boolean fastNeighbors = true;
 
     public UnsafeCSRGraphSearch() {
-        System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.defaultCtor()");
     }
 
     public UnsafeCSRGraphSearch(String name) {
@@ -107,7 +106,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
         reverseVertexlabel      = HashIntObjMaps.newMutableMap();
 
         // DEBUG!!
-        // numLabels = (int) Configuration.get().getNumberLabels();
         numLabels = conf.getInteger(conf.SEARCH_NUM_LABELS, conf.SEARCH_NUM_LABELS_DEFAULT);
         // For star
         // numLabels = 1;
@@ -127,7 +125,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
         if (numLabels>1000){
             throw new RuntimeException("Shouldn't use this class, way too inefficient(Reminder)");
         }
-
     }
 
     @Override
@@ -185,27 +182,20 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     }
 
     private void end_reading_normal(){
-        //System.out.println("Start building now next reference!!!");
         vertexNeighLabelPos = UNSAFE.allocateMemory((numVertices*numLabels+1L) * INT_SIZE_IN_BYTES);
         int neigh=0;
         for (int i=0;i<numVertices;i++){
-            //System.out.println("\t doing: "+i);
             neigh         = getVertexPos(i);
             int neigh_end = getVertexPos(i+1);
 
 
 
             int prevLabel = 0;
-            //boolean has_neighbors = false;
             while (neigh < neigh_end) {
-                //  has_neighbors = true;
                 int label = getVertexLabel(getEdgeDst(neigh));
-                //System.out.println(i+" -> "+getEdgeDst(neigh)+ "[ "+label+"]"+ "\t"+prevLabel);
 
                 if (prevLabel != label && label > 0){
                     while ( label > prevLabel){
-                        //Do we have missing?
-                        //System.out.println("\t\tAdding[missing]:"+i+" "+prevLabel+" " +neigh);
                         setVertexNeighborLabelPos(i, prevLabel, neigh);
                         prevLabel++;
                     }
@@ -213,14 +203,12 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
                 prevLabel = label;
                 neigh++;
             }
-            //System.out.println("\t\tMISSING Adding:"+i+" "+prevLabel+" " +neigh);
 
             setVertexNeighborLabelPos(i, prevLabel, neigh);
             prevLabel++;
             //Add the missing one, if any.
             while (prevLabel < numLabels) {
                 //Do we have missing?
-                //System.out.println("\t\tMISSING: Adding "+i+" "+prevLabel+" " +neigh);
                 setVertexNeighborLabelPos(i, prevLabel, neigh);
                 prevLabel++;
             }
@@ -234,7 +222,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
         vertexNeighLabelPos = UNSAFE.allocateMemory((numVertices*numLabels+1L) * INT_SIZE_IN_BYTES);
         int neigh=0;
         for (int i=0;i<numVertices;i++){
-            //System.out.println("\t doing: "+i);
             neigh         = getVertexPos(i);
             int neigh_end = getVertexPos(i+1);
 
@@ -243,18 +230,13 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
             neighborhoodMap.put(i,map);
 
             int prevLabel = 0;
-            //boolean has_neighbors = false;
             while (neigh < neigh_end) {
-                //  has_neighbors = true;
                 final int neigh_id = getEdgeDst(neigh);
                 int label = getVertexLabel(neigh_id);
-                //System.out.println(i+" -> "+getEdgeDst(neigh)+ "[ "+label+"]"+ "\t"+prevLabel);
                 map.put(neigh_id,label);
 
                 if (prevLabel != label && label > 0){
                     while ( label > prevLabel){
-                        //Do we have missing?
-                        //System.out.println("\t\tAdding[missing]:"+i+" "+prevLabel+" " +neigh);
                         setVertexNeighborLabelPos(i, prevLabel, neigh);
                         prevLabel++;
                     }
@@ -262,14 +244,9 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
                 prevLabel = label;
                 neigh++;
             }
-            //System.out.println("\t\tMISSING Adding:"+i+" "+prevLabel+" " +neigh);
 
-//            setVertexNeighborLabelPos(i, prevLabel, neigh);
-//            prevLabel++;
             //Add the missing one, if any.
             while (prevLabel < numLabels) {
-                //Do we have missing?
-                //System.out.println("\t\tMISSING: Adding "+i+" "+prevLabel+" " +neigh);
                 setVertexNeighborLabelPos(i, prevLabel, neigh);
                 prevLabel++;
             }
@@ -297,8 +274,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
 
     @Override
     public int getNeighborhoodSizeWithLabel(int i, int label) {
-        //System.out.println("Input:"+i+" label:"+
-        //    label+"     output:"+getVertexNeighborLabelEnd(i,label)+ "  "+getVertexNeighborLabelStart(i,label));
         if (label >=0) {
             return getVertexNeighborLabelEnd(i, label) - getVertexNeighborLabelStart(i, label);
         }
@@ -329,9 +304,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     }
 
     @Override
-//    public IntArrayList getVerticesWithLabel(int vertexLabel) {
-//        return reverseVertexlabel.get(vertexLabel);
-//    }
     public IntArrayList getVerticesWithLabel(int vertexLabel) {
         if (vertexLabel < 0){
             // should not invoke this method if we don't look for a specific label
@@ -388,7 +360,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     }
 
     private boolean isNeighborVertexWithLabel_(int sourceVertexId, int destVertexId, int destinationLabel) {
-        //System.out.println("\t\t Checking:"+sourceVertexId+"  "+destVertexId+"   "+destinationLabel);
         int start;
         int end;
 
@@ -455,7 +426,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
                 end = graph.getVertexNeighborLabelEnd(vertexId, numLabels-1);
 
             }
-            //System.out.println("\tlabel:"+vertexLabel+" Pos:"+pos+ "   to:"+end);
         }
 
         @Override
@@ -470,7 +440,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
 
         @Override
         public boolean hasNext() {
-           // System.out.println("\t"+pos+"  -> "+end);
             return end > pos;
         }
 
@@ -496,10 +465,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
 
     public void writeExternal(java.io.ObjectOutput out)
             throws IOException {
-        System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.writeExternal()");
-/*        if(true)
-            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.writeExternal(), writing the graph");*/
-
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
         out.writeLong(numVertices);
@@ -529,7 +494,7 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
             }
         }
 
-//        // Fields of this class
+        // Fields of this class
         out.writeInt(numLabels);
         out.writeBoolean(fastNeighbors);
 
@@ -593,11 +558,6 @@ public class UnsafeCSRGraphSearch extends UnsafeCSRMainGraph
     }
 
     public void readExternal (ObjectInput in) throws IOException, ClassNotFoundException {
-
-        System.out.println("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal()");
-/*        if(true)
-            throw new IOException("@DEBUG_CONF In UnsafeCSRGraphSearch.readExternal(), reading the graph");*/
-
         // Fields from AbstractMainGraph
         // isMultiGraph is covered by UnsafeCSRMainGraph and set to false in its build method
         numVertices = in.readLong();
