@@ -16,7 +16,7 @@ public class ConfigBasedOptimizationSetDescriptor implements OptimizationSetDesc
 
         for (Class optimizationClass : optimizationClasses) {
             if (!Optimization.class.isAssignableFrom(optimizationClass)) {
-                throw new RuntimeException("Class " + optimizationClass + " does not implement hte Optimization interface");
+                throw new RuntimeException("Class " + optimizationClass + " does not implement the Optimization interface");
             }
 
             Optimization optimization = (Optimization) ReflectionUtils.newInstance(optimizationClass);
