@@ -11,18 +11,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
-import org.apache.spark.executor.ShuffleReadMetrics;
-import org.apache.spark.executor.ShuffleWriteMetrics;
-import org.apache.spark.executor.TaskMetrics;
-import org.apache.spark.scheduler.SparkListener;
-import org.apache.spark.scheduler.SparkListenerStageCompleted;
-import org.apache.spark.scheduler.StageInfo;
 import org.apache.spark.util.CollectionAccumulator;
 import scala.Tuple2;
 import scala.collection.JavaConversions;
@@ -80,6 +73,9 @@ public class QfragRunner implements Tool {
     long shuffleTime;
 
     private void init(String[] args) {
+        System.out.print("Arguments passed to the app");
+        for(String arg: args)
+            System.out.println("Argument: " + arg);
         YamlConfiguration yamlConfig = new YamlConfiguration(args);
         yamlConfig.load();
 
