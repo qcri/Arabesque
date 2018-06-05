@@ -6,6 +6,12 @@ import com.koloboke.collect.IntCollection;
 import com.koloboke.collect.map.IntIntMap;
 import com.koloboke.collect.map.hash.HashIntIntMaps;
 import com.koloboke.function.IntConsumer;
+import com.koloboke.collect.set.ObjSet;
+
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.Map;
 
 public class BasicVertexNeighbourhood implements VertexNeighbourhood, java.io.Serializable {
     // Key = neighbour vertex id, Value = edge id that connects owner of neighbourhood with Key
@@ -66,4 +72,37 @@ public class BasicVertexNeighbourhood implements VertexNeighbourhood, java.io.Se
                 "neighbourhoodMap=" + neighbourhoodMap +
                 '}';
     }
+
+    //***** Modifications coming from QFrag
+
+    @Override
+    public void write(ObjectOutput out)
+            throws IOException {
+        if (neighbourhoodMap == null){
+            out.writeInt(-1);
+        } else {
+            ObjSet<Map.Entry<Integer,Integer>> entries = neighbourhoodMap.entrySet();
+            out.writeInt(entries.size());
+            for (Map.Entry<Integer,Integer> entry : entries){
+                out.writeInt(entry.getKey());
+                out.writeInt(entry.getValue());
+            }
+        }
+    }
+
+    @Override
+    public void read(ObjectInput in) throws IOException {
+        int size = in.readInt();
+        if (size < 0){
+            neighbourhoodMap = null;
+        } else {
+            for (int i=0; i < size; i++){
+                int key = in.readInt();
+                int value = in.readInt();
+                neighbourhoodMap.put(key,value);
+            }
+        }
+    }
+
+    //***** End of Modifications coming from QFrag
 }

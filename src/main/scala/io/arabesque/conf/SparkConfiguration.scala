@@ -235,10 +235,15 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     updateIfExists ("input_graph_path", CONF_MAINGRAPH_PATH)
     updateIfExists ("input_graph_subgraphs_path", CONF_MAINGRAPH_SUBGRAPHS_PATH)
     updateIfExists ("input_graph_local", CONF_MAINGRAPH_LOCAL)
- 
+    // QFrag input
+    updateIfExists ("search_input_graph_path", SEARCH_MAINGRAPH_PATH)
+
     // output
     updateIfExists ("output_active", CONF_OUTPUT_ACTIVE)
     updateIfExists ("output_path", CONF_OUTPUT_PATH)
+    // QFrag output
+    updateIfExists ("search_output_active", SEARCH_OUTPUT_PATH_ACTIVE)
+    updateIfExists ("search_output_path", SEARCH_OUTPUT_PATH)
 
     // aggregation
     updateIfExists ("incremental_aggregation", CONF_INCREMENTAL_AGGREGATION)
@@ -248,13 +253,26 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
   }
 
   /**
-   * Garantees that arabesque configuration is properly set
+   * Guarantees that arabesque configuration is properly set
    *
    * TODO: generalize the initialization in the superclass Configuration
    */
   override def initialize(): Unit = synchronized {
     if (Configuration.isUnset || uuid != Configuration.get[SparkConfiguration[O]].uuid) {
-      initializeInJvm()
+      val system: String = getString(CONF_SYSTEM_TYPE, CONF_SYSTEM_TYPE_DEFAULT)
+
+      println("@DEBUG_CONF In SparkConf.init() System_Type = " + system)
+      if(system.equals(CONF_ARABESQUE_SYSTEM_TYPE)) {
+        println("@DEBUG_CONF In SparkConf.init().initializeInJvm()")
+        Configuration.set (this)
+        initialized = true
+        initializeInJvm()
+      }
+      else {
+        println("@DEBUG_CONF In SparkConf.init().initializeInJvmQFrag()")
+        initializeInJvmQFrag()
+      }
+
       Configuration.set (this)
     }
   }
@@ -267,30 +285,30 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
     fixAssignments
 
     // common configs
-    setMainGraphClass (
-      getClass (CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT).
-      asInstanceOf[Class[_ <: MainGraph]]
+    setMainGraphClass(
+      getClass(CONF_MAINGRAPH_CLASS, CONF_MAINGRAPH_CLASS_DEFAULT).
+        asInstanceOf[Class[_ <: MainGraph]]
     )
 
     setMasterComputationClass (
       getClass (CONF_MASTER_COMPUTATION_CLASS, CONF_MASTER_COMPUTATION_CLASS_DEFAULT).
-      asInstanceOf[Class[_ <: MasterComputation]]
+        asInstanceOf[Class[_ <: MasterComputation]]
     )
-    
+
     setComputationClass (
       getClass (CONF_COMPUTATION_CLASS, CONF_COMPUTATION_CLASS_DEFAULT).
-      asInstanceOf[Class[_ <: Computation[O]]]
+        asInstanceOf[Class[_ <: Computation[O]]]
     )
 
     setPatternClass (
       getClass (CONF_PATTERN_CLASS, CONF_PATTERN_CLASS_DEFAULT).
-      asInstanceOf[Class[_ <: Pattern]]
+        asInstanceOf[Class[_ <: Pattern]]
     )
 
     setAggregationsMetadata (new java.util.HashMap())
 
     setOutputPath (getString(CONF_OUTPUT_PATH, CONF_OUTPUT_PATH_DEFAULT))
-    
+
     // main graph
     if ( (getMainGraph() == null && initialized)
          || (getString ("spark_master", "local[*]") startsWith "local[")
@@ -298,6 +316,15 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
       logInfo ("Main graph is null, gonna read it")
       setMainGraph (createGraph())
     }
+
+    initialized = true
+  }
+
+  private def initializeInJvmQFrag(): Unit = {
+
+    fixAssignments
+
+    setOutputPath (getString(Configuration.CONF_OUTPUT_PATH, Configuration.CONF_OUTPUT_PATH_DEFAULT))
 
     initialized = true
   }
@@ -316,6 +343,8 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
   override def getBoolean(key: String, defaultValue: java.lang.Boolean) =
     getValue(key, defaultValue).asInstanceOf[Boolean]
 
+  override def getDouble(key: String, defaultValue: java.lang.Double) =
+    getValue(key, defaultValue).asInstanceOf[Double]
 }
 
 object SparkConfiguration {

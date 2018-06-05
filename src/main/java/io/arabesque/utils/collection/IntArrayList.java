@@ -812,4 +812,39 @@ public class IntArrayList implements ReclaimableIntCollection, Writable, Externa
        public void remove() {
        }
     }
+
+    //***** GFrag changes
+    public boolean replace(int oldValue, int newValue){
+        for (int i = 0; i < numElements; ++i) {
+            int e = backingArray[i];
+
+            if (e == oldValue) {
+                backingArray[i] = newValue;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public IntArrayList clone(){
+
+        IntArrayList cloned = new IntArrayList();
+
+        if (cloned.backingArray.length < this.backingArray.length){
+            cloned.backingArray = new int [this.backingArray.length];
+        }
+        // TODO use System.arraycopy
+        System.arraycopy(this.backingArray, 0, cloned.backingArray, 0, this.numElements);
+//        for (int i = 0; i < this.numElements; i++) {
+//            cloned.backingArray[i] = this.backingArray[i];
+//        }
+
+        cloned.numElements = this.numElements;
+
+        cloned.intAdder = this.intAdder;
+        cloned.preventReclaim = this.preventReclaim;
+
+        return cloned;
+    }
+    //***** Eng of GFrag changes
 }

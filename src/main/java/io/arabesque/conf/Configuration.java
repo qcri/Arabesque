@@ -12,6 +12,7 @@ import io.arabesque.computation.comm.CommunicationStrategy;
 import io.arabesque.computation.comm.CommunicationStrategyFactory;
 import io.arabesque.embedding.Embedding;
 import io.arabesque.graph.MainGraph;
+import io.arabesque.graph.UnsafeCSRGraphSearch;
 import io.arabesque.optimization.OptimizationSet;
 import io.arabesque.optimization.OptimizationSetDescriptor;
 import io.arabesque.pattern.Pattern;
@@ -46,6 +47,12 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     public static final int K = 1000;
     public static final int M = 1000 * K;
     public static final int B = 1000 * M;
+
+    // "mining" for Arabesque and "search" for QFrag
+    public static final String CONF_SYSTEM_TYPE = "system_type";
+    public static final String CONF_SYSTEM_TYPE_DEFAULT = "mining";
+    public static final String CONF_ARABESQUE_SYSTEM_TYPE = "mining";
+    public static final String CONF_QFRAG_SYSTEM_TYPE = "search";
 
     public static final String CONF_LOG_LEVEL = "arabesque.log.level";
     public static final String CONF_LOG_LEVEL_DEFAULT = "info";
@@ -145,7 +152,74 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     private transient MainGraph mainGraph;
     private boolean isGraphEdgeLabelled;
     protected boolean initialized = false;
-    private boolean isGraphMulti;
+    private boolean isGraphMulti = false;
+
+    private UnsafeCSRGraphSearch searchMainGraph;
+
+    public UnsafeCSRGraphSearch getSearchMainGraph() { return searchMainGraph; }
+    public void setSearchMainGraph(UnsafeCSRGraphSearch _searchMainGraph) {
+        this.searchMainGraph = _searchMainGraph;
+    }
+
+    //***** QFrag paramters
+
+    public static final String SEARCH_MAINGRAPH_CLASS = "search.graph.class";
+    public static final String SEARCH_MAINGRAPH_CLASS_DEFAULT = "io.arabesque.graph.UnsafeCSRGraphSearch";
+
+    public static final String SEARCH_MAINGRAPH_PATH = "search_input_graph_path"; // no default - done
+    public static final String SEARCH_MAINGRAPH_PATH_DEFAULT = null;
+
+    public static final String SEARCH_QUERY_GRAPH_PATH = "search_query_graph_path"; // no default - done
+    public static final String SEARCH_QUERY_GRAPH_PATH_DEFAULT = null;
+
+    public static final String SEARCH_OUTLIERS_MIN_MATCHES = "search_outliers_min_matches";
+    public static final int SEARCH_OUTLIERS_MIN_MATCHES_DEFAULT = 100;
+
+    public static final String SEARCH_NUM_LABELS = "search_num_labels"; // no default - done
+    public static final int SEARCH_NUM_LABELS_DEFAULT = -1;
+
+    public static final String SEARCH_NUM_EDGES = "search_num_edges"; // no default - done
+    public static final int SEARCH_NUM_EDGES_DEFAULT = -1;
+
+    public static final String SEARCH_NUM_VERTICES = "search_num_vertices"; // no default - done
+    public static final int SEARCH_NUM_VERTICES_DEFAULT = -1;
+
+    public static final String SEARCH_MULTI_VERTEX_LABELS     = "search_multi_vertex_labels";
+    public static final boolean SEARCH_MULTI_VERTEX_LABELS_DEFAULT = false;
+
+    public static final String SEARCH_FASTNEIGHBORS   = "search_fastNeighbors";
+    public static final boolean SEARCH_FASTNEIGHBORS_DEFAULT = true;
+
+    public static final String SEARCH_INJECTIVE   = "search_injective";
+    public static final boolean SEARCH_INJECTIVE_DEFAULT = false;
+
+    public static final String SEARCH_OUTPUT_PATH = "search_output_path";
+    public static final String SEARCH_OUTPUT_PATH_DEFAULT = "output_search";
+
+    public static final String SEARCH_WRITE_IN_BINARY   = "search_write_in_binary";
+    public static final boolean SEARCH_WRITE_IN_BINARY_DEFAULT = false;
+
+    public static final String SEARCH_BUFFER_SIZE = "search_buffer_size";
+    public static final int SEARCH_BUFFER_SIZE_DEFAULT = 8192;
+
+    public static final String SEARCH_OUTPUT_PATH_ACTIVE   = "search_output_active";
+    public static final boolean SEARCH_OUTPUT_PATH_ACTIVE_DEFAULT = true;
+
+    public static final String SEARCH_OUTLIERS_PCT = "search_outliers_pct";
+    public static final double SEARCH_OUTLIERS_PCT_DEFAULT = 0.001;
+
+    public static final String CONF_MAINGRAPH_FLOAT_EDGE     = "arabesque.graph.float_edge";
+    public static final boolean CONF_MAINGRAPH_FLOAT_EDGE_DEFAULT = false;
+    public static final String CONF_MAINGRAPH_IS_BINARY      = "arabesque.graph.binary";
+    public static final String CONF_MAINGRAPH_VERTICES       = "arabesque.graph.vertices";
+    public static final String CONF_MAINGRAPH_EDGES          = "arabesque.graph.edges";
+    public static final String CONF_MAINGRAPH_LABELS         = "arabesque.graph.labels";
+    public static final String CONF_MAINGRAPH_NUM_EDGE_LABELS= "arabesque.graph.edge_labels";
+
+    private boolean isFloatEdge;
+    private boolean isBinary = false;
+
+    //***** End of QFrag paramters
 
     public UUID getUUID() {
        return uuid;
@@ -337,6 +411,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
         return getString(CONF_MAINGRAPH_SUBGRAPHS_PATH, CONF_MAINGRAPH_SUBGRAPHS_PATH_DEFAULT);
     }
 
+    public String getSearchMainGraphPath() {
+        return getString(SEARCH_MAINGRAPH_PATH, SEARCH_MAINGRAPH_PATH_DEFAULT);
+    }
+
     public long getInfoPeriod() {
         return infoPeriod;
     }
@@ -364,12 +442,17 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     protected MainGraph createGraph() {
         boolean useLocalGraph = getBoolean(CONF_MAINGRAPH_LOCAL, CONF_MAINGRAPH_LOCAL_DEFAULT);
 
+        System.out.println("useLocalGraph = " + useLocalGraph);
+
         try {
             Constructor<? extends MainGraph> constructor;
+
             String subgraphsFile = getMainGraphSubgraphsPath();
 
+            System.out.println("subgraphsFile = " + subgraphsFile);
+
             if (useLocalGraph) {
-                if(subgraphsFile != "None") {
+                if (subgraphsFile != "None") {
                     LOG.info("Creating disconnected graph");
                     constructor = mainGraphClass.getConstructor(java.nio.file.Path.class, java.nio.file.Path.class, boolean.class, boolean.class);
                     return constructor.newInstance(Paths.get(getMainGraphPath()), Paths.get(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
@@ -378,7 +461,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
                     return constructor.newInstance(Paths.get(getMainGraphPath()), isGraphEdgeLabelled, isGraphMulti);
                 }
             } else {
-                if(subgraphsFile != "None") {
+                if (subgraphsFile != "None") {
                     LOG.info("Creating disconnected graph");
                     constructor = mainGraphClass.getConstructor(Path.class, Path.class, boolean.class, boolean.class);
                     return constructor.newInstance(new Path(getMainGraphPath()), new Path(subgraphsFile), isGraphEdgeLabelled, isGraphMulti);
@@ -388,6 +471,7 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
                 }
             }
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            e.printStackTrace();
             throw new RuntimeException("Could not load main graph", e);
         }
     }
@@ -541,5 +625,36 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
        return getString (CONF_COMM_STRATEGY, CONF_COMM_STRATEGY_DEFAULT);
     }
 
+    //***** QFrag methods
+
+    public long getNumberVertices() {
+        return getLong(CONF_MAINGRAPH_VERTICES,-1L);
+    }
+
+    public long getNumberEdges(){
+        return getLong(CONF_MAINGRAPH_EDGES,-1L);
+    }
+
+    public long getNumberLabels(){
+        return getLong(CONF_MAINGRAPH_LABELS,-1L);
+    }
+
+    public boolean isFloatEdge() {
+        return isFloatEdge;
+    }
+
+    public boolean isBinaryInputFile() {
+        return isBinary;
+    }
+
+    public int getNumberEdgesLabels() {
+        return getInteger(CONF_MAINGRAPH_NUM_EDGE_LABELS,-1);
+    }
+
+    public Double getDouble(String key, Double defaultValue) {
+        return giraphConfiguration.getDouble(key, defaultValue);
+    }
+
+    //***** QFrag methods
 }
 

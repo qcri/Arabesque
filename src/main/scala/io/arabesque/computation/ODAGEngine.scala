@@ -72,6 +72,8 @@ trait ODAGEngine[
 
   // TODO: tirar isso !!!
   def init(): Unit = {
+    logInfo(s"ODAGEngine.init() -> Superstep $superstep, partitionId = $partitionId, " +
+      s"config# = ${configuration.hashCode()}, graph# = ${configuration.getMainGraph.hashCode()}")
   }
 
   // output

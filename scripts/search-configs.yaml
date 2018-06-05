@@ -1,0 +1,13 @@
+search_input_graph_path: hdfs:///input/citeseer.unsafe.graph
+search_output_path: output-search
+search_injective: true
+search_outliers_pct: 0.001
+search_outliers_min_matches: 100
+search_fastNeighbors: true
+search_write_in_binary: true
+search_query_graph_path: hdfs:///input/queries/Q7u
+search_output_active: false
+search_num_vertices: 3312
+search_num_edges: 9072
+search_num_labels: 6
+log_level: fatal

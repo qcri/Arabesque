@@ -120,4 +120,40 @@ public class OrderedNeighboursMainGraphDecorator implements OrderedNeighboursMai
     public void forEachEdgeId(int existingVertexId, int newVertexId, IntConsumer intConsumer) {
         underlyingMainGraph.forEachEdgeId(existingVertexId, newVertexId, intConsumer);
     }
+
+    //***** Modifications coming from QFrag
+
+    @Override
+    public void processVertexNeighbors(int vertexId,IntConsumer consumer) {
+    }
+
+    @Override
+    public int getEdgeLabel(int edgeId){
+        return -1;
+    }
+
+    @Override
+    public int getEdgeSource(int edgeId) {
+        return -1;
+    }
+
+    @Override
+    public int getEdgeDst(int edgeId) {
+        return -1;
+    }
+
+    @Override
+    public int neighborhoodSize(int vertexId) {
+        return 0;
+    }
+
+    @Override
+    public void processEdgeNeighbors(int vertexId,IntConsumer intAddConsumer){
+    }
+
+    @Override
+    public int getVertexLabel(int v) {
+        return 0;
+    }
+    //***** End of Modifications coming from QFrag
 }

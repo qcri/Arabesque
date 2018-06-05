@@ -1,21 +1,20 @@
 package io.arabesque.graph;
 
+import io.arabesque.conf.Configuration;
 import io.arabesque.utils.collection.ReclaimableIntCollection;
 import com.koloboke.collect.IntCollection;
 import com.koloboke.function.IntConsumer;
 import org.apache.commons.io.input.BOMInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.StringTokenizer;
+import jdk.nashorn.internal.objects.annotations.Getter;
 
-public class BasicMainGraph implements MainGraph {
+public class BasicMainGraph extends AbstractMainGraph {
     protected static final Logger LOG = Logger.getLogger(BasicMainGraph.class);
 
     protected static final int INITIAL_ARRAY_SIZE = 4096;
@@ -23,66 +22,42 @@ public class BasicMainGraph implements MainGraph {
     protected Vertex[] vertexIndexF;
     protected Edge[] edgeIndexF;
 
-    protected int numVertices;
-    protected int numEdges;
-
     protected VertexNeighbourhood[] vertexNeighbourhoods;
     protected HashMap<Integer, Vertex> vertexIdToVertexMap = new HashMap<>();
 
-    protected boolean isEdgeLabelled;
-    protected boolean isMultiGraph;
-    protected String name;
+    protected boolean negative_edge_label; //Used for search.
 
-    private void init(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
-        this.name = name;
-        long start = 0;
+    public BasicMainGraph() {}
 
-        if (LOG.isInfoEnabled()) {
-            start = System.currentTimeMillis();
-            LOG.info("Initializing");
-        }
-
-        vertexIndexF = null;
-        edgeIndexF = null;
-
-        vertexNeighbourhoods = null;
-
-        reset();
-
-        this.isEdgeLabelled = isEdgeLabelled;
-        this.isMultiGraph = isMultiGraph;
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Done in " + (System.currentTimeMillis() - start));
-        }
+    public BasicMainGraph(String name) {
+        super(name);
     }
 
-    private void init(Object path) throws IOException {
-        long start = 0;
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Reading graph");
-            start = System.currentTimeMillis();
-        }
-
-        if (path instanceof Path) {
-            Path filePath = (Path) path;
-            readFromFile(filePath);
-        } else if (path instanceof org.apache.hadoop.fs.Path) {
-            org.apache.hadoop.fs.Path hadoopPath = (org.apache.hadoop.fs.Path) path;
-            readFromHdfs(hadoopPath);
-        } else {
-            throw new RuntimeException("Invalid path: " + path);
-        }
-
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Done in " + (System.currentTimeMillis() - start));
-            LOG.info("Number vertices: " + numVertices);
-            LOG.info("Number edges: " + numEdges);
-        }
+    public BasicMainGraph(Path filePath) throws IOException {
+        super(filePath);
     }
 
-    private void prepareStructures(int numVertices, int numEdges) {
+    public BasicMainGraph(org.apache.hadoop.fs.Path hdfsPath) throws IOException {
+        super(hdfsPath);
+    }
+
+    public BasicMainGraph(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
+        super(name, isEdgeLabelled, isMultiGraph);
+    }
+
+    public BasicMainGraph(Path filePath, boolean isEdgeLabelled, boolean isMultiGraph)
+            throws IOException {
+        this(filePath.getFileName().toString(), isEdgeLabelled, isMultiGraph);
+        super.init(filePath, isEdgeLabelled, isMultiGraph);
+    }
+
+    public BasicMainGraph(org.apache.hadoop.fs.Path hdfsPath, boolean isEdgeLabelled, boolean isMultiGraph)
+            throws IOException {
+        this(hdfsPath.getName(), isEdgeLabelled, isMultiGraph);
+        super.init(hdfsPath, isEdgeLabelled, isMultiGraph);
+    }
+
+    protected void prepareStructures(int numVertices, int numEdges) {
         ensureCanStoreNewVertices(numVertices);
         ensureCanStoreNewEdges(numEdges);
     }
@@ -91,15 +66,18 @@ public class BasicMainGraph implements MainGraph {
     public void reset() {
         numVertices = 0;
         numEdges = 0;
+        vertexIndexF = null;
+        edgeIndexF = null;
+        vertexNeighbourhoods = null;
     }
 
-    private void ensureCanStoreNewVertices(int numVerticesToAdd) {
-        int newMaxVertexId = numVertices + numVerticesToAdd;
+    protected void ensureCanStoreNewVertices(int numVerticesToAdd) {
+        int newMaxVertexId = (int)(numVertices + numVerticesToAdd);
 
         ensureCanStoreUpToVertex(newMaxVertexId);
     }
 
-    private void ensureCanStoreUpToVertex(int maxVertexId) {
+    protected void ensureCanStoreUpToVertex(int maxVertexId) {
         int targetSize = maxVertexId + 1;
 
         if (vertexIndexF == null) {
@@ -139,7 +117,7 @@ public class BasicMainGraph implements MainGraph {
         }
     }
 
-    private void ensureCanStoreNewVertex() {
+    protected void ensureCanStoreNewVertex() {
         ensureCanStoreNewVertices(1);
     }
 
@@ -152,28 +130,8 @@ public class BasicMainGraph implements MainGraph {
         }
     }
 
-    private void ensureCanStoreNewEdge() {
+    protected void ensureCanStoreNewEdge() {
         ensureCanStoreNewEdges(1);
-    }
-
-    public BasicMainGraph(String name) {
-        this(name, false, false);
-    }
-
-    public BasicMainGraph(String name, boolean isEdgeLabelled, boolean isMultiGraph) {
-        init(name, isEdgeLabelled, isMultiGraph);
-    }
-
-    public BasicMainGraph(Path filePath, boolean isEdgeLabelled, boolean isMultiGraph)
-            throws IOException {
-        this(filePath.getFileName().toString(), isEdgeLabelled, isMultiGraph);
-        init(filePath);
-    }
-
-    public BasicMainGraph(org.apache.hadoop.fs.Path hdfsPath, boolean isEdgeLabelled, boolean isMultiGraph)
-            throws IOException {
-        this(hdfsPath.getName(), isEdgeLabelled, isMultiGraph);
-        init(hdfsPath);
     }
 
     @Override
@@ -190,7 +148,7 @@ public class BasicMainGraph implements MainGraph {
     @Override
     public MainGraph addVertex(Vertex vertex) {
         ensureCanStoreNewVertex();
-        vertexIndexF[numVertices++] = vertex;
+        vertexIndexF[(int)numVertices++] = vertex;
         vertexIdToVertexMap.put(vertex.getVertexId(), vertex);
 
         return this;
@@ -201,17 +159,12 @@ public class BasicMainGraph implements MainGraph {
         return vertexIndexF;
     }
 
+    @Getter
     @Override
     public Vertex getVertex(int vertexId) {
-        return vertexIndexF[vertexId];
-    }
-//    public Vertex getVertex(int vertexId) {
-//        return vertexIdToVertexMap.get(vertexId);
-//    }
-
-    @Override
-    public int getNumberVertices() {
-        return numVertices;
+        if(vertexId < vertexIndexF.length)
+            return vertexIndexF[vertexId];
+        return null;
     }
 
     @Override
@@ -222,11 +175,6 @@ public class BasicMainGraph implements MainGraph {
     @Override
     public Edge getEdge(int edgeId) {
         return edgeIndexF[edgeId];
-    }
-
-    @Override
-    public int getNumberEdges() {
-        return numEdges;
     }
 
     @Override
@@ -278,64 +226,21 @@ public class BasicMainGraph implements MainGraph {
         }
 
         if (edge.getEdgeId() == -1) {
-            edge.setEdgeId(numEdges);
+            edge.setEdgeId((int)numEdges);
         } else if (edge.getEdgeId() != numEdges) {
             throw new RuntimeException("Sanity check, edge with id " + edge.getEdgeId() + " added at position " + numEdges);
         }
 
         ensureCanStoreNewEdge();
         ensureCanStoreUpToVertex(Math.max(edge.getSourceId(), edge.getDestinationId()));
-        edgeIndexF[numEdges++] = edge;
-
-        try {
-            VertexNeighbourhood vertexNeighbourhood = vertexNeighbourhoods[edge.getSourceId()];
-
-            if (vertexNeighbourhood == null) {
-                vertexNeighbourhood = createVertexNeighbourhood();
-                vertexNeighbourhoods[edge.getSourceId()] = vertexNeighbourhood;
-            }
-
-            vertexNeighbourhood.addEdge(edge.getDestinationId(), edge.getEdgeId());
-        } catch (ArrayIndexOutOfBoundsException e) {
-            LOG.error("Tried to access index " + edge.getSourceId() + " of array with size " + vertexNeighbourhoods.length);
-            LOG.error("vertexIndexF.length=" + vertexIndexF.length);
-            LOG.error("vertexNeighbourhoods.length=" + vertexNeighbourhoods.length);
-            throw e;
-        }
-
-        try {
-            VertexNeighbourhood vertexNeighbourhood = vertexNeighbourhoods[edge.getDestinationId()];
-
-            if (vertexNeighbourhood == null) {
-                vertexNeighbourhood = createVertexNeighbourhood();
-                vertexNeighbourhoods[edge.getDestinationId()] = vertexNeighbourhood;
-            }
-
-            vertexNeighbourhood.addEdge(edge.getSourceId(), edge.getEdgeId());
-        } catch (ArrayIndexOutOfBoundsException e) {
-            LOG.error("Tried to access index " + edge.getDestinationId() + " of array with size " + vertexNeighbourhoods.length);
-            LOG.error("vertexIndexF.length=" + vertexIndexF.length);
-            LOG.error("vertexNeighbourhoods.length=" + vertexNeighbourhoods.length);
-            throw e;
-        }
+        edgeIndexF[(int)numEdges++] = edge;
+        addToNeighborhood(edge);
 
         return this;
     }
-
-    protected void readFromHdfs(org.apache.hadoop.fs.Path hdfsPath) throws IOException {
-        FileSystem fs = FileSystem.get(new org.apache.hadoop.conf.Configuration());
-        InputStream is = fs.open(hdfsPath);
-        readFromInputStream(is);
-        is.close();
-    }
-
-    protected void readFromFile(Path filePath) throws IOException {
-        InputStream is = Files.newInputStream(filePath);
-        readFromInputStream(is);
-        is.close();
-    }
-
-    protected void readFromInputStream(InputStream is) {
+//*
+    protected void readFromInputStream(InputStream is) throws IOException {
+        System.out.println("BasicMainGraph.readFromInputStream");
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(is)));
 
@@ -374,7 +279,7 @@ public class BasicMainGraph implements MainGraph {
                 while (tokenizer.hasMoreTokens()) {
                     Edge edge = parseEdge(tokenizer, vertexId);
 
-		    //halt if vertex self loop is found
+		            //halt if vertex self loop is found
                     if( edge.getSourceId() == edge.getDestinationId()) {
                         LOG.error("The input graph contains vertices having self loops. Arabesque does not support self loops");
                         LOG.error("Self loop at vertex #: " + edge.getSourceId());
@@ -396,11 +301,25 @@ public class BasicMainGraph implements MainGraph {
     protected Edge parseEdge(StringTokenizer tokenizer, int vertexId) {
         int neighborId = Integer.parseInt(tokenizer.nextToken());
 
+        return parseEdge(neighborId, tokenizer, vertexId);
+    }
+
+    protected Edge parseEdge(int neighborId, StringTokenizer tokenizer, int vertexId) {
+
         if (isEdgeLabelled) {
+            if (isFloatLabel) {
+                float edgeLabel = Float.parseFloat(tokenizer.nextToken());
+                if (edgeLabel<0){
+                    negative_edge_label = true;
+                }
+                return createEdge(vertexId, neighborId, edgeLabel);
+            }
             int edgeLabel = Integer.parseInt(tokenizer.nextToken());
+            if (edgeLabel<0){
+                negative_edge_label = true;
+            }
             return createEdge(vertexId, neighborId, edgeLabel);
-        }
-        else {
+        } else {
             return createEdge(vertexId, neighborId);
         }
     }
@@ -494,4 +413,332 @@ public class BasicMainGraph implements MainGraph {
     public String getName() {
         return name;
     }
+
+    //***** Modifications coming from QFrag
+
+    protected void readFromInputStreamText(InputStream is) {
+        System.out.println("BasicMainGraph.readFromInputStreamText");
+
+        //*
+        long start = 0;
+
+        if (LOG.isInfoEnabled()) {
+            start = System.currentTimeMillis();
+            LOG.info("Initializing");
+        }
+
+        int prev_vertex_id = -1;
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new BOMInputStream(is)));
+
+            String line = reader.readLine();
+            boolean firstLine = true;
+
+            while (line != null) {
+                StringTokenizer tokenizer = new StringTokenizer(line);
+
+                if (firstLine) {
+                    firstLine = false;
+
+                    if (line.startsWith("#")) {
+                        LOG.info("Found hints regarding number of vertices and edges");
+                        // Skip #
+                        tokenizer.nextToken();
+
+                        int numVertices = Integer.parseInt(tokenizer.nextToken());
+                        int numEdges = Integer.parseInt(tokenizer.nextToken());
+
+                        LOG.info("Hinted numVertices=" + numVertices);
+                        LOG.info("Hinted numEdges=" + numEdges);
+
+                        prepareStructures(numVertices, numEdges);
+
+                        line = reader.readLine();
+                        continue;
+                    }
+                }
+
+                Vertex vertex = parseVertex(tokenizer);
+                if (prev_vertex_id + 1 != vertex.getVertexId()) {
+                    throw new RuntimeException("Input graph isn't sorted by vertex id, or vertex id not sequential\n " +
+                            "Expecting:" + (prev_vertex_id + 1) + " Found:" + vertex.getVertexId());
+                }
+                prev_vertex_id = vertex.getVertexId();
+                addVertex(vertex);
+
+                int vertexId = vertex.getVertexId();
+
+                while (tokenizer.hasMoreTokens()) {
+                    Edge edge = parseEdge(tokenizer, vertexId);
+                    addEdge(edge);
+                }
+
+                line = reader.readLine();
+            }
+
+            reader.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Done in " + (System.currentTimeMillis() - start));
+            LOG.info("Number vertices: " + numVertices);
+            LOG.info("Number edges: " + numEdges);
+        }
+    }
+
+    protected void readFromInputStreamBinary(InputStream is) throws IOException {
+        long start = 0;
+
+        if (LOG.isInfoEnabled()) {
+            start = System.currentTimeMillis();
+            LOG.info("Initializing");
+        }
+
+        // We require to know as input the number of vertices and edges.
+        // Else we fail.
+        Configuration conf = Configuration.get();
+        long edges = conf.getNumberEdges();
+        long vertices = conf.getNumberVertices();
+
+        if (edges < 0 || vertices < 0) {
+            throw new RuntimeException("For Binary require the number of edges and vertices");
+        }
+
+        edgeIndexF = new Edge[(int) edges];
+        vertexNeighbourhoods = new VertexNeighbourhood[(int) vertices];
+        vertexIndexF = new Vertex[(int) vertices];
+
+        BufferedInputStream a_ = new BufferedInputStream(is);
+        DataInputStream in = new DataInputStream(a_);
+
+        while (in.available() > 0) {
+            Edge edge = createEdge((int) numEdges, in.readInt(), in.readInt(), in.readInt());
+            edgeIndexF[(int) numEdges] = edge;
+            addToNeighborhood(edge);
+            numEdges++;
+        }
+
+        // Dump vertexIndexF create (empty). QFrag probably needs this.
+        // TODO: have something better for labels on vertices. Maybe if src_id and dst_id is the same.
+        for (int i = 0; i < vertices; i++) {
+            vertexIndexF[i] = createVertex(i, -1);
+        }
+
+        in.close();
+        a_.close();
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Done in " + (System.currentTimeMillis() - start));
+            LOG.info("Number vertices: " + numVertices);
+            LOG.info("Number edges: " + numEdges);
+        }
+    }
+
+    protected void addToNeighborhood(Edge edge) {
+        try {
+            VertexNeighbourhood vertexNeighbourhood = vertexNeighbourhoods[edge.getSourceId()];
+
+            if (vertexNeighbourhood == null) {
+                vertexNeighbourhood = createVertexNeighbourhood();
+                vertexNeighbourhoods[edge.getSourceId()] = vertexNeighbourhood;
+            }
+
+            vertexNeighbourhood.addEdge(edge.getDestinationId(), edge.getEdgeId());
+        } catch (ArrayIndexOutOfBoundsException e) {
+            LOG.error("Tried to access index " + edge.getSourceId() + " of array with size " + vertexNeighbourhoods.length);
+            LOG.error("vertexIndexF.length=" + vertexIndexF.length);
+            LOG.error("vertexNeighbourhoods.length=" + vertexNeighbourhoods.length);
+            throw e;
+        }
+
+        try {
+            VertexNeighbourhood vertexNeighbourhood = vertexNeighbourhoods[edge.getDestinationId()];
+
+            if (vertexNeighbourhood == null) {
+                vertexNeighbourhood = createVertexNeighbourhood();
+                vertexNeighbourhoods[edge.getDestinationId()] = vertexNeighbourhood;
+            }
+
+            vertexNeighbourhood.addEdge(edge.getSourceId(), edge.getEdgeId());
+        } catch (ArrayIndexOutOfBoundsException e) {
+            LOG.error("Tried to access index " + edge.getDestinationId() + " of array with size " + vertexNeighbourhoods.length);
+            LOG.error("vertexIndexF.length=" + vertexIndexF.length);
+            LOG.error("vertexNeighbourhoods.length=" + vertexNeighbourhoods.length);
+            throw e;
+        }
+    }
+
+    @Override
+    public int getVertexLabel(int v) {
+        return vertexIndexF[v].getVertexLabel();
+    }
+
+    public IntCollection getVertexNeighbors(int vertexId) {
+        if(vertexNeighbourhoods[vertexId]!=null){
+            return vertexNeighbourhoods[vertexId].getNeighbourVertices();
+        }
+        return null;
+    }
+
+    @Override
+    public int getEdgeLabel(int edgeId) {
+        LabelledEdge edge = (LabelledEdge) edgeIndexF[edgeId];
+        return edge.getEdgeLabel();
+    }
+
+    @Override
+    public int getEdgeSource(int edgeId) {
+        return edgeIndexF[edgeId].getSourceId();
+    }
+
+    @Override
+    public int getEdgeDst(int edgeId) {
+        return edgeIndexF[edgeId].getDestinationId();
+    }
+
+    @Override
+    public int neighborhoodSize(int vertexId) {
+        return vertexNeighbourhoods[vertexId].getNeighbourVertices().size();
+    }
+
+    protected Edge createEdge(int edgeId, int srcId, int destId, int label) {
+        return new LabelledEdge(edgeId, srcId, destId, label);
+    }
+
+    protected Edge createEdge(int srcId, int destId, float label) {
+        return new FloatEdge(srcId, destId, label);
+    }
+
+    @Override
+    public void processVertexNeighbors(int vertexId, IntConsumer intAddConsumer) {
+        VertexNeighbourhood vertexNeighbourhood = vertexNeighbourhoods[vertexId];
+
+        if (vertexNeighbourhood == null) {
+            return;
+        }
+        vertexNeighbourhood.getNeighbourVertices().forEach(intAddConsumer);
+    }
+
+    @Override
+    public void processEdgeNeighbors(int vertexId, IntConsumer intAddConsumer) {
+        VertexNeighbourhood neighbourEdges = vertexNeighbourhoods[vertexId];
+        if (neighbourEdges == null){
+            return;
+        }
+        neighbourEdges.getNeighbourEdges().forEach(intAddConsumer);
+    }
+
+    public void write (ObjectOutput out)
+            throws IOException {
+        super.write(out);
+
+        if (vertexNeighbourhoods == null){
+            out.writeInt(-1);
+        } else {
+            int size = vertexNeighbourhoods.length;
+            out.writeInt(size);
+            if (size > 0){
+                String className = vertexNeighbourhoods[0].getClass().getName();
+                switch (className){
+                    case "io.arabesque.graph.BasicVertexNeighbourhood": out.writeInt(0); break;
+                    default: throw new RuntimeException ("Cannot serialize graph: no serialization support for the vertex neighbourhood class " + className);
+                }
+                for (int i=0; i < size; i++) {
+                    if (vertexNeighbourhoods[i] == null){
+                        out.writeBoolean(true);
+                    } else {
+                        out.writeBoolean(false);
+                        vertexNeighbourhoods[i].write(out);
+                    }
+                }
+            }
+        }
+
+        if (vertexIndexF == null){
+            out.writeInt(-1);
+        } else {
+            int size = vertexIndexF.length;
+            out.writeInt(size);
+            for (int i=0; i < size; i++){
+                if (vertexIndexF[i] == null){
+                    out.writeBoolean(true);
+                } else {
+                    out.writeBoolean(false);
+                    vertexIndexF[i].write(out);
+                }
+            }
+        }
+
+        if (edgeIndexF == null){
+            out.writeInt(-1);
+        } else {
+            int size = edgeIndexF.length;
+            out.writeInt(size);
+            for (int i=0; i < size; i++){
+                if(edgeIndexF[i] == null){
+                    out.writeBoolean(true);
+                } else {
+                    out.writeBoolean(false);
+                    edgeIndexF[i].write(out);
+                }
+            }
+        }
+
+        out.writeBoolean(negative_edge_label);
+    }
+
+    public void read (ObjectInput in)
+            throws IOException, ClassNotFoundException {
+        super.read(in);
+
+        System.out.println("BasicMainGraph.read");
+
+        vertexNeighbourhoods = null;
+        int size = in.readInt();
+        if (size >= 0){
+            if (size > 0){
+                vertexNeighbourhoods = new VertexNeighbourhood[size];
+                int classType = in.readInt();
+                for (int i=0; i < size; i++) {
+                    boolean isNull = in.readBoolean();
+                    if (!isNull) {
+                        switch (classType){
+                            case 0 : vertexNeighbourhoods[i] = new BasicVertexNeighbourhood(); break;
+                            default: throw new RuntimeException ("Cannot deserialize graph: no serialization support for the vertex neighbourhood class " + classType);
+                        }
+                        vertexNeighbourhoods[i].read(in);
+                    }
+                }
+            }
+        }
+
+        vertexIndexF = null;
+        size = in.readInt();
+        if (size >= 0){
+            vertexIndexF = new Vertex[size];
+            for (int i=0; i < size; i++){
+                boolean isNull = in.readBoolean();
+                if (!isNull) {
+                    vertexIndexF[i] = new Vertex();
+                    vertexIndexF[i].readFields(in);
+                }
+            }
+        }
+
+        edgeIndexF = null;
+        size = in.readInt();
+        if (size >= 0){
+            edgeIndexF = new Edge[size];
+            for (int i=0; i < size; i++){
+                boolean isNull = in.readBoolean();
+                if (!isNull) {
+                    edgeIndexF[i] = new Edge();
+                    edgeIndexF[i].readFields(in);
+                }
+            }
+        }
+
+        negative_edge_label = in.readBoolean();
+    }
+    //***** End of Modifications coming from QFrag
 }

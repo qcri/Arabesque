@@ -249,8 +249,10 @@ public class YamlConfiguration {
             CommandLine cmd = parser.parse(CMDLINE_OPTIONS, args);
 
             if (cmd.hasOption("y")) {
+                System.out.println("FOUND the y paramater");
                 return Arrays.asList(cmd.getOptionValues("y"));
             } else {
+                System.out.println("COULD not find the y paramater");
                 return Collections.singletonList(DEFAULT_CUSTOM_CONFIGURATION);
             }
         } catch (ParseException e) {
@@ -286,8 +288,10 @@ public class YamlConfiguration {
         URL url;
         try {
             url = new URL(urlStr);
+            System.out.println("URL -> " + url.toString());
             url.openStream().close(); // catches well-formed but bogus URLs
         } catch (Exception e) {
+            e.printStackTrace();
             ClassLoader loader = YamlConfiguration.class.getClassLoader();
             url = loader.getResource(urlStr);
             if (url == null) {
