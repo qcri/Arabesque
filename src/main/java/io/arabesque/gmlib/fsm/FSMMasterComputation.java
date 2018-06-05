@@ -14,13 +14,13 @@ public class FSMMasterComputation extends MasterComputation {
         System.out.println("Aggregation Storage: " + aggregationStorage);
 
         if (aggregationStorage.getNumberMappings() > 0) {
-            System.out.println("Frequent patterns:");
+            System.out.println("Frequent patterns count: " + aggregationStorage.getNumberMappings());
 
-            int i = 1;
-            for (Pattern pattern : aggregationStorage.getKeys()) {
-                System.out.println(i + ": " + pattern + ": " + aggregationStorage.getValue(pattern));
-                ++i;
-            }
+//            int i = 1;
+//            for (Pattern pattern : aggregationStorage.getKeys()) {
+//                System.out.println(i + ": " + pattern + ": " + aggregationStorage.getValue(pattern));
+//                ++i;
+//            }
         }
         // If frequent patterns is empty and superstep > 0, halt
         else if (getStep() > 0) {

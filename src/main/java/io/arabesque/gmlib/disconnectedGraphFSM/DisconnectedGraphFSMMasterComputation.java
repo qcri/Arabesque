@@ -15,14 +15,16 @@ public class DisconnectedGraphFSMMasterComputation extends MasterComputation {
         AggregationStorage<Pattern, DisconnectedGraphSupport> aggregationStorage =
                 readAggregation(DisconnectedGraphFSMComputation.AGG_SUPPORT);
 
-        if (aggregationStorage.getNumberMappings() > 0) {
-            System.out.println("Frequent patterns:");
+        System.out.println("Aggregation Storage: " + aggregationStorage);
 
-            int i = 1;
-            for (Pattern pattern : aggregationStorage.getKeys()) {
-                System.out.println(i + ": " + pattern + ": " + aggregationStorage.getValue(pattern));
-                ++i;
-            }
+        if (aggregationStorage.getNumberMappings() > 0) {
+            System.out.println("Frequent patterns count: " + aggregationStorage.getNumberMappings());
+
+//            int i = 1;
+//            for (Pattern pattern : aggregationStorage.getKeys()) {
+//                System.out.println(i + ": " + pattern + ": " + aggregationStorage.getValue(pattern));
+//                ++i;
+//            }
         }
         // If frequent patterns is empty and superstep > 0, halt
         else if (getStep() > 0) {
