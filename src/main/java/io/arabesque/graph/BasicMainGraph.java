@@ -5,16 +5,14 @@ import io.arabesque.utils.collection.ReclaimableIntCollection;
 import com.koloboke.collect.IntCollection;
 import com.koloboke.function.IntConsumer;
 import org.apache.commons.io.input.BOMInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.StringTokenizer;
+import jdk.nashorn.internal.objects.annotations.Getter;
 
 public class BasicMainGraph extends AbstractMainGraph {
     protected static final Logger LOG = Logger.getLogger(BasicMainGraph.class);
@@ -161,9 +159,12 @@ public class BasicMainGraph extends AbstractMainGraph {
         return vertexIndexF;
     }
 
+    @Getter
     @Override
     public Vertex getVertex(int vertexId) {
-        return vertexIndexF[vertexId];
+        if(vertexId < vertexIndexF.length)
+            return vertexIndexF[vertexId];
+        return null;
     }
 
     @Override
