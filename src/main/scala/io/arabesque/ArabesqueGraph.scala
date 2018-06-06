@@ -67,7 +67,6 @@ class ArabesqueGraph(
    * @return an [[io.arabesque.ArabesqueResult]] carrying odags and embeddings
    */
   def motifs(maxSize: Int): ArabesqueResult[_] = {
-    Configuration.unset
     val config = new SparkConfiguration [VertexInducedEmbedding]
     config.set ("input_graph_path", path)
     config.set ("input_graph_local", local)

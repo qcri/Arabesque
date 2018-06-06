@@ -442,14 +442,10 @@ public class Configuration<O extends Embedding> implements java.io.Serializable 
     protected MainGraph createGraph() {
         boolean useLocalGraph = getBoolean(CONF_MAINGRAPH_LOCAL, CONF_MAINGRAPH_LOCAL_DEFAULT);
 
-        System.out.println("useLocalGraph = " + useLocalGraph);
-
         try {
             Constructor<? extends MainGraph> constructor;
 
             String subgraphsFile = getMainGraphSubgraphsPath();
-
-            System.out.println("subgraphsFile = " + subgraphsFile);
 
             if (useLocalGraph) {
                 if (subgraphsFile != "None") {

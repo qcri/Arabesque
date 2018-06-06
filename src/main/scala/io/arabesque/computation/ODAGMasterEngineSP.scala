@@ -65,15 +65,11 @@ class ODAGMasterEngineSP [E <: Embedding] (_config: SparkConfiguration[E])
     )
 
     val startTime = System.currentTimeMillis
-    val GB:Double = 1024 * 1024 * 1024
-    val MB:Double = 1024 * 1024
+
 
     do {
       val _aggAccums = aggAccums
       val superstepStart = System.currentTimeMillis
-
-      val broadcastStorageSize: Double = SizeEstimator.estimate(aggregatedOdagsBc) / MB
-      println("Storage size = " + broadcastStorageSize + " in super_step " + superstep)
 
       val execEngines = getExecutionEngines (
         superstepRDD = superstepRDD,
