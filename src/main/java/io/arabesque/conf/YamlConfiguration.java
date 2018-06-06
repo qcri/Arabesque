@@ -288,10 +288,8 @@ public class YamlConfiguration {
         URL url;
         try {
             url = new URL(urlStr);
-            System.out.println("URL -> " + url.toString());
             url.openStream().close(); // catches well-formed but bogus URLs
         } catch (Exception e) {
-            e.printStackTrace();
             ClassLoader loader = YamlConfiguration.class.getClassLoader();
             url = loader.getResource(urlStr);
             if (url == null) {

@@ -6,11 +6,8 @@ import io.arabesque.embedding.Embedding
 import io.arabesque.graph.MainGraph
 import io.arabesque.pattern.Pattern
 import io.arabesque.utils.{Logging, SerializableConfiguration}
-
 import org.apache.spark.SparkConf
-
 import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
-
 import scala.collection.mutable.Map
 
 /**
@@ -258,23 +255,19 @@ case class SparkConfiguration[O <: Embedding](confs: Map[String,Any])
    * TODO: generalize the initialization in the superclass Configuration
    */
   override def initialize(): Unit = synchronized {
-    if (Configuration.isUnset || uuid != Configuration.get[SparkConfiguration[O]].uuid) {
-      val system: String = getString(CONF_SYSTEM_TYPE, CONF_SYSTEM_TYPE_DEFAULT)
+      if (Configuration.isUnset || uuid != Configuration.get[SparkConfiguration[O]].uuid) {
+        val system: String = getString(CONF_SYSTEM_TYPE, CONF_SYSTEM_TYPE_DEFAULT)
 
-      println("@DEBUG_CONF In SparkConf.init() System_Type = " + system)
-      if(system.equals(CONF_ARABESQUE_SYSTEM_TYPE)) {
-        println("@DEBUG_CONF In SparkConf.init().initializeInJvm()")
-        Configuration.set (this)
-        initialized = true
-        initializeInJvm()
+        if (system.equals(CONF_ARABESQUE_SYSTEM_TYPE)) {
+          initialized = true
+          Configuration.set(this)
+          initializeInJvm()
+        }
+        else {
+          initializeInJvmQFrag()
+          Configuration.set(this)
+        }
       }
-      else {
-        println("@DEBUG_CONF In SparkConf.init().initializeInJvmQFrag()")
-        initializeInJvmQFrag()
-      }
-
-      Configuration.set (this)
-    }
   }
 
   /**

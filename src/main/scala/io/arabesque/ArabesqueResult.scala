@@ -42,6 +42,7 @@ case class ArabesqueResult [E <: Embedding : ClassTag] (
   def masterEngine: SparkMasterEngine[E] = masterEngineOpt match {
     case None =>
       logInfo (s"starting/computing master execution engine")
+
       val _masterEngine = SparkMasterEngine [E] (sc, config)
       _masterEngine.compute
       _masterEngine.finalizeComputation

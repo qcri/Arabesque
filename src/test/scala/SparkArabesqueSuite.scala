@@ -47,6 +47,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
  /** tests */
  test("configurations") {
    // TODO: make this test more simple
+
    import scala.collection.mutable.Map
    val confs: Map[String,Any] = Map(
      "spark_master" -> "local[2]",
@@ -81,34 +82,38 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    }
 
    assert (conds.reduce (_ && _))
-
  }
 
  val motifsNumEmbeddings = 24546
+
  test ("[motifs,odag] arabesque API") {
+
    val motifsRes = arabGraph.motifs (3).
      set ("comm_strategy", COMM_ODAG_SP)
+
    val odags = motifsRes.odags
    assert (odags.count != 0)
    val embeddings = motifsRes.embeddings
    assert (embeddings.count == motifsNumEmbeddings)
    assert (embeddings.distinct.count == motifsNumEmbeddings)
  }
+
  test ("[motifs,embedding] arabesque API") {
    val motifsRes = arabGraph.motifs (3).
      set ("comm_strategy", COMM_EMBEDDING)
+
    val odags = motifsRes.odags
    assert (odags.count == 0)
    val embeddings = motifsRes.embeddings
    assert (embeddings.count == motifsNumEmbeddings)
    assert (embeddings.distinct.count == motifsNumEmbeddings)
  }
+
  test ("[motifs,custom computation equivalence] arabesque API") {
    import org.apache.hadoop.io.LongWritable
    import io.arabesque.pattern.Pattern
    import io.arabesque.utils.SerializableWritable
    import io.arabesque.aggregation.reductions.LongSumReduction
-
    val AGG_MOTIFS = "motifs"
    val motifsRes: ArabesqueResult[_] = arabGraph.
      vertexInducedComputation (
@@ -131,7 +136,6 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    val embeddings = motifsRes.embeddings
    assert (embeddings.count == motifsNumEmbeddings)
    assert (embeddings.distinct.count == motifsNumEmbeddings)
-
  }
 
  val fsmNumEmbeddings = 31414
@@ -198,6 +202,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    assert (embeddings.count == trianglesNumEmbeddings)
    assert (embeddings.distinct.count == trianglesNumEmbeddings)
  }
+
  test ("[triangles,embedding] arabesque API") {
    val trianglesRes = arabGraph.triangles().
      set ("comm_strategy", COMM_EMBEDDING)
@@ -207,6 +212,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    assert (embeddings.count == trianglesNumEmbeddings)
    assert (embeddings.distinct.count == trianglesNumEmbeddings)
  }
+
  test ("[triangles,custom computation equivalence] arabesque API") {
    import org.apache.hadoop.io.{IntWritable, LongWritable}
    import io.arabesque.utils.SerializableWritable
@@ -248,6 +254,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    assert (embeddings.count == cliquesNumEmbeddings)
    assert (embeddings.distinct.count == cliquesNumEmbeddings)
  }
+
  test ("[cliques,embedding] arabesque API") {
    val cliquesRes = arabGraph.cliques (3).
      set ("comm_strategy", COMM_EMBEDDING)
@@ -257,6 +264,7 @@ class SparkArabesqueSuite extends FunSuite with BeforeAndAfterAll {
    assert (embeddings.count == cliquesNumEmbeddings)
    assert (embeddings.distinct.count == cliquesNumEmbeddings)
  }
+
  test ("[cliques,custom computation equivalence] arabesque API") {
    val maxsize = 3
    val cliquesRes = arabGraph.
