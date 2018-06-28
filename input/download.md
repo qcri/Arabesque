@@ -6,9 +6,9 @@ project: Arabesque
 
 If you want to start using Arabesque on a single machine without first having to install and configure the Hadoop stack, you can choose one of the following options:
 
-* [Virtualbox image](https://qbox.qcri.org/s/Yfnxi9J3Bkkf1lH)
-* Docker image `docker run -it dsqcri/arabesque` (select user `su arabesque`)
-* [Installation scripts](https://qbox.qcri.org/s/HiSHoQ2YSPFrjet) to install Arabesque stack on a single node
+* [Virtualbox image](https://qbox.qcri.org/index.php/s/175XGYLVf2X5GzI)
+* Docker image `docker run -it dsqcri/arabesque` or download [Arabesque Dockerfile](https://qbox.qcri.org/index.php/s/38wvzHdK2LYRGAs) and build the image on your local machine
+* [Installation scripts](https://qbox.qcri.org/index.php/s/CC5IEhQc0RAvLYV) to install Arabesque stack on a single node
 
 # Github repo
 

@@ -96,6 +96,7 @@ Input format
 ...
 ```
 
+Input graph vertices and labels should both be mapped to integer ids that start from 0 onwards (0, 1, 2, etc). Otherwise, the results may not come as expected.
 Vertex ids are expected to be sequential integers between 0 and (total number of vertices - 1).
 
 You can examine our sample citeseer graphs [here](https://github.com/qcri/Arabesque/tree/master/data).
